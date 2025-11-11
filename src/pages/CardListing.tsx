@@ -38,8 +38,8 @@ const CardListing = () => {
         cardGeniusPayload: {}
       });
 
-      if (response.data) {
-        setCards(response.data);
+      if (response.data && response.data.cards) {
+        setCards(response.data.cards);
       }
     } catch (error) {
       console.error('Failed to fetch cards:', error);
