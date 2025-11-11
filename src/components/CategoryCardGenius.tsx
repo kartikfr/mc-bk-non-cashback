@@ -146,13 +146,38 @@ const CategoryCardGenius = () => {
 
       const response = await cardService.calculateCardGenius(payload);
       
-      if (response.status === 'success' && response.data) {
-        // Sort by total_savings_yearly and get top 3
-        const sortedCards = response.data.sort((a: any, b: any) => 
-          (b.total_savings_yearly || 0) - (a.total_savings_yearly || 0)
-        ).slice(0, 3);
+      if (response.status === 'success' && response.data?.savings) {
+        // The API returns data.savings array, sort by total_savings_yearly and get top 3
+        const sortedCards = response.data.savings
+          .sort((a: any, b: any) => (b.total_savings_yearly || 0) - (a.total_savings_yearly || 0))
+          .slice(0, 3);
         
-        setResults(sortedCards);
+        // Fetch full card details for each card to get card_bg_image
+        const cardsWithDetails = await Promise.all(
+          sortedCards.map(async (card: any) => {
+            try {
+              const detailsResponse = await cardService.getCardDetails(card.seo_card_alias);
+              const cardDetails = detailsResponse.data?.[0] || {};
+              
+              return {
+                ...card,
+                card_bg_image: cardDetails.card_bg_image || '/placeholder.svg',
+                annual_fees: card.joining_fees || cardDetails.annual_fee_text || '0',
+                category_savings: card.spending_breakdown || {}
+              };
+            } catch (error) {
+              console.error(`Failed to fetch details for ${card.seo_card_alias}:`, error);
+              return {
+                ...card,
+                card_bg_image: '/placeholder.svg',
+                annual_fees: card.joining_fees || '0',
+                category_savings: card.spending_breakdown || {}
+              };
+            }
+          })
+        );
+        
+        setResults(cardsWithDetails);
       }
     } catch (error) {
       console.error('Error calculating:', error);
@@ -289,20 +314,23 @@ const CategoryCardGenius = () => {
                       </div>
                     </div>
 
-                    {/* Category Savings Breakdown */}
-                    {card.category_savings && Object.keys(card.category_savings).length > 0 && (
-                      <details className="mb-4 bg-muted/30 rounded-lg p-3">
-                        <summary className="cursor-pointer text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-2">
-                          <ChevronDown className="w-4 h-4" />
-                          See Detailed Savings Breakdown
-                        </summary>
-                        <div className="mt-3 space-y-2 pl-2 border-l-2 border-primary/20">
-                          {Object.entries(card.category_savings).map(([category, savings]: [string, any]) => {
-                            const savingsValue = typeof savings === 'number' ? savings : 0;
-                            if (savingsValue === 0) return null;
-                            
-                            return (
-                              <div key={category} className="flex justify-between items-center text-sm py-1">
+                  {/* Category Savings Breakdown */}
+                  {card.category_savings && Object.keys(card.category_savings).length > 0 && (
+                    <details className="mb-4 bg-muted/30 rounded-lg p-3">
+                      <summary className="cursor-pointer text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-2">
+                        <ChevronDown className="w-4 h-4" />
+                        See Detailed Savings Breakdown
+                      </summary>
+                      <div className="mt-3 space-y-2 pl-2 border-l-2 border-primary/20">
+                        {Object.entries(card.category_savings).map(([category, data]: [string, any]) => {
+                          const savingsValue = data?.savings || 0;
+                          const spendValue = data?.spend || 0;
+                          
+                          if (savingsValue === 0 && spendValue === 0) return null;
+                          
+                          return (
+                            <div key={category} className="py-2 border-b border-muted/20 last:border-0">
+                              <div className="flex justify-between items-center text-sm mb-1">
                                 <span className="text-muted-foreground capitalize font-medium">
                                   {category.replace(/_/g, ' ')}
                                 </span>
@@ -310,11 +338,18 @@ const CategoryCardGenius = () => {
                                   +₹{savingsValue.toLocaleString()}
                                 </span>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    )}
+                              {spendValue > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  On ₹{spendValue.toLocaleString()} spend
+                                  {data?.cashback_percentage && ` • ${data.cashback_percentage}% back`}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  )}
 
                     {/* CTA Buttons */}
                     <div className="space-y-2">
