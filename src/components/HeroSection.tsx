@@ -1,134 +1,165 @@
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Sparkles, Calculator } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import gsap from "gsap";
+import { CreditCard3D } from "./CreditCard3D";
+import { gsap } from "gsap";
+import { Sparkles, TrendingUp, Shield, Zap } from "lucide-react";
 
 const HeroSection = () => {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const headlineRef = useRef<HTMLHeadingElement>(null);
+  const subheadlineRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (cardRef.current) {
-      // Card rotation animation
-      gsap.to(cardRef.current, {
-        rotateY: 360,
-        duration: 20,
-        repeat: -1,
-        ease: "none"
-      });
+    const timeline = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      // Float animation
-      gsap.to(cardRef.current, {
-        y: -20,
-        duration: 2,
-        yoyo: true,
-        repeat: -1,
-        ease: "power1.inOut"
-      });
-    }
-
-    if (contentRef.current) {
-      const children = contentRef.current.children;
-      gsap.from(children, {
+    timeline
+      .from(headlineRef.current, {
+        y: 60,
         opacity: 0,
-        y: 50,
-        duration: 1.2,
-        stagger: 0.2,
-        ease: "power3.out"
-      });
-    }
+        duration: 1,
+      })
+      .from(
+        subheadlineRef.current,
+        {
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+        },
+        "-=0.6"
+      )
+      .from(
+        ctaRef.current?.children || [],
+        {
+          y: 30,
+          opacity: 0,
+          stagger: 0.15,
+          duration: 0.6,
+        },
+        "-=0.4"
+      )
+      .from(
+        statsRef.current?.children || [],
+        {
+          scale: 0.8,
+          opacity: 0,
+          stagger: 0.1,
+          duration: 0.5,
+        },
+        "-=0.3"
+      );
   }, []);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-20">
-      {/* Animated background particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-primary/10 rounded-full blur-3xl -top-48 -left-48 animate-float"></div>
-        <div className="absolute w-96 h-96 bg-secondary/10 rounded-full blur-3xl -bottom-48 -right-48 animate-float" style={{ animationDelay: '1s' }}></div>
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Floating circles */}
+        {[...Array(5)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-primary/5 animate-float"
+            style={{
+              width: `${Math.random() * 300 + 100}px`,
+              height: `${Math.random() * 300 + 100}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${i * 0.5}s`,
+              animationDuration: `${Math.random() * 10 + 15}s`,
+            }}
+          />
+        ))}
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Content */}
-          <div ref={contentRef} className="text-center lg:text-left">
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Find Your Perfect <br />
-              <span className="bg-gradient-primary bg-clip-text text-transparent">
-                Credit Card
+      <div className="container mx-auto px-4 py-12 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          {/* Left Content */}
+          <div className="text-center lg:text-left space-y-8">
+            <h1
+              ref={headlineRef}
+              className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-charcoal-900 leading-tight"
+            >
+              Stop Leaving{" "}
+              <span className="bg-gradient-accent bg-clip-text text-transparent">
+                Money
               </span>{" "}
-              in 60 Seconds
+              on the Table
             </h1>
-            
-            <p className="text-xl text-muted-foreground mb-8">
-              AI-powered recommendations. Real savings. Zero hassle.
+
+            <p
+              ref={subheadlineRef}
+              className="text-xl md:text-2xl text-charcoal-700 max-w-2xl mx-auto lg:mx-0"
+            >
+              Find the credit card that pays you back for living your life. AI-powered recommendations in 60 seconds.
             </p>
 
-            <div className="flex flex-wrap gap-4 justify-center lg:justify-start mb-8">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Trusted by 2M+ Indians
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap justify-center lg:justify-start gap-6 text-sm text-charcoal-600">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                <span className="font-medium">Trusted by 2M+ Indians</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                100% Free
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-primary" />
+                <span className="font-medium">100% Free</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Unbiased Advice
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <span className="font-medium">Unbiased Advice</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-              <Link to="/cards">
-                <Button size="lg" className="shadow-xl hover:shadow-glow transition-all">
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Find Me The Best Card
-                </Button>
-              </Link>
-              <Link to="/card-genius">
-                <Button size="lg" variant="outline" className="border-2 hover:bg-accent">
-                  <Calculator className="w-5 h-5 mr-2" />
-                  Try Card Genius
-                </Button>
-              </Link>
+            {/* CTA Buttons */}
+            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Button
+                size="lg"
+                onClick={() => navigate("/cards")}
+                className="group"
+              >
+                <Sparkles className="mr-2 group-hover:rotate-12 transition-transform" />
+                Find My Perfect Card
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate("/card-genius")}
+              >
+                Try Card Genius
+              </Button>
+            </div>
+
+            {/* Stats */}
+            <div ref={statsRef} className="grid grid-cols-3 gap-6 pt-8 border-t border-charcoal-200">
+              <div className="text-center lg:text-left">
+                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">200+</div>
+                <div className="text-sm text-charcoal-600 mt-1">Credit Cards</div>
+              </div>
+              <div className="text-center lg:text-left">
+                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">₹45K</div>
+                <div className="text-sm text-charcoal-600 mt-1">Avg. Savings</div>
+              </div>
+              <div className="text-center lg:text-left">
+                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">2M+</div>
+                <div className="text-sm text-charcoal-600 mt-1">Happy Users</div>
+              </div>
             </div>
           </div>
 
-          {/* Animated Card */}
-          <div className="relative flex justify-center lg:justify-end">
-            <div 
-              ref={cardRef}
-              className="relative w-80 h-52 rounded-2xl shadow-2xl overflow-hidden"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-glow to-secondary rounded-2xl p-6 text-white">
-                <div className="flex justify-between items-start mb-8">
-                  <div className="text-sm font-medium">MoneyControl</div>
-                  <div className="w-12 h-8 bg-white/20 rounded"></div>
-                </div>
-                <div className="space-y-2 mb-6">
-                  <div className="w-3/4 h-3 bg-white/30 rounded"></div>
-                  <div className="w-1/2 h-3 bg-white/30 rounded"></div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <div className="text-xs opacity-70">Card Number</div>
-                    <div className="font-mono text-sm">•••• •••• •••• 1234</div>
-                  </div>
-                  <div className="w-10 h-10 bg-white/20 rounded-full"></div>
-                </div>
-              </div>
-            </div>
+          {/* Right Content - 3D Card */}
+          <div className="flex justify-center items-center lg:justify-end">
+            <CreditCard3D
+              cardImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop"
+              cardName="Your Dream Card"
+              className="w-full max-w-lg"
+            />
           </div>
         </div>
       </div>
+
+      {/* Bottom Gradient Fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
     </section>
   );
 };

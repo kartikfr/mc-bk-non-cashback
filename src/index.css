@@ -142,3 +142,34 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .credit-card-3d {
+    aspect-ratio: 1.586 / 1;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+    border-radius: 24px;
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      0 30px 90px rgba(0, 0, 0, 0.2),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .credit-card-3d:hover {
+    box-shadow: 
+      0 30px 80px rgba(0, 0, 0, 0.4),
+      0 40px 120px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      0 0 60px rgba(0, 166, 81, 0.3);
+  }
+
+  .perspective-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
