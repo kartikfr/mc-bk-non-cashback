@@ -315,24 +315,28 @@ const CardGenius = () => {
             {/* Welcome Benefits Section */}
             {selectedCard.welcome_benefits && selectedCard.welcome_benefits.length > 0 && (
               <div className="bg-white rounded-xl border border-border p-6 mb-8">
-                <h2 className="text-xl font-bold text-foreground mb-4">Welcome Benefits</h2>
+                <h2 className="text-xl font-bold text-foreground mb-2">Extra Benefits</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Note: These extra benefits are not included in your annual savings. They are for your reference
+                </p>
+                
+                <h3 className="text-lg font-semibold text-primary mb-4">Welcome Benefit</h3>
+                
                 <div className="space-y-3">
-                  {selectedCard.voucher_of > 0 && (
-                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                      <span className="text-sm text-foreground">Voucher Value</span>
-                      <span className="text-lg font-semibold text-green-600">₹{selectedCard.voucher_of.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {selectedCard.voucher_bonus > 0 && (
-                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                      <span className="text-sm text-foreground">Bonus Amount</span>
-                      <span className="text-lg font-semibold text-blue-600">₹{selectedCard.voucher_bonus.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {selectedCard.welcome_benefits.map((benefit: string, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg">
+                  {selectedCard.welcome_benefits.map((benefit: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
                       <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-foreground">{benefit}</span>
+                      <div className="flex-1">
+                        <p className="text-sm text-foreground">
+                          On card activation you get a {benefit.voucher_of || 'benefit'}
+                          {benefit.voucher_bonus && ` of ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
+                          {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
+                            <span className="text-muted-foreground">
+                              {' '}(Minimum spend: ₹{parseInt(benefit.minimum_spend).toLocaleString()})
+                            </span>
+                          )}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
