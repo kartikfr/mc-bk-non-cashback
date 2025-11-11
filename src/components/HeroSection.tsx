@@ -13,12 +13,6 @@ const HeroSection = () => {
   const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Set initial visibility to ensure elements are visible
-    if (headlineRef.current) headlineRef.current.style.opacity = '1';
-    if (subheadlineRef.current) subheadlineRef.current.style.opacity = '1';
-    if (ctaRef.current) ctaRef.current.style.opacity = '1';
-    if (statsRef.current) statsRef.current.style.opacity = '1';
-
     const timeline = gsap.timeline({ defaults: { ease: "power3.out" } });
 
     timeline
@@ -35,27 +29,18 @@ const HeroSection = () => {
           duration: 0.8,
         },
         "-=0.6"
-      )
-      .from(
-        ctaRef.current?.children || [],
-        {
-          y: 30,
-          opacity: 0,
-          stagger: 0.15,
-          duration: 0.6,
-        },
-        "-=0.4"
-      )
-      .from(
-        statsRef.current?.children || [],
-        {
-          scale: 0.8,
-          opacity: 0,
-          stagger: 0.1,
-          duration: 0.5,
-        },
-        "-=0.3"
       );
+    
+    // Animate stats separately without affecting buttons
+    if (statsRef.current) {
+      gsap.from(statsRef.current.children, {
+        scale: 0.8,
+        opacity: 0,
+        stagger: 0.1,
+        duration: 0.5,
+        delay: 0.8,
+      });
+    }
   }, []);
 
   return (
@@ -117,12 +102,12 @@ const HeroSection = () => {
               </div>
             </div>
 
-            {/* CTA Buttons */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            {/* CTA Buttons - Always Visible */}
+            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start opacity-100">
               <Button
                 size="lg"
                 onClick={() => navigate("/cards")}
-                className="group"
+                className="group shadow-xl"
               >
                 <Sparkles className="mr-2 group-hover:rotate-12 transition-transform" />
                 Find Me The Best Credit Card
@@ -131,6 +116,7 @@ const HeroSection = () => {
                 size="lg"
                 variant="outline"
                 onClick={() => navigate("/card-genius")}
+                className="shadow-lg"
               >
                 Try Genius
               </Button>
