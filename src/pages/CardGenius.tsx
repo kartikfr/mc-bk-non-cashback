@@ -75,9 +75,9 @@ interface CardResult {
   total_savings_yearly: number;
   total_extra_benefits: number;
   net_savings: number;
-  voucher_of: number;
-  voucher_bonus: number;
-  welcome_benefits: string[];
+  voucher_of?: string | number;
+  voucher_bonus?: string | number;
+  welcome_benefits: any[];
   spending_breakdown: {
     [key: string]: {
       on: string;
@@ -145,16 +145,28 @@ const CardGenius = () => {
         const cardsWithDetails = await Promise.all(
           response.data.savings.map(async (saving: any) => {
             try {
-              const cardDetails = await cardService.getCardDetails(saving.card_alias);
-              console.log('Card details for', saving.card_alias, ':', cardDetails);
+              let cardDetails: any = { data: {} };
+              if (saving.card_alias) {
+                cardDetails = await cardService.getCardDetails(saving.card_alias);
+                console.log('Card details for', saving.card_alias, ':', cardDetails);
+              } else {
+                console.warn('Missing card_alias for saving item:', saving);
+              }
               
-              // card_bg_image might be in the saving object or cardDetails.data
+              // Prefer image coming in savings payload
               const cardBgImage = saving.card_bg_image 
                 || cardDetails.data?.card_bg_image 
                 || cardDetails.data?.card_image
-                || cardDetails.data?.image;
+                || cardDetails.data?.image
+                || '';
               
-              console.log('Card bg image:', cardBgImage);
+              // Map welcome benefits from either response shape
+              const welcomeBenefits = 
+                saving.welcomeBenefits 
+                || cardDetails.data?.welcomeBenefits 
+                || saving.welcome_benefits 
+                || cardDetails.data?.welcome_benefits 
+                || [];
               
               const joiningFees = parseInt(saving.joining_fees) || 0;
               const totalSavingsYearly = saving.total_savings_yearly || 0;
@@ -171,11 +183,11 @@ const CardGenius = () => {
                 net_savings: netSavings,
                 voucher_of: saving.voucher_of || 0,
                 voucher_bonus: saving.voucher_bonus || 0,
-                welcome_benefits: cardDetails.data?.welcome_benefits || saving.welcome_benefits || [],
+                welcome_benefits: welcomeBenefits,
                 spending_breakdown: saving.spending_breakdown || {}
-              };
+              } as CardResult;
             } catch (error) {
-              console.error(`Error fetching details for ${saving.card_alias}:`, error);
+              console.error(`Error processing card ${saving.card_alias || saving.card_name}:`, error);
               const joiningFees = parseInt(saving.joining_fees) || 0;
               const totalSavingsYearly = saving.total_savings_yearly || 0;
               const totalExtraBenefits = saving.total_extra_benefits || 0;
@@ -183,7 +195,7 @@ const CardGenius = () => {
               
               return {
                 card_name: saving.card_name || saving.card_alias,
-                card_bg_image: saving.card_bg_image,
+                card_bg_image: saving.card_bg_image || '',
                 joining_fees: joiningFees,
                 total_savings: saving.total_savings || 0,
                 total_savings_yearly: totalSavingsYearly,
@@ -191,9 +203,9 @@ const CardGenius = () => {
                 net_savings: netSavings,
                 voucher_of: saving.voucher_of || 0,
                 voucher_bonus: saving.voucher_bonus || 0,
-                welcome_benefits: saving.welcome_benefits || [],
+                welcome_benefits: saving.welcomeBenefits || saving.welcome_benefits || [],
                 spending_breakdown: saving.spending_breakdown || {}
-              };
+              } as CardResult;
             }
           })
         );
@@ -313,35 +325,46 @@ const CardGenius = () => {
             </div>
 
             {/* Welcome Benefits Section */}
-            {selectedCard.welcome_benefits && selectedCard.welcome_benefits.length > 0 && (
-              <div className="bg-white rounded-xl border border-border p-6 mb-8">
-                <h2 className="text-xl font-bold text-foreground mb-2">Extra Benefits</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Note: These extra benefits are not included in your annual savings. They are for your reference
-                </p>
-                
-                <h3 className="text-lg font-semibold text-primary mb-4">Welcome Benefit</h3>
-                
-                <div className="space-y-3">
-                  {selectedCard.welcome_benefits.map((benefit: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm text-foreground">
-                          On card activation you get a {benefit.voucher_of || 'benefit'}
-                          {benefit.voucher_bonus && ` of ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
-                          {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
-                            <span className="text-muted-foreground">
-                              {' '}(Minimum spend: ₹{parseInt(benefit.minimum_spend).toLocaleString()})
-                            </span>
-                          )}
-                        </p>
+            {(() => {
+              const list = Array.isArray(selectedCard.welcome_benefits) ? selectedCard.welcome_benefits : [];
+              const fallbackItem = (selectedCard as any).voucher_of || (selectedCard as any).voucher_bonus
+                ? [{
+                    voucher_of: (selectedCard as any).voucher_of,
+                    voucher_bonus: (selectedCard as any).voucher_bonus,
+                    minimum_spend: (selectedCard as any).minimum_spend
+                  }]
+                : [];
+              const display = list.length > 0 ? list : fallbackItem;
+              if (!display || display.length === 0) return null;
+              return (
+                <div className="bg-white rounded-xl border border-border p-6 mb-8">
+                  <h2 className="text-xl font-bold text-foreground mb-2">Extra Benefits</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Note: These extra benefits are not included in your annual savings. They are for your reference
+                  </p>
+                  
+                  <h3 className="text-lg font-semibold text-primary mb-4">Welcome Benefit</h3>
+                  
+                  <div className="space-y-3">
+                    {display.map((benefit: any, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-foreground">
+                            On card activation you get a {benefit.voucher_of || 'benefit'}
+                            {benefit.voucher_bonus && ` of ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
+                            {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
+                              <span className="text-muted-foreground">{' '} (Minimum spend: ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
+
 
             {/* Savings Breakdown */}
             <div className="bg-white rounded-xl border border-border p-6">
