@@ -192,14 +192,142 @@ const CardGenius = () => {
 
 
   if (showResults) {
+    const totalMonthlySpend = Object.values(responses).reduce((acc, val) => acc + (val || 0), 0);
+    const totalAnnualSpend = totalMonthlySpend * 12;
+    const [activeTab, setActiveTab] = useState<'quick' | 'detailed'>('quick');
+    const [selectedCard, setSelectedCard] = useState<CardResult | null>(null);
+
+    if (selectedCard) {
+      // Detailed card view
+      return (
+        <div className="min-h-screen bg-background">
+          <header className="sticky top-0 bg-white border-b border-border z-50">
+            <div className="container mx-auto px-4 py-4">
+              <button
+                onClick={() => setSelectedCard(null)}
+                className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-semibold">Back to Results</span>
+              </button>
+            </div>
+          </header>
+
+          <main className="container mx-auto px-4 py-8 max-w-6xl">
+            <h1 className="text-2xl font-bold text-foreground mb-6">{selectedCard.card_name}</h1>
+            
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Card Image */}
+              {selectedCard.card_bg_image && (
+                <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl p-8 flex items-center justify-center">
+                  <img
+                    src={selectedCard.card_bg_image}
+                    alt={selectedCard.card_name}
+                    className="w-full max-w-sm h-64 object-contain"
+                  />
+                </div>
+              )}
+
+              {/* Savings Summary */}
+              <div className="bg-blue-50 rounded-2xl p-6">
+                <p className="text-sm text-muted-foreground mb-4">On The Spends Of ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</p>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Total Savings</span>
+                    <span className="text-lg font-semibold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Milestone Benefits</span>
+                    <span className="text-lg font-semibold text-foreground">₹0</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Joining Fees</span>
+                    <span className="text-lg font-semibold text-foreground">-₹{selectedCard.joining_fees.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="h-px bg-border"></div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-foreground">Your Net Savings</span>
+                    <span className="text-2xl font-bold text-green-600">₹{(selectedCard.total_savings_yearly - selectedCard.joining_fees).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <Button className="w-full" size="lg">Apply Now</Button>
+              </div>
+            </div>
+
+            {/* Savings Breakdown */}
+            <div className="bg-white rounded-xl border border-border p-6">
+              <h2 className="text-xl font-bold text-foreground mb-4">Your Total Savings Breakdown</h2>
+              
+              {/* Category Pills */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
+                  if (!details || !details.spend || details.spend === 0) return null;
+                  return (
+                    <button
+                      key={category}
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      {category.replace(/_/g, ' ')} Savings
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Breakdown Table */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-sm text-foreground">Savings Breakdown</th>
+                      <th className="text-right p-4 font-semibold text-sm text-foreground">Yearly</th>
+                      <th className="text-right p-4 font-semibold text-sm text-foreground">Monthly</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
+                      if (!details || !details.spend || details.spend === 0) return null;
+                      return (
+                        <tr key={category} className="border-t border-border">
+                          <td className="p-4">
+                            <div>
+                              <p className="font-medium text-foreground capitalize">{category.replace(/_/g, ' ')}</p>
+                              <p className="text-sm text-muted-foreground">Total Spends: ₹{((details.spend || 0) * 12).toLocaleString()}</p>
+                              <p className="text-sm text-muted-foreground">Points Earned: {((details.points_earned || 0) * 12).toLocaleString()}</p>
+                            </div>
+                          </td>
+                          <td className="p-4 text-right font-semibold text-foreground">₹{((details.savings || 0) * 12).toLocaleString()}</td>
+                          <td className="p-4 text-right font-semibold text-foreground">₹{(details.savings || 0).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="border-t-2 border-border bg-muted">
+                      <td className="p-4 font-bold text-foreground">Total Savings</td>
+                      <td className="p-4 text-right font-bold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</td>
+                      <td className="p-4 text-right font-bold text-foreground">₹{Math.round(selectedCard.total_savings_yearly / 12).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // Results list view
     return (
-      <div className="min-h-screen bg-gradient-primary">
-        {/* Header */}
-        <header className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-charcoal-100 z-50">
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 bg-white border-b border-border z-50">
           <div className="container mx-auto px-4 py-4">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-charcoal-700 hover:text-primary transition-colors"
+              className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-semibold">Back to Home</span>
@@ -207,140 +335,158 @@ const CardGenius = () => {
           </div>
         </header>
 
-        {/* Results */}
-        <main className="container mx-auto px-4 py-12">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-4">
-                Your Perfect Cards Are Here! 🎉
-              </h1>
-              <p className="text-xl text-charcoal-700">
-                Based on your spending, here are the top 3 cards that'll save you the most money
-              </p>
-            </div>
+        <main className="container mx-auto px-4 py-8 max-w-7xl">
+          {/* Title */}
+          <h1 className="text-3xl font-bold text-center text-foreground mb-8">
+            The Best Cards Sorted By Annual Savings!
+          </h1>
 
-            <div className="space-y-6">
-              {results.map((card, index) => (
-                <div key={index} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-charcoal-200">
-                  <div className="p-6 md:p-8">
-                    <div className="flex flex-col md:flex-row gap-6">
-                      {/* Card Image */}
-                      {card.card_bg_image && (
-                        <div className="flex-shrink-0">
-                          <img
-                            src={card.card_bg_image}
-                            alt={card.card_name}
-                            className="w-full md:w-64 h-40 object-contain rounded-lg"
-                          />
-                        </div>
-                      )}
-
-                      {/* Card Details */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="text-2xl font-bold text-charcoal-900 mb-2">
-                              {card.card_name}
-                            </h3>
-                            <p className="text-charcoal-600">
-                              Annual Fee: ₹{card.joining_fees.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="bg-primary/10 px-4 py-2 rounded-full">
-                            <span className="text-sm font-semibold text-primary">
-                              #{index + 1} Best Match
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Savings Highlight */}
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl mb-4">
-                          <div className="text-center">
-                            <p className="text-sm text-charcoal-600 mb-1">You could save</p>
-                            <p className="text-4xl font-bold text-green-600 mb-1">
-                              ₹{card.total_savings_yearly.toLocaleString()}
-                            </p>
-                            <p className="text-lg text-charcoal-700">
-                              per year (₹{Math.round(card.total_savings_yearly / 12).toLocaleString()}/month)
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Breakdown Toggle */}
-                        <button
-                          onClick={() => toggleCardExpansion(index)}
-                          className="w-full flex items-center justify-between p-4 bg-charcoal-50 rounded-lg hover:bg-charcoal-100 transition-colors"
-                        >
-                          <span className="font-semibold text-charcoal-900">
-                            See detailed savings breakdown
-                          </span>
-                          <ChevronDown 
-                            className={`w-5 h-5 text-charcoal-600 transition-transform ${
-                              expandedCards.includes(index) ? 'rotate-180' : ''
-                            }`}
-                          />
-                        </button>
-
-                        {/* Expanded Breakdown */}
-                        {expandedCards.includes(index) && (
-                          <div className="mt-4 space-y-3 animate-fade-in">
-                            {Object.entries(card.spending_breakdown || {}).map(([category, details]) => {
-                              // Safety checks for details
-                              if (!details || typeof details !== 'object' || !details.spend || details.spend === 0) {
-                                return null;
-                              }
-                              
-                              return (
-                                <div key={category} className="p-4 bg-white border border-charcoal-200 rounded-lg">
-                                  <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                      <p className="font-semibold text-charcoal-900 capitalize">
-                                        {category.replace(/_/g, ' ')}
-                                      </p>
-                                      <p className="text-sm text-charcoal-600">
-                                        Monthly Spend: ₹{(details.spend || 0).toLocaleString()}
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-bold text-green-600">
-                                        ₹{(details.savings || 0).toLocaleString()}
-                                      </p>
-                                      <p className="text-xs text-charcoal-500">savings</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-4 text-sm text-charcoal-600">
-                                    <span>Points: {(details.points_earned || 0).toLocaleString()}</span>
-                                    {details.cashback_percentage && (
-                                      <span>Cashback: {details.cashback_percentage}%</span>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA */}
-            <div className="mt-12 text-center">
-              <Button
-                size="lg"
+          {/* Total Spends Summary */}
+          <div className="bg-muted/50 rounded-xl p-6 mb-6 text-center">
+            <p className="text-sm font-medium text-foreground mb-2">Your Total Spends:</p>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="text-2xl font-bold text-foreground">
+                ₹{(totalMonthlySpend / 100000).toFixed(2)}L Monthly
+              </span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-2xl font-bold text-primary">
+                ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually
+              </span>
+              <button
                 onClick={() => {
                   setShowResults(false);
                   setCurrentStep(0);
-                  setResponses({});
-                  setResults([]);
                 }}
-                variant="outline"
+                className="ml-2 text-primary hover:text-primary/80 font-medium text-sm flex items-center gap-1"
               >
-                Start Over
-              </Button>
+                Edit Spends <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex gap-3 mb-6">
+            <Button variant="outline" size="sm" className="gap-2">
+              Eligibility <ChevronDown className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="sm">
+              Lifetime Free Cards
+            </Button>
+          </div>
+
+          {/* Tabs */}
+          <div className="border-b border-border mb-6">
+            <div className="flex gap-8">
+              <button
+                onClick={() => setActiveTab('quick')}
+                className={`pb-3 px-1 font-semibold transition-colors relative ${
+                  activeTab === 'quick' 
+                    ? 'text-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Quick Insights
+                {activeTab === 'quick' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('detailed')}
+                className={`pb-3 px-1 font-semibold transition-colors relative ${
+                  activeTab === 'detailed' 
+                    ? 'text-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Detailed Breakdown
+                {activeTab === 'detailed' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Results Table */}
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-semibold text-sm text-foreground">Credit Cards</th>
+                    <th className="text-center p-4 font-semibold text-sm text-foreground">Total<br/>Savings</th>
+                    <th className="text-center p-4 font-semibold text-sm text-foreground">Milestone<br/>Benefits</th>
+                    <th className="text-center p-4 font-semibold text-sm text-foreground">Joining<br/>Fees</th>
+                    <th className="text-center p-4 font-semibold text-sm text-foreground">Net<br/>Savings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((card, index) => {
+                    const netSavings = card.total_savings_yearly - card.joining_fees;
+                    return (
+                      <tr 
+                        key={index} 
+                        className={`border-t border-border hover:bg-muted/30 transition-colors ${
+                          index === 0 ? 'bg-green-50/50' : ''
+                        }`}
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-4">
+                            {card.card_bg_image && (
+                              <img
+                                src={card.card_bg_image}
+                                alt={card.card_name}
+                                className="w-20 h-12 object-contain"
+                              />
+                            )}
+                            <div>
+                              <p className="font-semibold text-foreground">{card.card_name}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center font-semibold text-foreground">
+                          ₹{card.total_savings_yearly.toLocaleString()}
+                        </td>
+                        <td className="p-4 text-center font-semibold text-foreground">
+                          ₹0
+                        </td>
+                        <td className="p-4 text-center font-semibold text-foreground">
+                          ₹{card.joining_fees.toLocaleString()}
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-bold text-green-600">
+                              ₹{netSavings.toLocaleString()}
+                            </span>
+                            <button
+                              onClick={() => setSelectedCard(card)}
+                              className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+                            >
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Start Over Button */}
+          <div className="mt-8 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setShowResults(false);
+                setCurrentStep(0);
+                setResponses({});
+                setResults([]);
+              }}
+            >
+              Start Over
+            </Button>
           </div>
         </main>
       </div>
