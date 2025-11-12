@@ -23,8 +23,13 @@ export default function EligibilityResultDialog({
   networkUrl,
   onRecheck
 }: EligibilityResultDialogProps) {
-  const isEligible = result?.data && Array.isArray(result.data) && result.data.length > 0;
-  const hasData = result?.data;
+  // Check if eligible: API returns success status with data array containing cards
+  const isEligible = result?.status === 'success' && 
+                     result?.data && 
+                     Array.isArray(result.data) && 
+                     result.data.length > 0;
+  
+  const hasData = result !== null && result !== undefined;
 
   useEffect(() => {
     if (open && isEligible) {
