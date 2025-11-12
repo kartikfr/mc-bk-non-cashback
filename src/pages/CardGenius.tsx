@@ -517,9 +517,6 @@ const CardGenius = () => {
 
           {/* Filters */}
           <div className="flex gap-3 mb-6">
-            <Button variant="outline" size="sm" className="gap-2">
-              Eligibility <ChevronDown className="w-4 h-4" />
-            </Button>
             <Button 
               variant={showLifetimeFreeOnly ? "default" : "outline"} 
               size="sm"
