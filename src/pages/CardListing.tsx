@@ -326,21 +326,22 @@ const CardListing = () => {
             
             {/* Top Filters */}
             <div className="flex flex-wrap items-center gap-3 justify-center">
-              <Collapsible open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Eligibility Check
-                    {eligibilitySubmitted && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${eligibilityOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 bg-popover border border-border rounded-lg shadow-lg p-4 z-50">
+              <div className="relative">
+                <Collapsible open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Eligibility Check
+                      {eligibilitySubmitted && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${eligibilityOpen ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 bg-popover border border-border rounded-lg shadow-lg p-4 z-50">
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Pincode</label>
@@ -392,6 +393,7 @@ const CardListing = () => {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+              </div>
 
               <Select
                 value={filters.sort_by}
