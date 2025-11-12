@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,7 +98,10 @@ export default function GeniusDialog({ open, onOpenChange, category, onSubmit }:
             <Sparkles className="w-6 h-6 text-primary" />
             Card Genius - {category.charAt(0).toUpperCase() + category.slice(1)} Spending
           </DialogTitle>
-        </DialogHeader>
+          </DialogHeader>
+          <DialogDescription>
+            Answer a few quick questions to estimate your yearly savings.
+          </DialogDescription>
         
         <div className="space-y-6 mt-4">
           <p className="text-muted-foreground">

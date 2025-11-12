@@ -40,7 +40,7 @@ const CardListing = () => {
   const [eligibilitySubmitted, setEligibilitySubmitted] = useState(false);
   const [showGeniusDialog, setShowGeniusDialog] = useState(false);
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
-  const [cardSavings, setCardSavings] = useState<Record<number, number>>({});
+  const [cardSavings, setCardSavings] = useState<Record<string, number>>({});
   
   // Filters - sort_by will be sent to API
   const [filters, setFilters] = useState({
@@ -279,25 +279,27 @@ const CardListing = () => {
       console.log('Genius API Response:', response);
       
       if (response.status === 'success' && response.data) {
-        const savings: Record<number, number> = {};
+        const savings: Record<string, number> = {};
         
-        // Handle different response formats
-        let cardsArray: any[] = [];
+        // Normalize response into an array
+        let items: any[] = [];
         if (Array.isArray(response.data)) {
-          cardsArray = response.data;
+          items = response.data;
         } else if (response.data.cards && Array.isArray(response.data.cards)) {
-          cardsArray = response.data.cards;
+          items = response.data.cards;
         } else if (typeof response.data === 'object') {
-          // If data is an object, convert it to an array
-          cardsArray = Object.values(response.data);
+          items = Object.values(response.data);
         }
         
-        console.log('Cards array:', cardsArray);
+        console.log('Cards array:', items);
         
-        cardsArray.forEach((item: any) => {
-          if (item.card_id && item.total_savings_yearly) {
-            savings[item.card_id] = item.total_savings_yearly;
-          }
+        items.forEach((item: any) => {
+          const value = Number(item.total_savings_yearly ?? item.total_savings ?? item.savings ?? 0);
+          if (!value || Number.isNaN(value)) return;
+          const id = item.card_id ?? item.cardId ?? item.id ?? item.card?.id;
+          const alias = item.seo_card_alias ?? item.card_alias ?? item.alias ?? item.card?.seo_card_alias ?? item.card?.alias;
+          if (id) savings[String(id)] = value;
+          if (alias) savings[String(alias)] = value;
         });
         
         console.log('Calculated savings:', savings);
@@ -313,6 +315,7 @@ const CardListing = () => {
           origin: { y: 0.6 }
         });
       }
+        
     } catch (error) {
       console.error('Failed to calculate genius:', error);
       toast.error("Failed to calculate savings. Please try again.");
@@ -699,12 +702,12 @@ const CardListing = () => {
                         className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2"
                       >
                         <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4">
-                          {cardSavings[card.id] && filters.category !== 'all' && (
+                          {filters.category !== 'all' && ((cardSavings[String(card.id)] ?? cardSavings[String(card.seo_card_alias || card.card_alias || '')]) ? (
                             <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-sm font-bold">
                               <Sparkles className="w-4 h-4" />
-                              Save ₹{cardSavings[card.id].toLocaleString()}/yr
+                              Save ₹{(cardSavings[String(card.id)] ?? cardSavings[String(card.seo_card_alias || card.card_alias || '')]).toLocaleString()}/yr
                             </div>
-                          )}
+                          ) : null)}
                           {eligibilitySubmitted && (
                             <Badge className="absolute top-3 right-3 bg-green-500 gap-1">
                               <CheckCircle2 className="w-3 h-3" />
