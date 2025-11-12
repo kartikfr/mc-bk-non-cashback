@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import CardListing from "./pages/CardListing";
 import CardGenius from "./pages/CardGenius";
+import CardDetails from "./pages/CardDetails";
 import BlogPost from "./pages/BlogPost";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
@@ -21,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/cards" element={<CardListing />} />
+          <Route path="/cards/:alias" element={<CardDetails />} />
           <Route path="/card-genius" element={<CardGenius />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/about" element={<About />} />

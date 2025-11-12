@@ -51,13 +51,37 @@ export const cardService = {
     return response.json();
   },
 
-  async getCardListing(filters: any) {
+  async getCardListing(params: {
+    slug?: string;
+    banks_ids?: number[];
+    card_networks?: string[];
+    annualFees?: string;
+    credit_score?: string;
+    sort_by?: string;
+    free_cards?: string;
+    eligiblityPayload?: {
+      pincode?: string;
+      inhandIncome?: string;
+      empStatus?: string;
+    };
+    cardGeniusPayload?: {
+      tag_id?: string;
+      [key: string]: any;
+    };
+  }) {
     const response = await authManager.makeAuthenticatedRequest(
       `${BASE_URL}/cardgenius/cards`,
       {
         method: 'POST',
-        body: JSON.stringify(filters)
+        body: JSON.stringify(params)
       }
+    );
+    return response.json();
+  },
+
+  async getCardDetailsByAlias(alias: string) {
+    const response = await authManager.makeAuthenticatedRequest(
+      `${BASE_URL}/cardgenius/cards/${alias}`
     );
     return response.json();
   }

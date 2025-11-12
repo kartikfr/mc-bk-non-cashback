@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,8 +234,19 @@ const CardListing = () => {
                         </div>
 
                         <div className="flex gap-2">
-                          <Button variant="outline" className="flex-1">Details</Button>
-                          <Button className="flex-1">Apply</Button>
+                          <Link to={`/cards/${card.seo_card_alias || card.card_alias}`} className="flex-1">
+                            <Button variant="outline" className="w-full">Details</Button>
+                          </Link>
+                          <Button 
+                            className="flex-1"
+                            onClick={() => {
+                              if (card.network_url) {
+                                window.open(card.network_url, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                          >
+                            Apply
+                          </Button>
                         </div>
                       </div>
                     </div>
