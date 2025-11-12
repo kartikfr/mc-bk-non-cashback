@@ -43,12 +43,13 @@ const CardListing = () => {
   
   // API-compliant filters
   const [filters, setFilters] = useState({
+    slug: "",
     banks_ids: [] as number[],
     card_networks: [] as string[],
     annualFees: "",
     credit_score: "",
-    sort_by: "recommended",
-    free_cards: false
+    sort_by: "",
+    free_cards: ""
   });
 
   // Eligibility payload
@@ -67,13 +68,13 @@ const CardListing = () => {
       setLoading(true);
       
       const params: any = {
-        slug: searchQuery || "",
-        banks_ids: filters.banks_ids,
-        card_networks: filters.card_networks,
-        annualFees: filters.annualFees,
-        credit_score: filters.credit_score,
-        sort_by: filters.sort_by,
-        free_cards: filters.free_cards
+        slug: filters.slug || searchQuery || "",
+        banks_ids: filters.banks_ids || [],
+        card_networks: filters.card_networks || [],
+        annualFees: filters.annualFees || "",
+        credit_score: filters.credit_score || "",
+        sort_by: filters.sort_by || "",
+        free_cards: filters.free_cards || ""
       };
 
       // Only include eligibility if submitted and complete
@@ -126,12 +127,13 @@ const CardListing = () => {
 
   const clearFilters = () => {
     setFilters({
+      slug: "",
       banks_ids: [],
       card_networks: [],
       annualFees: "",
       credit_score: "",
-      sort_by: "recommended",
-      free_cards: false
+      sort_by: "",
+      free_cards: ""
     });
     setSearchQuery("");
     setDisplayCount(12);
@@ -143,25 +145,24 @@ const CardListing = () => {
       toast.error("Please enter a valid 6-digit pincode");
       return;
     }
-    if (!eligibility.inhandIncome || parseInt(eligibility.inhandIncome) < 1000) {
-      toast.error("Please enter a valid monthly income");
+    if (!eligibility.inhandIncome) {
+      toast.error("Please enter your monthly income");
       return;
     }
-
+    
     setLoading(true);
     setShowEligibilityDialog(false);
-
+    
     try {
       const response = await cardService.getCardListing({
-        slug: searchQuery || "",
-        banks_ids: filters.banks_ids,
-        card_networks: filters.card_networks,
-        annualFees: filters.annualFees,
-        credit_score: filters.credit_score,
-        sort_by: filters.sort_by,
-        free_cards: filters.free_cards,
-        eligiblityPayload: eligibility,
-        cardGeniusPayload: {}
+        slug: "",
+        banks_ids: [],
+        card_networks: [],
+        annualFees: "",
+        credit_score: "",
+        sort_by: "",
+        free_cards: "",
+        eligiblityPayload: eligibility
       });
 
       if (response.data && response.data.cards) {
@@ -201,8 +202,8 @@ const CardListing = () => {
           <input 
             type="checkbox" 
             className="accent-primary w-4 h-4"
-            checked={filters.free_cards}
-            onChange={(e) => handleFilterChange('free_cards', e.target.checked)}
+            checked={filters.free_cards === "true"}
+            onChange={(e) => handleFilterChange('free_cards', e.target.checked ? "true" : "")}
           />
           <span className="text-sm">Show only Lifetime Free cards</span>
         </label>
@@ -490,7 +491,7 @@ const CardListing = () => {
                       Lifetime Free
                       <X 
                         className="w-3 h-3 cursor-pointer" 
-                        onClick={() => handleFilterChange('free_cards', false)}
+                        onClick={() => handleFilterChange('free_cards', "")}
                       />
                     </Badge>
                   )}
