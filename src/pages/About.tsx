@@ -142,21 +142,32 @@ const About = () => {
         </div>
       </section>
 
-      {/* Team Note */}
+      {/* CTA Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-6 text-foreground">Join Over 2 Million Indians</h2>
+            <h2 className="text-4xl font-bold mb-6 text-foreground">Ready to Find Your Perfect Card?</h2>
             <p className="text-xl text-muted-foreground leading-relaxed mb-8">
-              People just like you who realized they were leaving money on the table and decided to do something about it. Start by trying our Card Genius tool – it takes 60 seconds and could save you thousands every year.
+              Stop leaving money on the table. Whether you're looking for cashback, travel rewards, or fuel savings, we'll help you find the card that matches your lifestyle. It takes just 60 seconds, and it's completely free.
             </p>
-            <a
-              href="/card-genius"
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-full text-lg font-semibold hover:shadow-lg transition-all"
-            >
-              Try Card Genius Now
-              <TrendingUp className="w-5 h-5" />
-            </a>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <a
+                href="/card-genius"
+                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-full text-lg font-semibold hover:shadow-lg transition-all hover:-translate-y-0.5"
+              >
+                Try Card Genius Now
+                <TrendingUp className="w-5 h-5" />
+              </a>
+              <a
+                href="/cards"
+                className="inline-flex items-center gap-2 border-2 border-primary text-primary px-8 py-4 rounded-full text-lg font-semibold hover:bg-primary/5 transition-all"
+              >
+                Browse All Cards
+              </a>
+            </div>
+            <p className="text-sm text-muted-foreground mt-6">
+              No hidden fees. No spam. Just honest recommendations that could save you thousands.
+            </p>
           </div>
         </div>
       </section>
