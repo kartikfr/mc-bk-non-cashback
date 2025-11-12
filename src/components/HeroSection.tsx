@@ -135,12 +135,12 @@ const HeroSection = () => {
                 <div className="text-sm text-charcoal-600 mt-1">Credit Cards</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">₹5K</div>
-                <div className="text-sm text-charcoal-600 mt-1">Avg. Monthly Savings</div>
+                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">₹60K</div>
+                <div className="text-sm text-charcoal-600 mt-1">Avg. Yearly Savings</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">100K+</div>
-                <div className="text-sm text-charcoal-600 mt-1">Cards Compared</div>
+                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">15+</div>
+                <div className="text-sm text-charcoal-600 mt-1">Categories Covered</div>
               </div>
             </div>
           </div>

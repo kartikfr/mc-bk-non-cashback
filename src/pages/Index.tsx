@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
 import BankCarousel from "@/components/BankCarousel";
@@ -34,10 +35,10 @@ const Index = () => {
             <div>
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li><a href="/" className="hover:opacity-100">Home</a></li>
-                <li><a href="/cards" className="hover:opacity-100">All Cards</a></li>
-                <li><a href="/card-genius" className="hover:opacity-100">Card Genius</a></li>
-                <li><a href="/about" className="hover:opacity-100">About</a></li>
+                <li><Link to="/" className="hover:opacity-100">Home</Link></li>
+                <li><Link to="/cards" className="hover:opacity-100">All Cards</Link></li>
+                <li><Link to="/card-genius" className="hover:opacity-100">Card Genius</Link></li>
+                <li><Link to="/about" className="hover:opacity-100">About</Link></li>
               </ul>
             </div>
             <div>

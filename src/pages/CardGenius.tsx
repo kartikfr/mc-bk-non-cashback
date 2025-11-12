@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
-import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp } from "lucide-react";
 import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import logo from "@/assets/moneycontrol-logo.png";
 
 interface SpendingQuestion {
   field: string;
@@ -107,6 +115,11 @@ const CardGenius = () => {
   const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+
+  useEffect(() => {
+    setShowWelcomeDialog(true);
+  }, []);
 
   const currentQuestion = questions[currentStep];
   const progress = ((currentStep + 1) / questions.length) * 100;
@@ -889,6 +902,75 @@ const CardGenius = () => {
 
   return (
     <div className="min-h-screen bg-gradient-primary">
+      {/* Welcome Dialog */}
+      <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <button
+            onClick={() => setShowWelcomeDialog(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
+          
+          <div className="flex flex-col items-center text-center space-y-4 pt-6">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-2">
+              <img src={logo} alt="Card Genius 360" className="w-24 h-24 object-contain" />
+            </div>
+            
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">
+                Welcome to Card Genius 360
+              </DialogTitle>
+              <DialogDescription className="text-base text-charcoal-700 leading-relaxed">
+                We help you find the <span className="font-semibold text-primary">best credit card</span> tailored to your unique spending habits.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="w-full bg-primary/5 rounded-xl p-6 space-y-3 text-left">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-charcoal-900">Personalized Recommendations</h4>
+                  <p className="text-sm text-charcoal-600">Answer a few quick questions about your spending</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-charcoal-900">Smart Analysis</h4>
+                  <p className="text-sm text-charcoal-600">Get cards ranked by maximum savings and benefits</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-charcoal-900">Maximize Your Savings</h4>
+                  <p className="text-sm text-charcoal-600">Discover how much you can save annually</p>
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              size="lg" 
+              onClick={() => setShowWelcomeDialog(false)}
+              className="w-full shadow-lg"
+            >
+              Let's Get Started
+              <ArrowRight className="ml-2" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Loading State */}
       {isCalculating && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
