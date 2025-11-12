@@ -34,14 +34,16 @@ export function ComparisonProvider({ children, maxCompare = 2 }: { children: Rea
         const cId = c.id?.toString() || c.seo_card_alias;
         return cId !== cardId;
       }));
-      toast.success('Card removed from comparison', {
-        description: card.name
+      toast.success('Removed from comparison', {
+        description: card.name,
+        position: 'top-right'
       });
     } else {
       // Add card
       if (selectedCards.length >= maxCompare) {
-        toast.error(`You can compare up to ${maxCompare} cards`, {
+        toast.error(`Maximum ${maxCompare} cards allowed`, {
           description: 'Remove one to add another',
+          position: 'top-right',
           action: selectedCards.length === 2 ? {
             label: 'Compare Now',
             onClick: () => {
@@ -54,8 +56,9 @@ export function ComparisonProvider({ children, maxCompare = 2 }: { children: Rea
       }
       
       setSelectedCards(prev => [...prev, card]);
-      toast.success('Card added to comparison', {
-        description: card.name
+      toast.success('Added to comparison', {
+        description: `${selectedCards.length + 1} of ${maxCompare} cards selected`,
+        position: 'top-right'
       });
     }
   };
@@ -69,7 +72,9 @@ export function ComparisonProvider({ children, maxCompare = 2 }: { children: Rea
 
   const clearAll = () => {
     setSelectedCards([]);
-    toast.info('Comparison cleared');
+    toast.info('Comparison cleared', {
+      position: 'top-right'
+    });
   };
 
   const isSelected = (cardId: string) => {

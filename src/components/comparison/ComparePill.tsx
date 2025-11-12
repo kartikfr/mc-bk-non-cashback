@@ -30,17 +30,34 @@ export function ComparePill() {
     <>
       <div 
         className={cn(
-          "fixed bottom-6 right-6 z-40 animate-slide-in-right",
-          "md:bottom-8 md:right-8"
+          "fixed bottom-6 right-6 z-40",
+          "md:bottom-8 md:right-8",
+          isVisible ? "animate-slide-in-right" : "opacity-0 pointer-events-none"
         )}
       >
-        <div className="bg-card border-2 border-primary/20 rounded-full shadow-2xl p-2 flex items-center gap-3 pr-4 backdrop-blur-md">
+        <div className="bg-gradient-to-r from-primary to-secondary rounded-2xl shadow-2xl p-4 backdrop-blur-md border-2 border-primary/20">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-primary-foreground flex items-center gap-2">
+              <ArrowRightLeft className="w-4 h-4" />
+              Compare Cards
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={clearAll}
+              className="w-6 h-6 p-0 hover:bg-white/20 text-primary-foreground"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
           {/* Card Thumbnails */}
-          <div className="flex -space-x-2">
-            {selectedCards.slice(0, 3).map((card, idx) => (
+          <div className="flex gap-2 mb-3">
+            {selectedCards.map((card, idx) => (
               <div 
                 key={card.id || idx}
-                className="w-10 h-10 rounded-full bg-muted border-2 border-background overflow-hidden flex items-center justify-center"
+                className="relative w-16 h-16 rounded-lg bg-white border-2 border-white/50 overflow-hidden flex items-center justify-center shadow-md"
               >
                 <img 
                   src={card.card_bg_image || card.image || '/placeholder.svg'} 
@@ -54,30 +71,15 @@ export function ComparePill() {
             ))}
           </div>
 
-          {/* Count and Actions */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">
-              Compare {selectedCards.length} card{selectedCards.length > 1 ? 's' : ''}
-            </span>
-            
-            <Button 
-              size="sm"
-              onClick={() => setIsPanelOpen(true)}
-              className="gap-2 shadow-md"
-            >
-              <ArrowRightLeft className="w-4 h-4" />
-              Compare
-            </Button>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={clearAll}
-              className="w-8 h-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          {/* Compare Button */}
+          <Button 
+            size="default"
+            onClick={() => setIsPanelOpen(true)}
+            className="w-full bg-white hover:bg-white/90 text-primary font-semibold shadow-lg"
+          >
+            <ArrowRightLeft className="w-4 h-4 mr-2" />
+            Compare {selectedCards.length} Card{selectedCards.length > 1 ? 's' : ''}
+          </Button>
         </div>
       </div>
 
