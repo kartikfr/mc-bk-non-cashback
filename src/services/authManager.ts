@@ -1,7 +1,7 @@
 class AuthManager {
   private token: string | null = null;
   private expiresAt: Date | null = null;
-  private readonly API_KEY = 'test';
+  private readonly API_KEY = '9F476773305B9EE7DE245875FF416DD1FB7281A1B51F2A475F36C6CA4A27FE2E';
   private readonly TOKEN_URL = 'https://uat-platform.bankkaro.com/partner/token';
 
   async getToken(): Promise<string> {
