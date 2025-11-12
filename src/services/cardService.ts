@@ -58,7 +58,7 @@ export const cardService = {
     annualFees?: string;
     credit_score?: string;
     sort_by?: string;
-    free_cards?: string;
+    free_cards?: boolean;
     eligiblityPayload?: {
       pincode?: string;
       inhandIncome?: string;
@@ -69,32 +69,11 @@ export const cardService = {
       [key: string]: any;
     };
   }) {
-    // Clean the params to only send fields that have values
-    const cleanParams: any = {
-      slug: params.slug || "",
-      banks_ids: params.banks_ids || [],
-      card_networks: params.card_networks || [],
-      annualFees: params.annualFees || "",
-      credit_score: params.credit_score || "",
-      sort_by: params.sort_by || "",
-      free_cards: params.free_cards || ""
-    };
-
-    // Only include eligiblityPayload if it exists and has data
-    if (params.eligiblityPayload && params.eligiblityPayload.pincode) {
-      cleanParams.eligiblityPayload = params.eligiblityPayload;
-    }
-
-    // Only include cardGeniusPayload if it exists and has data
-    if (params.cardGeniusPayload && Object.keys(params.cardGeniusPayload).length > 0) {
-      cleanParams.cardGeniusPayload = params.cardGeniusPayload;
-    }
-
     const response = await authManager.makeAuthenticatedRequest(
       `${BASE_URL}/cardgenius/cards`,
       {
         method: 'POST',
-        body: JSON.stringify(cleanParams)
+        body: JSON.stringify(params)
       }
     );
     return response.json();

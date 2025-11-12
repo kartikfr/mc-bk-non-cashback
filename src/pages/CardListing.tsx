@@ -43,13 +43,12 @@ const CardListing = () => {
   
   // API-compliant filters
   const [filters, setFilters] = useState({
-    slug: "",
     banks_ids: [] as number[],
     card_networks: [] as string[],
     annualFees: "",
     credit_score: "",
-    sort_by: "",
-    free_cards: ""
+    sort_by: "recommended",
+    free_cards: false
   });
 
   // Eligibility payload
@@ -61,51 +60,28 @@ const CardListing = () => {
 
   useEffect(() => {
     fetchCards();
-  }, [filters]);
+  }, [filters, eligibility]);
 
   const fetchCards = async () => {
     try {
       setLoading(true);
-      
-      const params: any = {
-        slug: filters.slug || searchQuery || "",
-        banks_ids: filters.banks_ids || [],
-        card_networks: filters.card_networks || [],
-        annualFees: filters.annualFees || "",
-        credit_score: filters.credit_score || "",
-        sort_by: filters.sort_by || "",
-        free_cards: filters.free_cards || ""
-      };
+      const response = await cardService.getCardListing({
+        slug: searchQuery || "",
+        banks_ids: filters.banks_ids,
+        card_networks: filters.card_networks,
+        annualFees: filters.annualFees,
+        credit_score: filters.credit_score,
+        sort_by: filters.sort_by,
+        free_cards: filters.free_cards,
+        eligiblityPayload: eligibility,
+        cardGeniusPayload: {}
+      });
 
-      // Only include eligibility if submitted and complete
-      if (eligibilitySubmitted && eligibility.pincode && eligibility.inhandIncome && eligibility.empStatus) {
-        params.eligiblityPayload = {
-          pincode: eligibility.pincode,
-          inhandIncome: eligibility.inhandIncome,
-          empStatus: eligibility.empStatus
-        };
-      }
-
-      const response = await cardService.getCardListing(params);
-
-      if (response.status === 'success' && response.data && response.data.cards) {
+      if (response.data && response.data.cards) {
         setCards(response.data.cards);
-      } else {
-        console.error('Invalid response:', response);
-        toast.error('Failed to load cards. Please try again.');
-        setCards([]);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch cards:', error);
-      
-      if (error.message?.includes('API key')) {
-        toast.error('API key expired. Please contact support.', {
-          description: 'The authentication key needs to be renewed.'
-        });
-      } else {
-        toast.error('Unable to load cards. Please try again later.');
-      }
-      setCards([]);
     } finally {
       setLoading(false);
     }
@@ -133,13 +109,12 @@ const CardListing = () => {
 
   const clearFilters = () => {
     setFilters({
-      slug: "",
       banks_ids: [],
       card_networks: [],
       annualFees: "",
       credit_score: "",
-      sort_by: "",
-      free_cards: ""
+      sort_by: "recommended",
+      free_cards: false
     });
     setSearchQuery("");
     setDisplayCount(12);
@@ -151,24 +126,25 @@ const CardListing = () => {
       toast.error("Please enter a valid 6-digit pincode");
       return;
     }
-    if (!eligibility.inhandIncome) {
-      toast.error("Please enter your monthly income");
+    if (!eligibility.inhandIncome || parseInt(eligibility.inhandIncome) < 1000) {
+      toast.error("Please enter a valid monthly income");
       return;
     }
-    
-    setLoading(true);
+
     setShowEligibilityDialog(false);
-    
+    setLoading(true);
+
     try {
       const response = await cardService.getCardListing({
-        slug: "",
-        banks_ids: [],
-        card_networks: [],
-        annualFees: "",
-        credit_score: "",
-        sort_by: "",
-        free_cards: "",
-        eligiblityPayload: eligibility
+        slug: searchQuery || "",
+        banks_ids: filters.banks_ids,
+        card_networks: filters.card_networks,
+        annualFees: filters.annualFees,
+        credit_score: filters.credit_score,
+        sort_by: filters.sort_by,
+        free_cards: filters.free_cards,
+        eligiblityPayload: eligibility,
+        cardGeniusPayload: {}
       });
 
       if (response.data && response.data.cards) {
@@ -208,8 +184,8 @@ const CardListing = () => {
           <input 
             type="checkbox" 
             className="accent-primary w-4 h-4"
-            checked={filters.free_cards === "true"}
-            onChange={(e) => handleFilterChange('free_cards', e.target.checked ? "true" : "")}
+            checked={filters.free_cards}
+            onChange={(e) => handleFilterChange('free_cards', e.target.checked)}
           />
           <span className="text-sm">Show only Lifetime Free cards</span>
         </label>
@@ -290,6 +266,50 @@ const CardListing = () => {
         </div>
       </div>
 
+      {/* Eligibility Criteria */}
+      <div className="pt-4 border-t border-border">
+        <h3 className="font-semibold mb-3">Eligibility Criteria</h3>
+        
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Pincode</label>
+            <Input
+              type="text"
+              placeholder="Enter pincode"
+              value={eligibility.pincode}
+              onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value }))}
+              maxLength={6}
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Monthly Income (₹)</label>
+            <Input
+              type="text"
+              placeholder="Enter income"
+              value={eligibility.inhandIncome}
+              onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value }))}
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Employment Status</label>
+            <Select
+              value={eligibility.empStatus}
+              onValueChange={(value) => setEligibility(prev => ({ ...prev, empStatus: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="salaried">Salaried</SelectItem>
+                <SelectItem value="self_employed">Self-Employed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
       <Button variant="outline" className="w-full" onClick={clearFilters}>
         Clear All Filters
       </Button>
@@ -338,80 +358,15 @@ const CardListing = () => {
             
             {/* Top Filters */}
             <div className="flex flex-wrap items-center gap-3 justify-center">
-              {/* Eligibility Check Dropdown */}
-              <Sheet open={showEligibilityDialog} onOpenChange={setShowEligibilityDialog}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Eligibility Check
-                    {eligibilitySubmitted && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="top" className="h-auto">
-                  <SheetHeader>
-                    <SheetTitle className="text-2xl">Card Eligibility</SheetTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Enter your details and get personalised card recommendations
-                    </p>
-                  </SheetHeader>
-
-                  <div className="grid md:grid-cols-3 gap-4 py-6">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Pin Code*</label>
-                      <Input
-                        type="text"
-                        placeholder="122003"
-                        value={eligibility.pincode}
-                        onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                        maxLength={6}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Monthly In Hand Income*</label>
-                      <Input
-                        type="text"
-                        placeholder="₹1,00,000"
-                        value={eligibility.inhandIncome}
-                        onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value.replace(/\D/g, '') }))}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Income Type*</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={eligibility.empStatus === "salaried" ? "default" : "outline"}
-                          onClick={() => setEligibility(prev => ({ ...prev, empStatus: "salaried" }))}
-                        >
-                          💼 Salaried
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={eligibility.empStatus === "self_employed" ? "default" : "outline"}
-                          onClick={() => setEligibility(prev => ({ ...prev, empStatus: "self_employed" }))}
-                        >
-                          💻 Self
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button 
-                    onClick={handleEligibilitySubmit}
-                    className="w-full"
-                    disabled={!eligibility.pincode || !eligibility.inhandIncome}
-                  >
-                    Find Eligible Cards
-                  </Button>
-                </SheetContent>
-              </Sheet>
+              <Button
+                variant={showEligibilityDialog ? "default" : "outline"}
+                onClick={() => setShowEligibilityDialog(true)}
+                className="gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Eligibility Check
+                {eligibilitySubmitted && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+              </Button>
 
               <Select
                 value={filters.sort_by}
@@ -429,9 +384,9 @@ const CardListing = () => {
               </Select>
 
               <Button
-                variant="outline"
+                variant={filters.free_cards ? "default" : "outline"}
                 onClick={() => handleFilterChange('free_cards', !filters.free_cards)}
-                className={filters.free_cards ? "border-primary" : ""}
+                className="gap-2"
               >
                 Free Cards Only
               </Button>
@@ -497,7 +452,7 @@ const CardListing = () => {
                       Lifetime Free
                       <X 
                         className="w-3 h-3 cursor-pointer" 
-                        onClick={() => handleFilterChange('free_cards', "")}
+                        onClick={() => handleFilterChange('free_cards', false)}
                       />
                     </Badge>
                   )}
@@ -639,6 +594,75 @@ const CardListing = () => {
           </div>
         </div>
       </section>
+
+      {/* Eligibility Dialog */}
+      <Dialog open={showEligibilityDialog} onOpenChange={setShowEligibilityDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Card Eligibility</DialogTitle>
+            <DialogDescription>
+              Enter your details and get personalised card recommendations
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Pin Code*</label>
+              <Input
+                type="text"
+                placeholder="122003"
+                value={eligibility.pincode}
+                onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                maxLength={6}
+                className="text-lg"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Monthly In Hand Income*</label>
+              <Input
+                type="text"
+                placeholder="₹1,00,000"
+                value={eligibility.inhandIncome}
+                onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value.replace(/\D/g, '') }))}
+                className="text-lg"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Income Type*</label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={eligibility.empStatus === "salaried" ? "default" : "outline"}
+                  onClick={() => setEligibility(prev => ({ ...prev, empStatus: "salaried" }))}
+                  className="h-16 flex-col gap-1"
+                >
+                  <span className="text-2xl">💼</span>
+                  <span>Salaried</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={eligibility.empStatus === "self_employed" ? "default" : "outline"}
+                  onClick={() => setEligibility(prev => ({ ...prev, empStatus: "self_employed" }))}
+                  className="h-16 flex-col gap-1"
+                >
+                  <span className="text-2xl">💻</span>
+                  <span>Self</span>
+                </Button>
+              </div>
+            </div>
+
+            <Button 
+              onClick={handleEligibilitySubmit}
+              className="w-full h-12 text-lg"
+              disabled={!eligibility.pincode || !eligibility.inhandIncome}
+            >
+              Find Eligible Cards
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
