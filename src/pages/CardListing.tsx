@@ -57,12 +57,13 @@ const CardListing = () => {
 
   useEffect(() => {
     fetchCards();
-  }, [filters, eligibility]);
+  }, [filters]);
 
   const fetchCards = async () => {
     try {
       setLoading(true);
-      const response = await cardService.getCardListing({
+      
+      const params: any = {
         slug: searchQuery || "",
         banks_ids: filters.banks_ids,
         card_networks: filters.card_networks,
@@ -70,9 +71,15 @@ const CardListing = () => {
         credit_score: filters.credit_score,
         sort_by: filters.sort_by,
         free_cards: filters.free_cards,
-        eligiblityPayload: eligibility,
         cardGeniusPayload: {}
-      });
+      };
+
+      // Only include eligibility if it's been submitted
+      if (eligibilitySubmitted && eligibility.pincode && eligibility.inhandIncome) {
+        params.eligiblityPayload = eligibility;
+      }
+
+      const response = await cardService.getCardListing(params);
 
       if (response.data && response.data.cards) {
         setCards(response.data.cards);
@@ -130,6 +137,9 @@ const CardListing = () => {
 
     setEligibilitySubmitted(true);
     setEligibilityOpen(false);
+    
+    // Refetch cards with eligibility criteria
+    await fetchCards();
     
     toast.success("Eligibility criteria applied!", {
       description: "Showing cards matching your profile"
