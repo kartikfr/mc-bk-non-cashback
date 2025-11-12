@@ -63,18 +63,24 @@ const CardListing = () => {
     try {
       setLoading(true);
       
-      // Build minimal payload - only include what's needed
+      // Build payload matching backend requirements exactly
       const params: any = {
         slug: "",
         banks_ids: [],
         card_networks: [],
         annualFees: "",
         credit_score: "",
-        sort_by: filters.sort_by, // Only these values: "recommended", "annual_savings", "annual_fees"
-        free_cards: ""
+        sort_by: filters.sort_by,
+        free_cards: "",
+        eligiblityPayload: {
+          pincode: "",
+          inhandIncome: "",
+          empStatus: ""
+        },
+        cardGeniusPayload: {}
       };
 
-      // Only include eligibility if it's been submitted and has valid data
+      // Update eligibility only if submitted
       if (eligibilitySubmitted && eligibility.pincode && eligibility.inhandIncome) {
         params.eligiblityPayload = {
           pincode: eligibility.pincode,

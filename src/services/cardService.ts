@@ -57,13 +57,14 @@ export const cardService = {
     card_networks: string[];
     annualFees: string;
     credit_score: string;
-    sort_by: "recommended" | "annual_savings" | "annual_fees";
+    sort_by: string;
     free_cards: string;
-    eligiblityPayload?: {
+    eligiblityPayload: {
       pincode: string;
       inhandIncome: string;
       empStatus: string;
     };
+    cardGeniusPayload: {};
   }) {
     const response = await authManager.makeAuthenticatedRequest(
       `${BASE_URL}/cardgenius/cards`,
