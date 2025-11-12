@@ -191,20 +191,34 @@ const CategoryCardGenius = () => {
         const cardsWithDetails = await Promise.all(
           sortedCards.map(async (card: any) => {
             try {
-              const detailsResponse = await cardService.getCardDetails(card.seo_card_alias);
+              // Use card_alias from the API response
+              const cardAlias = card.card_alias || card.seo_card_alias;
+              if (!cardAlias) {
+                console.warn('No card alias found for card:', card);
+                return {
+                  ...card,
+                  card_bg_image: '/placeholder.svg',
+                  annual_fees: card.joining_fees || '0',
+                  category_savings: card.spending_breakdown || {}
+                };
+              }
+
+              const detailsResponse = await cardService.getCardDetails(cardAlias);
               const cardDetails = detailsResponse.data?.[0] || {};
               
               return {
                 ...card,
-                card_bg_image: cardDetails.card_bg_image || '/placeholder.svg',
-                annual_fees: card.joining_fees || cardDetails.annual_fee_text || '0',
+                card_name: card.card_name || cardDetails.name || cardDetails.card_name,
+                card_bg_image: cardDetails.card_bg_image || card.card_bg_image || '/placeholder.svg',
+                annual_fees: cardDetails.annual_fee_text || card.joining_fees || '0',
+                joining_fees: card.joining_fees || cardDetails.joining_fee_text || '0',
                 category_savings: card.spending_breakdown || {}
               };
             } catch (error) {
-              console.error(`Failed to fetch details for ${card.seo_card_alias}:`, error);
+              console.error(`Failed to fetch details for ${card.card_alias || card.seo_card_alias}:`, error);
               return {
                 ...card,
-                card_bg_image: '/placeholder.svg',
+                card_bg_image: card.card_bg_image || '/placeholder.svg',
                 annual_fees: card.joining_fees || '0',
                 category_savings: card.spending_breakdown || {}
               };
