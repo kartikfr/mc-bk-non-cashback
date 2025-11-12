@@ -4,8 +4,9 @@ import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard } from "lucide-react";
-import { cardService } from "@/services/cardService";
+import { cardService, SpendingData } from "@/services/cardService";
 import { Badge } from "@/components/ui/badge";
+import GeniusDialog from "@/components/GeniusDialog";
 import {
   Sheet,
   SheetContent,
@@ -37,6 +38,9 @@ const CardListing = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
   const [eligibilitySubmitted, setEligibilitySubmitted] = useState(false);
+  const [showGeniusDialog, setShowGeniusDialog] = useState(false);
+  const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
+  const [cardSavings, setCardSavings] = useState<Record<number, number>>({});
   
   // Filters - sort_by will be sent to API
   const [filters, setFilters] = useState({
@@ -48,7 +52,6 @@ const CardListing = () => {
     free_cards: false,
     category: "all"  // all, fuel, shopping, online-food, dining, grocery, travel, utility
   });
-  const [showGeniusDialog, setShowGeniusDialog] = useState(false);
 
   // Category to slug mapping
   const categoryToSlug: Record<string, string> = {
@@ -265,6 +268,40 @@ const CardListing = () => {
     });
   };
 
+  const handleGeniusSubmit = async (spendingData: SpendingData) => {
+    try {
+      setGeniusSpendingData(spendingData);
+      toast.success("Calculating savings...", {
+        description: "Finding the best cards for your spending pattern"
+      });
+
+      const response = await cardService.calculateCardGenius(spendingData);
+      
+      if (response.status === 'success' && response.data) {
+        const savings: Record<number, number> = {};
+        response.data.forEach((item: any) => {
+          if (item.card_id && item.total_savings_yearly) {
+            savings[item.card_id] = item.total_savings_yearly;
+          }
+        });
+        setCardSavings(savings);
+        
+        toast.success("Savings calculated!", {
+          description: "Cards are now sorted by potential savings"
+        });
+        
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to calculate genius:', error);
+      toast.error("Failed to calculate savings. Please try again.");
+    }
+  };
+
   // Filter sidebar component
   const FilterSidebar = () => (
     <div className="space-y-6">
@@ -433,6 +470,18 @@ const CardListing = () => {
             
             {/* Top Filters */}
             <div className="flex flex-wrap items-center gap-3 justify-center">
+              {filters.category !== 'all' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowGeniusDialog(true)}
+                  className="gap-2 border-primary/50 hover:bg-primary/10"
+                >
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Try Genius
+                </Button>
+              )}
+              
               <div className="relative">
                 <Collapsible open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
                   <CollapsibleTrigger asChild>
@@ -664,6 +713,13 @@ const CardListing = () => {
                           
                           <h3 className="text-xl font-bold mb-3 line-clamp-2">{card.name}</h3>
                           
+                          {cardSavings[card.id] && (
+                            <div className="mb-3 flex items-center gap-1 bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-2 rounded-lg text-sm font-semibold">
+                              <Sparkles className="w-4 h-4" />
+                              Total Yearly Savings: ₹{cardSavings[card.id].toLocaleString()}
+                            </div>
+                          )}
+                          
                           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Joining Fee</p>
@@ -730,6 +786,13 @@ const CardListing = () => {
         </div>
       </section>
 
+      {/* Genius Dialog */}
+      <GeniusDialog
+        open={showGeniusDialog}
+        onOpenChange={setShowGeniusDialog}
+        category={filters.category}
+        onSubmit={handleGeniusSubmit}
+      />
     </div>
   );
 };
