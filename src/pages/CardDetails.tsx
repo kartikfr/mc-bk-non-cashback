@@ -153,7 +153,7 @@ export default function CardDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-24 md:pt-28">
         <Navigation />
         <div className="container mx-auto px-4 py-20">
           <div className="flex items-center justify-center">
@@ -166,7 +166,7 @@ export default function CardDetails() {
 
   if (!card) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-24 md:pt-28">
         <Navigation />
         <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Card not found</h1>
@@ -200,7 +200,7 @@ export default function CardDetails() {
     : card.product_benefits?.filter(b => b.benefit_type === selectedBenefitCategory);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-24 md:pt-28">
       <Navigation />
       
       {/* Back Button & Breadcrumb */}
