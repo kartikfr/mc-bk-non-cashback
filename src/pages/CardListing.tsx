@@ -479,7 +479,7 @@ const CardListing = () => {
       <section className="pt-28 pb-12 bg-gradient-hero">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl lg:text-5xl font-bold text-center mb-6">
-            Explore 200+ Credit Cards
+            Find Your Dream Credit Card from 100+ Options
           </h1>
           
           {/* Category Navigation */}
@@ -809,30 +809,8 @@ const CardListing = () => {
                               <span className="text-xs text-muted-foreground">{card.banks.name}</span>
                             )}
                           </div>
-                          
-                          <h3 className="text-xl font-bold mb-2 line-clamp-2">{card.name}</h3>
-
-                          {filters.category !== 'all' && (() => {
-                            const categorySavings = cardSavings[filters.category] || {};
-                            const saving = (categorySavings[String(card.id)] ?? categorySavings[String(card.seo_card_alias || card.card_alias || '')]);
-                            if (saving !== undefined && saving !== null) {
-                              if (saving === 0) {
-                                return (
-                                  <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-500/10 text-gray-700 dark:text-gray-400 text-xs font-semibold">
-                                    <Sparkles className="w-3 h-3" />
-                                    Total saving: ₹0/yr
-                                  </div>
-                                );
-                              }
-                              return (
-                                <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-semibold">
-                                  <Sparkles className="w-3 h-3" />
-                                  Total saving: ₹{saving.toLocaleString()}/yr
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
+          
+                          <h3 className="text-xl font-bold mb-4 line-clamp-2">{card.name}</h3>
                           
                           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
                             <div>
