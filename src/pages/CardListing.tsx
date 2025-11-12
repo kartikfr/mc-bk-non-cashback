@@ -107,7 +107,8 @@ const CardListing = () => {
         toast.error("Failed to load cards");
       }
 
-      // Client-side safety filter for card networks (in case backend doesn't filter)
+      // Client-side safety filters (in case backend doesn't filter)
+      // 1) Card Network
       if (Array.isArray(incomingCards) && filters.card_networks?.length) {
         const wanted = filters.card_networks.map((n) => n.replace(/\s+/g, '').toLowerCase());
         incomingCards = incomingCards.filter((card: any) => {
@@ -115,6 +116,39 @@ const CardListing = () => {
           const parts = typeStr.split(',').map((p: string) => p.replace(/\s+/g, '').toLowerCase());
           // Keep card if any selected network matches any part
           return wanted.some((w) => parts.includes(w));
+        });
+      }
+
+      // 2) Annual Fee range
+      if (Array.isArray(incomingCards) && filters.annualFees) {
+        const val = filters.annualFees as string;
+        let min = 0;
+        let max = Number.POSITIVE_INFINITY;
+        if (val.includes('-')) {
+          const [a, b] = val.split('-');
+          min = parseInt(a, 10) || 0;
+          const parsedMax = parseInt(b, 10);
+          max = Number.isNaN(parsedMax) ? Number.POSITIVE_INFINITY : parsedMax;
+        } else if (val.endsWith('+')) {
+          min = parseInt(val, 10) || 0;
+          max = Number.POSITIVE_INFINITY;
+        }
+        incomingCards = incomingCards.filter((card: any) => {
+          const feeRaw = card.annual_fee_text ?? card.annual_fee ?? card.annualFees ?? '0';
+          const fee = parseInt(feeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+          const feeNum = Number.isFinite(fee) ? fee : 0;
+          return feeNum >= min && feeNum <= max;
+        });
+      }
+
+      // 3) Credit Score buckets (minimum)
+      if (Array.isArray(incomingCards) && filters.credit_score) {
+        const minScore = parseInt(filters.credit_score as string, 10) || 0;
+        incomingCards = incomingCards.filter((card: any) => {
+          const scoreRaw = card.crif ?? card.credit_score ?? '';
+          const score = parseInt(scoreRaw?.toString().replace(/[^0-9]/g, ''), 10);
+          const scoreNum = Number.isFinite(score) ? score : 0;
+          return scoreNum >= minScore;
         });
       }
 
@@ -211,7 +245,7 @@ const CardListing = () => {
             { label: 'All Fees', value: '' },
             { label: '₹0 - ₹1,000', value: '0-1000' },
             { label: '₹1,000 - ₹2,000', value: '1000-2000' },
-            { label: '₹2,000 - ₹5,000', value: '2000-5000' },
+            { label: '₹2,000 - ₹50,000', value: '2000-50000' },
             { label: '₹5,000+', value: '5000+' }
           ].map((fee) => (
             <label key={fee.value} className="flex items-center gap-2 cursor-pointer">
