@@ -758,12 +758,23 @@ const CardListing = () => {
                           {filters.category !== 'all' && (() => {
                             const categorySavings = cardSavings[filters.category] || {};
                             const saving = (categorySavings[String(card.id)] ?? categorySavings[String(card.seo_card_alias || card.card_alias || '')]);
-                            return saving ? (
-                              <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-sm font-bold">
-                                <Sparkles className="w-4 h-4" />
-                                Save ₹{saving.toLocaleString()}/yr
-                              </div>
-                            ) : null;
+                            if (saving !== undefined && saving !== null) {
+                              if (saving === 0) {
+                                return (
+                                  <div className="absolute top-3 left-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-sm font-bold">
+                                    <Sparkles className="w-4 h-4" />
+                                    ₹0 Savings/yr
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-sm font-bold">
+                                  <Sparkles className="w-4 h-4" />
+                                  Save ₹{saving.toLocaleString()}/yr
+                                </div>
+                              );
+                            }
+                            return null;
                           })()}
                           {eligibilitySubmitted && (
                             <Badge className="absolute top-3 right-3 bg-green-500 gap-1">
@@ -803,12 +814,23 @@ const CardListing = () => {
                           {filters.category !== 'all' && (() => {
                             const categorySavings = cardSavings[filters.category] || {};
                             const saving = (categorySavings[String(card.id)] ?? categorySavings[String(card.seo_card_alias || card.card_alias || '')]);
-                            return saving ? (
-                              <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-semibold">
-                                <Sparkles className="w-3 h-3" />
-                                Total saving: ₹{saving.toLocaleString()}/yr
-                              </div>
-                            ) : null;
+                            if (saving !== undefined && saving !== null) {
+                              if (saving === 0) {
+                                return (
+                                  <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-500/10 text-gray-700 dark:text-gray-400 text-xs font-semibold">
+                                    <Sparkles className="w-3 h-3" />
+                                    Total saving: ₹0/yr
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-semibold">
+                                  <Sparkles className="w-3 h-3" />
+                                  Total saving: ₹{saving.toLocaleString()}/yr
+                                </div>
+                              );
+                            }
+                            return null;
                           })()}
                           
                           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
