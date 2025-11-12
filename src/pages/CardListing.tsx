@@ -4,7 +4,6 @@ import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard } from "lucide-react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cardService } from "@/services/cardService";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -347,47 +346,44 @@ const CardListing = () => {
           
           {/* Category Navigation */}
           <div className="max-w-5xl mx-auto mb-8">
-            <ScrollArea className="w-full whitespace-nowrap">
-              <div className="flex items-center gap-3 pb-4">
-                {[
-                  { id: 'all', label: 'All Cards', icon: CreditCard },
-                  { id: 'fuel', label: 'Fuel', icon: Fuel },
-                  { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
-                  { id: 'online-food', label: 'Online Food', icon: Coffee },
-                  { id: 'dining', label: 'Dining', icon: Utensils },
-                  { id: 'grocery', label: 'Grocery', icon: ShoppingCart },
-                  { id: 'travel', label: 'Travel', icon: Plane },
-                  { id: 'utility', label: 'Utility', icon: CreditCard },
-                ].map((cat) => {
-                  const Icon = cat.icon;
-                  const isActive = filters.category === cat.id;
-                  return (
-                    <Button
-                      key={cat.id}
-                      variant={isActive ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleFilterChange('category', cat.id)}
-                      className="gap-2 flex-shrink-0"
-                    >
-                      <Icon className="w-4 h-4" />
-                      {cat.label}
-                    </Button>
-                  );
-                })}
-                {filters.category !== 'all' && (
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {[
+                { id: 'all', label: 'All Cards', icon: CreditCard },
+                { id: 'fuel', label: 'Fuel', icon: Fuel },
+                { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
+                { id: 'online-food', label: 'Online Food', icon: Coffee },
+                { id: 'dining', label: 'Dining', icon: Utensils },
+                { id: 'grocery', label: 'Grocery', icon: ShoppingCart },
+                { id: 'travel', label: 'Travel', icon: Plane },
+                { id: 'utility', label: 'Utility', icon: CreditCard },
+              ].map((cat) => {
+                const Icon = cat.icon;
+                const isActive = filters.category === cat.id;
+                return (
                   <Button
-                    variant="ghost"
+                    key={cat.id}
+                    variant={isActive ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setShowGeniusDialog(true)}
-                    className="gap-2 text-primary border border-primary/30 hover:bg-primary/10 flex-shrink-0"
+                    onClick={() => handleFilterChange('category', cat.id)}
+                    className="gap-2"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    Try Genius
+                    <Icon className="w-4 h-4" />
+                    {cat.label}
                   </Button>
-                )}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+                );
+              })}
+              {filters.category !== 'all' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowGeniusDialog(true)}
+                  className="gap-2 text-primary border border-primary/30 hover:bg-primary/10"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Try Genius
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="max-w-2xl mx-auto space-y-4">
