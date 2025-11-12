@@ -336,7 +336,8 @@ const CardListing = () => {
             0;
 
           const value = Number(valueRaw);
-          if (!value || Number.isNaN(value)) return;
+          // Allow 0 savings - only skip if NaN or not a finite number
+          if (Number.isNaN(value) || !Number.isFinite(value)) return;
 
           const id = item.card_id ?? item.cardId ?? item.id ?? item.card?.id;
           const alias =
