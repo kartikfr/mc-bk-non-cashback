@@ -59,10 +59,10 @@ export const cardService = {
     credit_score: string;
     sort_by: string;
     free_cards: string;
-    eligiblityPayload?: {
-      pincode: string;
-      inhandIncome: string;
-      empStatus: string;
+    eligiblityPayload: {
+      pincode?: string;
+      inhandIncome?: string;
+      empStatus?: string;
     };
     cardGeniusPayload: any[];
   }) {

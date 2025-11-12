@@ -63,7 +63,7 @@ const CardListing = () => {
     try {
       setLoading(true);
       
-      // Build base payload (omit eligiblityPayload unless fully provided)
+      // Build base payload
       const baseParams: any = {
         slug: "",
         banks_ids: [],
@@ -75,36 +75,27 @@ const CardListing = () => {
         cardGeniusPayload: []
       };
 
-      // Only include eligibility if user submitted and all fields are present
+      // Handle eligiblityPayload based on user input
       if (
         eligibilitySubmitted &&
         eligibility.pincode &&
         eligibility.inhandIncome &&
         eligibility.empStatus
       ) {
+        // User filled all fields - send actual values
         baseParams.eligiblityPayload = {
           pincode: eligibility.pincode,
           inhandIncome: eligibility.inhandIncome,
           empStatus: eligibility.empStatus
         };
+      } else {
+        // First load or no eligibility - send empty object
+        baseParams.eligiblityPayload = {};
       }
 
       console.log('Fetching cards with params:', baseParams);
-      let response = await cardService.getCardListing(baseParams);
+      const response = await cardService.getCardListing(baseParams);
       console.log('API Response:', response);
-
-      // If backend complains about incomplete eligibility, retry without it
-      if (
-        response?.status === 'error' &&
-        typeof response?.error?.message === 'string' &&
-        response.error.message.toLowerCase().includes('incomplete eligiblity')
-      ) {
-        const retryParams = { ...baseParams } as any;
-        delete retryParams.eligiblityPayload;
-        console.warn('Retrying without eligiblityPayload due to incomplete data error');
-        response = await cardService.getCardListing(retryParams);
-        console.log('Retry API Response:', response);
-      }
 
       if (response.status === 'success' && response.data && Array.isArray(response.data.cards)) {
         setCards(response.data.cards);
