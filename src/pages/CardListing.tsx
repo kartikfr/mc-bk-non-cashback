@@ -65,17 +65,23 @@ const CardListing = () => {
   const fetchCards = async () => {
     try {
       setLoading(true);
-      const response = await cardService.getCardListing({
+      
+      const params: any = {
         slug: searchQuery || "",
         banks_ids: filters.banks_ids,
         card_networks: filters.card_networks,
         annualFees: filters.annualFees,
         credit_score: filters.credit_score,
         sort_by: filters.sort_by,
-        free_cards: filters.free_cards,
-        eligiblityPayload: eligibilitySubmitted ? eligibility : undefined,
-        cardGeniusPayload: {}
-      });
+        free_cards: filters.free_cards
+      };
+
+      // Only include eligibility if submitted and complete
+      if (eligibilitySubmitted && eligibility.pincode && eligibility.inhandIncome && eligibility.empStatus) {
+        params.eligiblityPayload = eligibility;
+      }
+
+      const response = await cardService.getCardListing(params);
 
       if (response.data && response.data.cards) {
         setCards(response.data.cards);
