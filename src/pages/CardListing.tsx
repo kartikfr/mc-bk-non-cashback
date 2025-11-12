@@ -79,16 +79,21 @@ const CardListing = () => {
 
       // Only include eligibility if submitted and complete
       if (eligibilitySubmitted && eligibility.pincode && eligibility.inhandIncome && eligibility.empStatus) {
-        params.eligiblityPayload = eligibility;
+        params.eligiblityPayload = {
+          pincode: eligibility.pincode,
+          inhandIncome: eligibility.inhandIncome,
+          empStatus: eligibility.empStatus
+        };
       }
 
       const response = await cardService.getCardListing(params);
 
-      if (response.data && response.data.cards) {
+      if (response.status === 'success' && response.data && response.data.cards) {
         setCards(response.data.cards);
       } else {
         console.error('Invalid response:', response);
         toast.error('Failed to load cards. Please try again.');
+        setCards([]);
       }
     } catch (error: any) {
       console.error('Failed to fetch cards:', error);
@@ -100,6 +105,7 @@ const CardListing = () => {
       } else {
         toast.error('Unable to load cards. Please try again later.');
       }
+      setCards([]);
     } finally {
       setLoading(false);
     }
