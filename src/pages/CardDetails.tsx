@@ -396,36 +396,42 @@ export default function CardDetails() {
         )}
 
 
-        {/* Rewards & Redemption - Improved UI */}
-        <section className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200/50 dark:border-amber-800/30 rounded-2xl p-8 shadow-lg">
+        {/* Rewards & Redemption - Aligned with Design System */}
+        <section className="bg-card border border-border rounded-xl p-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
-              <Gift className="w-6 h-6 text-white" />
+            <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-sm">
+              <Gift className="w-7 h-7 text-primary-foreground" />
             </div>
             <h2 className="text-2xl font-bold text-foreground">Rewards & Redemption</h2>
           </div>
+          
           <div className="space-y-6">
-            <div className="bg-white dark:bg-card border-2 border-amber-300/50 dark:border-amber-700/30 rounded-xl p-6 shadow-sm">
+            {/* Reward Conversion Rate */}
+            <div className="bg-background border border-border rounded-xl p-6">
               <div className="flex items-center gap-2 mb-3">
-                <Award className="w-5 h-5 text-amber-600" />
-                <p className="text-sm font-semibold text-muted-foreground">Reward Conversion Rate</p>
+                <Award className="w-5 h-5 text-primary" />
+                <p className="text-sm font-medium text-muted-foreground">Reward Conversion Rate</p>
               </div>
-              <p className="text-3xl font-black text-foreground bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold text-primary">
                 {card.reward_conversion_rate}
               </p>
             </div>
+
+            {/* Redemption Options */}
             {card.redemption_options && (
-              <div className="bg-white/50 dark:bg-card/50 rounded-lg p-5 border border-amber-200/30 dark:border-amber-800/20">
-                <div className="flex items-start gap-2 mb-3">
-                  <Sparkles className="w-5 h-5 text-amber-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground mb-2">Redemption Options</p>
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: card.redemption_options }} 
-                      className="prose prose-sm max-w-none text-muted-foreground [&>ul]:list-disc [&>ul]:pl-5 [&>li]:mb-1"
-                    />
-                  </div>
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-foreground">Redemption Options</h3>
                 </div>
+                <div 
+                  dangerouslySetInnerHTML={{ __html: card.redemption_options }} 
+                  className="prose prose-sm max-w-none text-muted-foreground 
+                    [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 
+                    [&>li]:text-muted-foreground [&>li]:leading-relaxed
+                    [&>p]:mb-3 [&>p]:leading-relaxed
+                    [&>strong]:text-foreground [&>strong]:font-semibold"
+                />
               </div>
             )}
           </div>
