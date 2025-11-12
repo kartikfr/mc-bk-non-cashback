@@ -146,6 +146,17 @@ const CardListing = () => {
     });
     setSearchQuery("");
     setDisplayCount(12);
+    
+    // Reset eligibility data
+    setEligibilitySubmitted(false);
+    setEligibility({
+      pincode: "",
+      inhandIncome: "",
+      empStatus: "salaried"
+    });
+    
+    // Trigger API call without eligibility
+    fetchCards();
   };
 
   const handleEligibilitySubmit = async () => {
