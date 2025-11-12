@@ -714,7 +714,7 @@ const CardListing = () => {
                               Eligible
                             </Badge>
                           )}
-                          {!cardSavings[card.id] && (card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase() === "free") && (
+                          {!((cardSavings[String(card.id)] ?? cardSavings[String(card.seo_card_alias || card.card_alias || '')])) && (card.joining_fee_text === "0" || (card.joining_fee_text?.toLowerCase?.() === "free")) && (
                             <Badge className="absolute top-3 right-3 bg-primary">LTF</Badge>
                           )}
                           <img
@@ -737,7 +737,17 @@ const CardListing = () => {
                             )}
                           </div>
                           
-                          <h3 className="text-xl font-bold mb-3 line-clamp-2">{card.name}</h3>
+                          <h3 className="text-xl font-bold mb-2 line-clamp-2">{card.name}</h3>
+
+                          {filters.category !== 'all' && (() => {
+                            const saving = (cardSavings[String(card.id)] ?? cardSavings[String(card.seo_card_alias || card.card_alias || '')]);
+                            return saving ? (
+                              <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs font-semibold">
+                                <Sparkles className="w-3 h-3" />
+                                Total saving: ₹{saving.toLocaleString()}/yr
+                              </div>
+                            ) : null;
+                          })()}
                           
                           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
                             <div>
