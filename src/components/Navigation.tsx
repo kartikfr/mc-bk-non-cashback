@@ -1,17 +1,11 @@
 import { Link } from "react-router-dom";
 import logo from "@/assets/moneycontrol-logo.png";
-
 const Navigation = () => {
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+  return <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container mx-auto px-4 py-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mx-0 px-0 py-0">
           <Link to="/" className="flex items-center">
-            <img 
-              src={logo} 
-              alt="MoneyControl Credit Cards" 
-              className="h-40 md:h-48 w-auto"
-            />
+            <img src={logo} alt="MoneyControl Credit Cards" className="h-40 md:h-48 w-auto" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -36,8 +30,6 @@ const Navigation = () => {
           </button>
         </div>
       </div>
-    </nav>
-  );
+    </nav>;
 };
-
 export default Navigation;
