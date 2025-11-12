@@ -699,13 +699,19 @@ const CardListing = () => {
                         className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2"
                       >
                         <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4">
+                          {cardSavings[card.id] && filters.category !== 'all' && (
+                            <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-sm font-bold">
+                              <Sparkles className="w-4 h-4" />
+                              Save ₹{cardSavings[card.id].toLocaleString()}/yr
+                            </div>
+                          )}
                           {eligibilitySubmitted && (
-                            <Badge className="absolute top-3 left-3 bg-green-500 gap-1">
+                            <Badge className="absolute top-3 right-3 bg-green-500 gap-1">
                               <CheckCircle2 className="w-3 h-3" />
                               Eligible
                             </Badge>
                           )}
-                          {(card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase() === "free") && (
+                          {!cardSavings[card.id] && (card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase() === "free") && (
                             <Badge className="absolute top-3 right-3 bg-primary">LTF</Badge>
                           )}
                           <img
@@ -729,13 +735,6 @@ const CardListing = () => {
                           </div>
                           
                           <h3 className="text-xl font-bold mb-3 line-clamp-2">{card.name}</h3>
-                          
-                          {cardSavings[card.id] && filters.category !== 'all' && (
-                            <div className="mb-3 flex items-center gap-1 bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-2 rounded-lg text-sm font-semibold">
-                              <Sparkles className="w-4 h-4" />
-                              Total Savings: ₹{cardSavings[card.id].toLocaleString()}/year
-                            </div>
-                          )}
                           
                           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
                             <div>
