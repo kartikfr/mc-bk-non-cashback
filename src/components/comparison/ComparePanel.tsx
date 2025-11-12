@@ -15,8 +15,7 @@ import {
   ExternalLink, 
   Trophy,
   ChevronDown,
-  ChevronUp,
-  Download
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -111,26 +110,16 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
         <DialogHeader className="p-6 pb-4 border-b sticky top-0 bg-background z-10">
           <div className="flex items-center justify-between">
             <DialogTitle id="compare-dialog-title" className="text-2xl font-bold">
-              Compare Cards
+              Compare Cards ({selectedCards.length})
             </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDifferencesOnly(!showDifferencesOnly)}
-                className="gap-2"
-              >
-                {showDifferencesOnly ? 'Show All' : 'Show Differences Only'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDifferencesOnly(!showDifferencesOnly)}
+              className="gap-2"
+            >
+              {showDifferencesOnly ? 'Show All' : 'Show Differences Only'}
+            </Button>
           </div>
         </DialogHeader>
 

@@ -120,18 +120,25 @@ export default function CardDetails() {
 
   const handleShare = async () => {
     const url = window.location.href;
+    const shareData = {
+      title: `${card?.name} - Credit Card Details`,
+      text: `Check out ${card?.name} - ${card?.card_type} card with great benefits!`,
+      url: url,
+    };
     
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: card?.name || 'Credit Card',
-          text: `Check out ${card?.name}`,
-          url: url,
-        });
+        await navigator.share(shareData);
+        toast.success('Shared successfully!');
       } catch (err) {
-        console.log('Share cancelled');
+        if ((err as Error).name !== 'AbortError') {
+          // Fallback to clipboard
+          navigator.clipboard.writeText(url);
+          toast.success('Link copied to clipboard!');
+        }
       }
     } else {
+      // Fallback for browsers that don't support Web Share API
       navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard!');
     }
