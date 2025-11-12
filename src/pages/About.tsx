@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Target, Users, Lightbulb, Heart, TrendingUp, Shield } from "lucide-react";
 
@@ -151,19 +152,19 @@ const About = () => {
               Stop leaving money on the table. Whether you're looking for cashback, travel rewards, or fuel savings, we'll help you find the card that matches your lifestyle. It takes just 60 seconds, and it's completely free.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a
-                href="/card-genius"
+              <Link
+                to="/card-genius"
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-full text-lg font-semibold hover:shadow-lg transition-all hover:-translate-y-0.5"
               >
                 Try Card Genius Now
                 <TrendingUp className="w-5 h-5" />
-              </a>
-              <a
-                href="/cards"
+              </Link>
+              <Link
+                to="/cards"
                 className="inline-flex items-center gap-2 border-2 border-primary text-primary px-8 py-4 rounded-full text-lg font-semibold hover:bg-primary/5 transition-all"
               >
                 Browse All Cards
-              </a>
+              </Link>
             </div>
             <p className="text-sm text-muted-foreground mt-6">
               No hidden fees. No spam. Just honest recommendations that could save you thousands.
@@ -175,7 +176,7 @@ const About = () => {
       {/* Footer */}
       <footer className="bg-foreground text-background py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             <div>
               <h3 className="font-bold text-lg mb-4">MoneyControl Cards</h3>
               <p className="text-sm opacity-80">
@@ -185,18 +186,10 @@ const About = () => {
             <div>
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li><a href="/" className="hover:opacity-100">Home</a></li>
-                <li><a href="/cards" className="hover:opacity-100">All Cards</a></li>
-                <li><a href="/card-genius" className="hover:opacity-100">Card Genius</a></li>
-                <li><a href="/about" className="hover:opacity-100">About</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm opacity-80">
-                <li><a href="#" className="hover:opacity-100">Privacy Policy</a></li>
-                <li><a href="#" className="hover:opacity-100">Terms of Service</a></li>
-                <li><a href="#" className="hover:opacity-100">Cookie Policy</a></li>
+                <li><Link to="/" className="hover:opacity-100">Home</Link></li>
+                <li><Link to="/cards" className="hover:opacity-100">All Cards</Link></li>
+                <li><Link to="/card-genius" className="hover:opacity-100">Card Genius</Link></li>
+                <li><Link to="/about" className="hover:opacity-100">About</Link></li>
               </ul>
             </div>
             <div>
