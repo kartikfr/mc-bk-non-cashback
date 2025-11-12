@@ -179,20 +179,6 @@ const CardListing = () => {
   // Filter sidebar component
   const FilterSidebar = () => (
     <div className="space-y-6">
-      {/* Lifetime Free (LTF) */}
-      <div>
-        <h3 className="font-semibold mb-3">Lifetime Free (LTF)</h3>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input 
-            type="checkbox" 
-            className="accent-primary w-4 h-4"
-            checked={filters.free_cards}
-            onChange={(e) => handleFilterChange('free_cards', e.target.checked)}
-          />
-          <span className="text-sm">Show only Lifetime Free cards</span>
-        </label>
-      </div>
-
       {/* Annual Fee Range */}
       <div>
         <h3 className="font-semibold mb-3">Annual Fee Range</h3>
@@ -265,50 +251,6 @@ const CardListing = () => {
               <span className="text-sm">{network === 'AmericanExpress' ? 'American Express' : network}</span>
             </label>
           ))}
-        </div>
-      </div>
-
-      {/* Eligibility Criteria */}
-      <div className="pt-4 border-t border-border">
-        <h3 className="font-semibold mb-3">Eligibility Criteria</h3>
-        
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Pincode</label>
-            <Input
-              type="text"
-              placeholder="Enter pincode"
-              value={eligibility.pincode}
-              onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value }))}
-              maxLength={6}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Monthly Income (₹)</label>
-            <Input
-              type="text"
-              placeholder="Enter income"
-              value={eligibility.inhandIncome}
-              onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value }))}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Employment Status</label>
-            <Select
-              value={eligibility.empStatus}
-              onValueChange={(value) => setEligibility(prev => ({ ...prev, empStatus: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="salaried">Salaried</SelectItem>
-                <SelectItem value="self_employed">Self-Employed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
