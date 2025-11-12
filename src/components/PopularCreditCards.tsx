@@ -187,7 +187,7 @@ const PopularCreditCards = () => {
                             variant="outline" 
                             className="w-full" 
                             size="sm"
-                            onClick={() => navigate(`/card/${card.seo_alias}`)}
+                            onClick={() => navigate(`/cards/${card.seo_card_alias}`)}
                           >
                             View Details
                           </Button>
