@@ -10,6 +10,7 @@ import CardGenius from "./pages/CardGenius";
 import CardDetails from "./pages/CardDetails";
 import BlogPost from "./pages/BlogPost";
 import About from "./pages/About";
+import RedirectInterstitial from "./pages/RedirectInterstitial";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/cards" element={<CardListing />} />
             <Route path="/cards/:alias" element={<CardDetails />} />
             <Route path="/card-genius" element={<CardGenius />} />
+            <Route path="/redirect" element={<RedirectInterstitial />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/about" element={<About />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from '@/utils/redirectHandler';
 
 interface ComparePanelProps {
   open: boolean;
@@ -187,7 +188,13 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
                     className="w-full"
                     onClick={() => {
                       if (card.network_url) {
-                        window.open(card.network_url, '_blank', 'noopener,noreferrer');
+                        openRedirectInterstitial({
+                          networkUrl: card.network_url,
+                          bankName: extractBankName(card),
+                          bankLogo: extractBankLogo(card),
+                          cardName: card.name,
+                          cardId: card.id
+                        });
                       }
                     }}
                   >

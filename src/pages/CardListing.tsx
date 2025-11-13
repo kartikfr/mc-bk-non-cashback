@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import GeniusDialog from "@/components/GeniusDialog";
 import { CompareToggleIcon } from "@/components/comparison/CompareToggleIcon";
 import { ComparePill } from "@/components/comparison/ComparePill";
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
 import {
   Sheet,
   SheetContent,
@@ -856,7 +857,13 @@ const CardListing = () => {
                               className="flex-1"
                               onClick={() => {
                                 if (card.network_url) {
-                                  window.open(card.network_url, '_blank', 'noopener,noreferrer');
+                                  openRedirectInterstitial({
+                                    networkUrl: card.network_url,
+                                    bankName: extractBankName(card),
+                                    bankLogo: extractBankLogo(card),
+                                    cardName: card.name,
+                                    cardId: card.id
+                                  });
                                 }
                               }}
                             >

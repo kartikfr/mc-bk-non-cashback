@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { openRedirectInterstitial } from '@/utils/redirectHandler';
 
 interface EligibilityResultDialogProps {
   open: boolean;
@@ -83,7 +84,32 @@ export default function EligibilityResultDialog({
     }
 
     if (networkUrl) {
-      window.open(networkUrl, '_blank', 'noopener,noreferrer');
+      // Extract bank name from the card data
+      let bankName = 'Bank';
+      let bankLogo = undefined;
+      let cardId = undefined;
+
+      if (singleCard) {
+        bankName = singleCard.banks?.name || bankName;
+        bankLogo = singleCard.banks?.logo;
+        cardId = singleCard.id;
+      } else if (cards.length > 0) {
+        // Try to find the matching card from the results
+        const matchedCard = cards.find((c: any) => c.seo_card_alias === cardAlias || c.card_alias === cardAlias);
+        if (matchedCard) {
+          bankName = matchedCard.banks?.name || bankName;
+          bankLogo = matchedCard.banks?.logo;
+          cardId = matchedCard.id;
+        }
+      }
+
+      openRedirectInterstitial({
+        networkUrl,
+        bankName,
+        bankLogo,
+        cardName,
+        cardId
+      });
     }
   };
 

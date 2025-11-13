@@ -7,6 +7,7 @@ import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
 import {
   Tooltip,
   TooltipContent,
@@ -260,6 +261,57 @@ const CardGenius = () => {
     );
   };
 
+  const handleApplyFromDetail = async () => {
+    if (!selectedCard) return;
+    
+    try {
+      // Fetch card listing to get network_url
+      const params = {
+        slug: "",
+        banks_ids: [],
+        card_networks: [],
+        annualFees: "",
+        credit_score: "",
+        sort_by: "",
+        free_cards: "",
+        eligiblityPayload: {},
+        cardGeniusPayload: []
+      };
+      
+      const response = await cardService.getCardListing(params);
+      const list = response?.data?.cards || [];
+      
+      // Find the matching card by name
+      const matchingCard = list.find((c: any) => 
+        c.name === selectedCard.card_name ||
+        c.name.toLowerCase() === selectedCard.card_name.toLowerCase()
+      );
+      
+      if (matchingCard?.network_url) {
+        openRedirectInterstitial({
+          networkUrl: matchingCard.network_url,
+          bankName: extractBankName(matchingCard),
+          bankLogo: extractBankLogo(matchingCard),
+          cardName: matchingCard.name,
+          cardId: matchingCard.id
+        });
+      } else {
+        toast({
+          title: "Unable to apply",
+          description: "Please try viewing the card details and apply from there.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error applying for card:', error);
+      toast({
+        title: "Unable to apply",
+        description: "Please try again later or view card details.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleCardSelect = (card: any) => {
     setSelectedCard(card);
     // Smooth scroll to top
@@ -337,7 +389,7 @@ const CardGenius = () => {
                   </div>
                 </div>
 
-                <Button className="w-full" size="lg">Apply Now</Button>
+                <Button className="w-full" size="lg" onClick={handleApplyFromDetail}>Apply Now</Button>
               </div>
             </div>
 
