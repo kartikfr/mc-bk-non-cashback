@@ -116,21 +116,22 @@ export const openRedirectInterstitial = (params: RedirectParams): Window | null 
     targetUrl: bankUrl || '',
   });
 
-  // Open in new tab
+  // Open in new tab - NEVER modify the current page
   try {
     const newWindow = window.open(interstitialUrl, '_blank', 'noopener,noreferrer');
     
     // Check if popup was blocked
     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      console.warn('Redirect handler: Popup blocked');
-      // Fallback: open in same tab
-      window.location.href = interstitialUrl;
+      console.warn('Redirect handler: Popup blocked - user needs to allow popups');
+      // DO NOT redirect current page - just log and return null
+      // The current page stays intact, user can try again or check popup settings
       return null;
     }
 
     return newWindow;
   } catch (error) {
     console.error('Redirect handler: Failed to open window', error);
+    // DO NOT modify current page even on error
     return null;
   }
 };
