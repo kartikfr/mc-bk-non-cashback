@@ -261,55 +261,18 @@ const CardGenius = () => {
     );
   };
 
-  const handleApplyFromDetail = async () => {
+  const handleApplyFromDetail = () => {
     if (!selectedCard) return;
     
-    try {
-      // Fetch card listing to get network_url
-      const params = {
-        slug: "",
-        banks_ids: [],
-        card_networks: [],
-        annualFees: "",
-        credit_score: "",
-        sort_by: "",
-        free_cards: "",
-        eligiblityPayload: {},
-        cardGeniusPayload: []
-      };
-      
-      const response = await cardService.getCardListing(params);
-      const list = response?.data?.cards || [];
-      
-      // Find the matching card by name
-      const matchingCard = list.find((c: any) => 
-        c.name === selectedCard.card_name ||
-        c.name.toLowerCase() === selectedCard.card_name.toLowerCase()
-      );
-      
-      if (matchingCard?.network_url) {
-        openRedirectInterstitial({
-          networkUrl: matchingCard.network_url,
-          bankName: extractBankName(matchingCard),
-          bankLogo: extractBankLogo(matchingCard),
-          cardName: matchingCard.name,
-          cardId: matchingCard.id
-        });
-      } else {
-        toast({
-          title: "Unable to apply",
-          description: "Please try viewing the card details and apply from there.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error applying for card:', error);
-      toast({
-        title: "Unable to apply",
-        description: "Please try again later or view card details.",
-        variant: "destructive"
-      });
-    }
+    // Extract bank name from the card name (first word is usually the bank)
+    const bankName = selectedCard.card_name?.split(' ')[0] || 'Bank';
+    
+    // Use hard-coded bank URLs - no need to fetch network_url
+    openRedirectInterstitial({
+      bankName: bankName,
+      bankLogo: selectedCard.card_bg_image, // Use card image as fallback for bank logo
+      cardName: selectedCard.card_name
+    });
   };
 
   const handleCardSelect = (card: any) => {
