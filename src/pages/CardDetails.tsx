@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { toast } from 'sonner';
 import EligibilityDialog from '@/components/EligibilityDialog';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from '@/utils/redirectHandler';
 
 interface CardData {
   id: number;
@@ -150,7 +151,13 @@ export default function CardDetails() {
 
   const handleApply = () => {
     if (card?.network_url) {
-      window.open(card.network_url, '_blank', 'noopener,noreferrer');
+      openRedirectInterstitial({
+        networkUrl: card.network_url,
+        bankName: extractBankName(card),
+        bankLogo: extractBankLogo(card),
+        cardName: card.name,
+        cardId: card.id
+      });
     }
   };
 

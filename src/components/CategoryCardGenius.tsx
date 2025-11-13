@@ -6,6 +6,7 @@ import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
 import { SpendingInput } from "./ui/spending-input";
 import { useNavigate } from "react-router-dom";
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
 
 const creditCardFacts = [
   "💳 The first credit card was introduced in 1950 by Diners Club!",
@@ -348,7 +349,13 @@ const CategoryCardGenius = () => {
       );
       
       if (matchingCard?.network_url) {
-        window.open(matchingCard.network_url, '_blank', 'noopener,noreferrer');
+        openRedirectInterstitial({
+          networkUrl: matchingCard.network_url,
+          bankName: extractBankName(matchingCard),
+          bankLogo: extractBankLogo(matchingCard),
+          cardName: matchingCard.name || card.card_name,
+          cardId: matchingCard.id || card.card_id
+        });
       } else {
         console.warn('No network_url found for card', { card, matchingCard });
         // Fallback: navigate to card details page

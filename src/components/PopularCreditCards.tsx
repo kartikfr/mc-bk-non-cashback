@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Star } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
 
 const categories = {
   shopping: {
@@ -179,7 +180,13 @@ const PopularCreditCards = () => {
                           <Button 
                             className="w-full" 
                             size="lg"
-                            onClick={() => window.open(card.network_url, '_blank')}
+                            onClick={() => openRedirectInterstitial({
+                              networkUrl: card.network_url,
+                              bankName: extractBankName(card),
+                              bankLogo: extractBankLogo(card),
+                              cardName: card.name,
+                              cardId: card.id
+                            })}
                           >
                             Apply Now
                           </Button>
