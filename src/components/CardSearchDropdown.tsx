@@ -9,7 +9,7 @@ interface Card {
   name: string;
   seo_card_alias: string;
   image: string;
-  banks: {
+  banks?: {
     name: string;
   };
 }
@@ -41,7 +41,7 @@ export const CardSearchDropdown = ({
   const filteredCards = debouncedQuery.trim() 
     ? cards.filter(card =>
         card.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        card.banks.name.toLowerCase().includes(debouncedQuery.toLowerCase())
+        (card.banks?.name || '').toLowerCase().includes(debouncedQuery.toLowerCase())
       )
     : cards.slice(0, 10);
 
@@ -107,7 +107,7 @@ export const CardSearchDropdown = ({
           />
           <div className="flex-1">
             <h3 className="font-semibold text-foreground">{selectedCard.name}</h3>
-            <p className="text-sm text-muted-foreground">{selectedCard.banks.name}</p>
+            <p className="text-sm text-muted-foreground">{selectedCard.banks?.name || 'Credit Card'}</p>
           </div>
           <div className="flex items-center gap-2">
             <Check className="w-5 h-5 text-primary" />
@@ -167,7 +167,7 @@ export const CardSearchDropdown = ({
                     />
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{card.name}</h3>
-                      <p className="text-sm text-muted-foreground">{card.banks.name}</p>
+                      <p className="text-sm text-muted-foreground">{card.banks?.name || 'Credit Card'}</p>
                     </div>
                   </button>
                 ))
