@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { CardSearchDropdown } from "@/components/CardSearchDropdown";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { openRedirectInterstitial } from "@/utils/redirectHandler";
-import Navigation from "@/components/Navigation";
 import { Badge } from "@/components/ui/badge";
 interface CategorySavings {
   category: string;
@@ -525,9 +524,7 @@ const BeatMyCard = () => {
   // Render card selection
   if (step === 'select') {
     return <div className="min-h-screen bg-background">
-        <Navigation />
-        
-        <div className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto my-[80px] py-[10px]">
             <div className="text-center mb-10">
               <h1 className="text-5xl md:text-6xl font-bold mb-5 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
@@ -565,9 +562,7 @@ const BeatMyCard = () => {
     const question = questions[currentStep];
     const progress = (currentStep + 1) / questions.length * 100;
     return <div className="min-h-screen bg-background">
-        <Navigation />
-        
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-12">
           <Button variant="ghost" onClick={() => setStep('select')} className="mb-6">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Card Selection
@@ -635,9 +630,7 @@ const BeatMyCard = () => {
   if (step === 'results' && userCardData && geniusCardData) {
     const savingsDifference = Math.abs(geniusCardData.annual_saving - userCardData.annual_saving);
     return <div className="min-h-screen bg-background">
-        <Navigation />
-        
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-12">
           <div className="max-w-6xl mx-auto">
             {/* Verdict Section */}
             <div className="text-center mb-12 animate-fade-in">
