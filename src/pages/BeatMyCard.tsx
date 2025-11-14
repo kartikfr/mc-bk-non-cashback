@@ -125,7 +125,30 @@ const BeatMyCard = () => {
 
     setIsCalculating(true);
     try {
-      const calculateResponse = await cardService.calculateCardGenius(responses);
+      // Ensure all required fields are present with default value of 0
+      const completePayload: SpendingData = {
+        amazon_spends: responses.amazon_spends || 0,
+        flipkart_spends: responses.flipkart_spends || 0,
+        other_online_spends: responses.other_online_spends || 0,
+        other_offline_spends: responses.other_offline_spends || 0,
+        grocery_spends_online: responses.grocery_spends_online || 0,
+        online_food_ordering: responses.online_food_ordering || 0,
+        fuel: responses.fuel || 0,
+        dining_or_going_out: responses.dining_or_going_out || 0,
+        flights_annual: responses.flights_annual || 0,
+        hotels_annual: responses.hotels_annual || 0,
+        domestic_lounge_usage_quarterly: responses.domestic_lounge_usage_quarterly || 0,
+        international_lounge_usage_quarterly: responses.international_lounge_usage_quarterly || 0,
+        mobile_phone_bills: responses.mobile_phone_bills || 0,
+        electricity_bills: responses.electricity_bills || 0,
+        water_bills: responses.water_bills || 0,
+        insurance_health_annual: responses.insurance_health_annual || 0,
+        insurance_car_or_bike_annual: responses.insurance_car_or_bike_annual || 0,
+        rent: responses.rent || 0,
+        school_fees: responses.school_fees || 0,
+      };
+
+      const calculateResponse = await cardService.calculateCardGenius(completePayload);
       
       if (calculateResponse.status === "success" && calculateResponse.data && calculateResponse.data.length > 0) {
         const topCard = calculateResponse.data[0];
