@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Loader2, Trophy, TrendingUp, Award } from "lucide-react";
+import { ArrowLeft, Loader2, Trophy, TrendingUp, Award } from "lucide-react";
 import { cardService, SpendingData } from "@/services/cardService";
 import { toast } from "sonner";
 import { SpendingInput } from "@/components/ui/spending-input";
+import { CardSearchDropdown } from "@/components/CardSearchDropdown";
 
 interface Card {
   id: number;
@@ -54,7 +54,6 @@ const BeatMyCard = () => {
   const [step, setStep] = useState<'select' | 'questions' | 'results'>('select');
   const [cards, setCards] = useState<Card[]>([]);
   const [filteredCards, setFilteredCards] = useState<Card[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -80,17 +79,7 @@ const BeatMyCard = () => {
   const fetchCards = async () => {
     setIsLoading(true);
     try {
-      const response = await cardService.getCardListing({
-        slug: "",
-        banks_ids: [],
-        card_networks: [],
-        annualFees: "",
-        credit_score: "",
-        sort_by: "",
-        free_cards: "",
-        eligiblityPayload: {},
-        cardGeniusPayload: []
-      });
+      const response = await cardService.getPartnerCards();
       
       if (response.status === "success" && response.data && Array.isArray(response.data)) {
         setCards(response.data);
@@ -151,7 +140,7 @@ const BeatMyCard = () => {
 
         if (geniusCard.status === "success" && geniusCard.data?.[0]) {
           setGeniusCardData({
-            ...geniusCard.data[0],
+            ...geniusCard.data[0], 
             annual_saving: topCard.annual_saving || 0
           });
         }
@@ -193,42 +182,13 @@ const BeatMyCard = () => {
               </p>
             </div>
 
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search for your card..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-12 text-lg"
-              />
-            </div>
-
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="grid gap-4 max-h-[60vh] overflow-y-auto pr-2">
-                {filteredCards.map((card) => (
-                  <button
-                    key={card.id}
-                    onClick={() => handleCardSelect(card)}
-                    className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:border-primary hover:shadow-lg transition-all text-left"
-                  >
-                    <img
-                      src={card.image}
-                      alt={card.name}
-                      className="w-20 h-12 object-contain"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{card.name}</h3>
-                      <p className="text-sm text-muted-foreground">{card.banks.name}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            <CardSearchDropdown
+              cards={filteredCards}
+              selectedCard={selectedCard}
+              onCardSelect={handleCardSelect}
+              onClearSelection={() => setSelectedCard(null)}
+              isLoading={isLoading}
+            />
           </div>
         </div>
       </div>
