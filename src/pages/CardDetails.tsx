@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { cardService } from '@/services/cardService';
 import Navigation from '@/components/Navigation';
-import { Star, ChevronDown, ChevronUp, Share2, ExternalLink, Gift, Award, Sparkles, ArrowLeft, Shield } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp, Share2, ExternalLink, Gift, Award, Sparkles, ArrowLeft, Shield, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -12,6 +12,7 @@ import { sanitizeHtml } from '@/lib/sanitize';
 import { openRedirectInterstitial, extractBankName, extractBankLogo } from '@/utils/redirectHandler';
 import { CompareToggleIcon } from '@/components/comparison/CompareToggleIcon';
 import { ComparePanel } from '@/components/comparison/ComparePanel';
+import { useComparison } from '@/contexts/ComparisonContext';
 
 interface CardData {
   id: number;
@@ -84,6 +85,7 @@ export default function CardDetails() {
   const [showEligibilityDialog, setShowEligibilityDialog] = useState(false);
   const [isComparePanelOpen, setIsComparePanelOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
+  const { toggleCard } = useComparison();
   const heroRef = useRef<HTMLDivElement>(null);
   const feesRef = useRef<HTMLDivElement>(null);
   const benefitsRef = useRef<HTMLDivElement>(null);
@@ -356,9 +358,18 @@ export default function CardDetails() {
                   <Shield className="mr-2 w-4 h-4" />
                   Quick Eligibility Check - No Docs
                 </Button>
-                <div className="ml-auto">
-                  <CompareToggleIcon card={card} />
-                </div>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    toggleCard(card);
+                    setIsComparePanelOpen(true);
+                  }}
+                  className="border-white text-white hover:bg-white/10"
+                >
+                  <Plus className="mr-2 w-4 h-4" />
+                  Compare
+                </Button>
               </div>
             </div>
           </div>
