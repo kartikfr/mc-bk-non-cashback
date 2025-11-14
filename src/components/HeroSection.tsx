@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { CreditCard3D } from "./CreditCard3D";
 import { gsap } from "gsap";
-import { Sparkles, TrendingUp, Shield, Zap } from "lucide-react";
+import { Sparkles, GitCompare, Cpu, Wallet } from "lucide-react";
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -89,16 +89,16 @@ const HeroSection = () => {
             {/* Trust Indicators */}
             <div className="flex flex-wrap justify-center lg:justify-start gap-6 text-sm text-charcoal-600">
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                <span className="font-medium">Trusted by Smart Savers</span>
+                <Cpu className="w-5 h-5 text-primary" />
+                <span className="font-medium">Best AI Powered Card Recommendation</span>
               </div>
               <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" />
-                <span className="font-medium">100% Free</span>
+                <Wallet className="w-5 h-5 text-primary" />
+                <span className="font-medium">Minimum ₹1000 to ₹5000 Real Cashback</span>
               </div>
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <span className="font-medium">Unbiased Recommendations</span>
+                <GitCompare className="w-5 h-5 text-primary" />
+                <span className="font-medium">Easy Comparison</span>
               </div>
             </div>
 
