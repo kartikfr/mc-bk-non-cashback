@@ -8,21 +8,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
 
 const categories = {
+  editor: {
+    title: "Editor's Choice",
+    aliases: ['hdfc-tata-neu-plus-credit-card', 'axis-bank-magnus-credit-card', 'amex-gold-credit-card'],
+    filterValue: 'all'
+  },
   shopping: {
     title: "Online Shopping",
-    aliases: ['idfc-power-plus-credit-card', 'sbi-cashback-credit-card', 'hdfc-swiggy-credit-card']
+    aliases: ['idfc-power-plus-credit-card', 'sbi-cashback-credit-card', 'hdfc-swiggy-credit-card'],
+    filterValue: 'shopping'
   },
   dining: {
     title: "Dining",
-    aliases: ['hdfc-swiggy-credit-card', 'hdfc-millenia-credit-card', 'au-zenith-plus-credit-card']
+    aliases: ['hdfc-swiggy-credit-card', 'hdfc-millenia-credit-card', 'au-zenith-plus-credit-card'],
+    filterValue: 'dining'
   },
   travel: {
     title: "Travel",
-    aliases: ['hdfc-indigo-credit-card', 'indusind-legend-credit-card', 'amex-gold-credit-card']
-  },
-  editor: {
-    title: "Editor's Choice",
-    aliases: ['hdfc-tata-neu-plus-credit-card', 'axis-bank-magnus-credit-card', 'amex-gold-credit-card']
+    aliases: ['hdfc-indigo-credit-card', 'indusind-legend-credit-card', 'amex-gold-credit-card'],
+    filterValue: 'travel'
   }
 };
 
@@ -30,7 +34,7 @@ const PopularCreditCards = () => {
   const navigate = useNavigate();
   const [cards, setCards] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('travel');
+  const [activeTab, setActiveTab] = useState('editor');
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -93,6 +97,15 @@ const PopularCreditCards = () => {
 
           {Object.entries(categories).map(([key, category]) => (
             <TabsContent key={key} value={key} className="mt-0">
+              <div className="mb-8 flex justify-center">
+                <Button
+                  size="lg"
+                  onClick={() => navigate(`/cards?category=${category.filterValue}`)}
+                  className="min-w-[200px]"
+                >
+                  View All Cards
+                </Button>
+              </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {cards[key]?.map((card: any, index: number) => {
                   const topUsps = card.product_usps

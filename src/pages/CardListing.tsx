@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ import confetti from 'canvas-confetti';
 import { toast } from "sonner";
 
 const CardListing = () => {
+  const [searchParams] = useSearchParams();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +46,9 @@ const CardListing = () => {
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
   
+  // Get category from URL params, default to "all"
+  const initialCategory = searchParams.get('category') || 'all';
+  
   // Filters - sort_by will be sent to API
   const [filters, setFilters] = useState({
     banks_ids: [] as number[],
@@ -53,7 +57,7 @@ const CardListing = () => {
     credit_score: "",
     sort_by: "",  // Empty string by default, can be "recommended", "annual_savings", or "annual_fees"
     free_cards: false,
-    category: "all"  // all, fuel, shopping, online-food, dining, grocery, travel, utility
+    category: initialCategory  // all, fuel, shopping, online-food, dining, grocery, travel, utility
   });
 
   // Category to slug mapping
