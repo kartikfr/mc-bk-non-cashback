@@ -92,10 +92,10 @@ const CardListing = () => {
         slug: categoryToSlug[filters.category] || "",
         banks_ids: filters.banks_ids || [],
         card_networks: filters.card_networks || [],
-        annualFees: filters.annualFees || "",
+        annualFees: filters.annualFees === "free" ? "" : filters.annualFees || "",
         credit_score: filters.credit_score || "",
         sort_by: filters.sort_by || "",
-        free_cards: filters.free_cards ? "true" : "",
+        free_cards: filters.annualFees === "free" ? "true" : "",
         cardGeniusPayload: []
       };
 
@@ -396,16 +396,55 @@ const CardListing = () => {
 
   // Filter sidebar component
   const FilterSidebar = () => (
-    <div className="space-y-6">
-      {/* Annual Fee Range */}
-      <div>
-        <h3 className="font-semibold mb-3">Annual Fee Range</h3>
-        <div className="space-y-2">
+    <div className="space-y-4">
+      {/* Category Filter - Open by default */}
+      <Collapsible defaultOpen={true}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+          <h3 className="font-semibold">Category</h3>
+          <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-2">
+          {[
+            { id: 'all', label: 'All Cards', icon: CreditCard },
+            { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
+            { id: 'online-food', label: 'Food Delivery', icon: Coffee },
+            { id: 'fuel', label: 'Fuel', icon: Fuel },
+            { id: 'dining', label: 'Dining', icon: Utensils },
+            { id: 'grocery', label: 'Grocery', icon: ShoppingCart },
+            { id: 'travel', label: 'Travel', icon: Plane },
+            { id: 'utility', label: 'Utility', icon: CreditCard },
+          ].map((cat) => {
+            const Icon = cat.icon;
+            const isActive = filters.category === cat.id;
+            return (
+              <Button
+                key={cat.id}
+                variant={isActive ? "default" : "ghost"}
+                size="sm"
+                onClick={() => handleFilterChange('category', cat.id)}
+                className="w-full justify-start gap-2"
+              >
+                <Icon className="w-4 h-4" />
+                {cat.label}
+              </Button>
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Annual Fee Range - Collapsed by default */}
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+          <h3 className="font-semibold">Annual Fee Range</h3>
+          <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-2">
           {[
             { label: 'All Fees', value: '' },
+            { label: 'Lifetime Free (₹0)', value: 'free' },
             { label: '₹0 - ₹1,000', value: '0-1000' },
             { label: '₹1,000 - ₹2,000', value: '1000-2000' },
-            { label: '₹2,000 - ₹50,000', value: '2000-50000' },
+            { label: '₹2,000 - ₹5,000', value: '2000-5000' },
             { label: '₹5,000+', value: '5000+' }
           ].map((fee) => (
             <label key={fee.value} className="flex items-center gap-2 cursor-pointer">
@@ -419,13 +458,16 @@ const CardListing = () => {
               <span className="text-sm">{fee.label}</span>
             </label>
           ))}
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* Credit Score */}
-      <div>
-        <h3 className="font-semibold mb-3">Minimum Credit Score</h3>
-        <div className="space-y-2">
+      {/* Credit Score - Collapsed by default */}
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+          <h3 className="font-semibold">Minimum Credit Score</h3>
+          <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-2">
           {[
             { label: 'All Scores', value: '' },
             { label: '600+', value: '600' },
@@ -444,13 +486,16 @@ const CardListing = () => {
               <span className="text-sm">{score.label}</span>
             </label>
           ))}
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* Card Network */}
-      <div>
-        <h3 className="font-semibold mb-3">Card Network</h3>
-        <div className="space-y-2">
+      {/* Card Network - Collapsed by default */}
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+          <h3 className="font-semibold">Card Network</h3>
+          <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-2">
           {['VISA', 'Mastercard', 'RuPay', 'AmericanExpress'].map((network) => (
             <label key={network} className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -469,8 +514,8 @@ const CardListing = () => {
               <span className="text-sm">{network === 'AmericanExpress' ? 'American Express' : network}</span>
             </label>
           ))}
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <Button variant="outline" className="w-full" onClick={clearFilters}>
         Clear All Filters
@@ -485,42 +530,11 @@ const CardListing = () => {
       {/* Hero Search */}
       <section className="pt-28 pb-12 bg-gradient-hero">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl lg:text-5xl font-bold text-center mb-6">
+          <h1 className="text-4xl lg:text-5xl font-bold text-center mb-8">
             Find Your Perfect Card - 100+ Options
           </h1>
           
-          {/* Category Navigation */}
-          <div className="max-w-5xl mx-auto mb-8">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {[
-                { id: 'all', label: 'All Cards', icon: CreditCard },
-                { id: 'fuel', label: 'Fuel', icon: Fuel },
-                { id: 'shopping', label: 'Shopping', icon: ShoppingBag },
-                { id: 'online-food', label: 'Online Food', icon: Coffee },
-                { id: 'dining', label: 'Dining', icon: Utensils },
-                { id: 'grocery', label: 'Grocery', icon: ShoppingCart },
-                { id: 'travel', label: 'Travel', icon: Plane },
-                { id: 'utility', label: 'Utility', icon: CreditCard },
-              ].map((cat) => {
-                const Icon = cat.icon;
-                const isActive = filters.category === cat.id;
-                return (
-                  <Button
-                    key={cat.id}
-                    variant={isActive ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleFilterChange('category', cat.id)}
-                    className="gap-2"
-                  >
-                    <Icon className="w-4 h-4" />
-                    {cat.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-          
-          <div className="max-w-2xl mx-auto space-y-4">
+          <div className="max-w-2xl mx-auto space-y-6">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -548,113 +562,89 @@ const CardListing = () => {
                 Search
               </Button>
             </div>
-            
-            {/* Top Filters - Keep all on one line */}
-            <div className="flex items-center gap-3 justify-center">
+
+            {/* Eligibility Check - More prominent */}
+            <div className="flex items-center justify-center gap-4">
               {filters.category !== 'all' && (
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="lg"
                   onClick={() => setShowGeniusDialog(true)}
-                  className="gap-2 border-primary/50 hover:bg-primary/10 flex-shrink-0"
+                  className="gap-2 border-primary/50 hover:bg-primary/10 shadow-md"
                 >
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  Try Genius
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Try Card Genius
                 </Button>
               )}
               
-              <div className="relative flex-shrink-0">
+              <div className="relative">
                 <Collapsible open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
                   <CollapsibleTrigger asChild>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-2 text-muted-foreground hover:text-foreground flex-shrink-0"
+                      size="lg"
+                      variant={eligibilitySubmitted ? "default" : "secondary"}
+                      className="gap-2 shadow-lg hover:shadow-xl transition-all"
                     >
-                      <Sparkles className="w-4 h-4" />
-                      Eligibility Check
-                      {eligibilitySubmitted && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      <CheckCircle2 className="w-5 h-5" />
+                      {eligibilitySubmitted ? "Eligibility Applied" : "Check Eligibility"}
                       <ChevronDown className={`w-4 h-4 transition-transform ${eligibilityOpen ? 'rotate-180' : ''}`} />
                     </Button>
                   </CollapsibleTrigger>
                   
-                  <CollapsibleContent className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-80 bg-popover border border-border rounded-lg shadow-lg p-4 z-50">
-                  <div className="space-y-3">
+                  <CollapsibleContent className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-96 bg-popover border border-border rounded-lg shadow-2xl p-6 z-50">
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Pincode</label>
+                      <label className="text-sm font-semibold mb-2 block">Pincode</label>
                       <Input
                         type="text"
-                        placeholder="110001"
+                        placeholder="Enter your 6-digit pincode"
+                        className="h-11"
                         value={eligibility.pincode}
                         onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
                         maxLength={6}
-                        className="h-9"
                       />
                     </div>
                     
                     <div>
-                      <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Monthly Income (₹)</label>
+                      <label className="text-sm font-semibold mb-2 block">Monthly In-hand Income (₹)</label>
                       <Input
-                        type="text"
-                        placeholder="50000"
+                        type="number"
+                        placeholder="Enter your monthly income"
+                        className="h-11"
                         value={eligibility.inhandIncome}
                         onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value.replace(/\D/g, '') }))}
-                        className="h-9"
                       />
                     </div>
                     
                     <div>
-                      <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Employment Status</label>
+                      <label className="text-sm font-semibold mb-2 block">Employment Status</label>
                       <Select
                         value={eligibility.empStatus}
                         onValueChange={(value) => setEligibility(prev => ({ ...prev, empStatus: value }))}
                       >
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger className="h-11">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-popover z-[100]">
                           <SelectItem value="salaried">Salaried</SelectItem>
-                          <SelectItem value="self_employed">Self-Employed</SelectItem>
+                          <SelectItem value="self-employed">Self Employed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <Button 
                       onClick={handleEligibilitySubmit}
-                      className="w-full h-9"
-                      size="sm"
+                      className="w-full h-12 text-base font-semibold"
+                      size="lg"
                       disabled={!eligibility.pincode || !eligibility.inhandIncome}
                     >
-                      Apply Eligibility
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Apply Eligibility Criteria
                     </Button>
                   </div>
                 </CollapsibleContent>
-              </Collapsible>
+                </Collapsible>
               </div>
-
-              <Select
-                value={filters.sort_by}
-                onValueChange={(value) => handleFilterChange('sort_by', value)}
-              >
-                <SelectTrigger className="w-48 h-9 border-none bg-transparent text-muted-foreground hover:text-foreground flex-shrink-0">
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recommended">Recommended</SelectItem>
-                  <SelectItem value="annual_savings">Annual Savings</SelectItem>
-                  <SelectItem value="annual_fees">Annual Fees</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleFilterChange('free_cards', !filters.free_cards)}
-                className={`gap-2 flex-shrink-0 ${filters.free_cards ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Free Cards Only
-              </Button>
             </div>
           </div>
         </div>
