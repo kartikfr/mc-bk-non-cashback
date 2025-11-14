@@ -152,11 +152,19 @@ const BeatMyCard = () => {
       
       console.log("Card Genius API Response:", calculateResponse);
       
-      if (calculateResponse.status === "success" && calculateResponse.data && calculateResponse.data.length > 0) {
-        // Sort by annual_saving to get the top card
-        const sortedCards = [...calculateResponse.data].sort((a: any, b: any) => {
-          const aSaving = a.annual_saving || a['Total Net Saving'] || 0;
-          const bSaving = b.annual_saving || b['Total Net Saving'] || 0;
+      // API returns: { status: "success", data: { success: true, savings: [...] } }
+      if (calculateResponse.status === "success" && 
+          calculateResponse.data?.success && 
+          calculateResponse.data?.savings && 
+          calculateResponse.data.savings.length > 0) {
+        
+        const savingsArray = calculateResponse.data.savings;
+        console.log("Savings Array:", savingsArray);
+        
+        // Sort by total_savings to get the top card
+        const sortedCards = [...savingsArray].sort((a: any, b: any) => {
+          const aSaving = a.total_savings || 0;
+          const bSaving = b.total_savings || 0;
           return bSaving - aSaving;
         });
         
@@ -164,7 +172,7 @@ const BeatMyCard = () => {
         console.log("Top Card:", topCard);
         
         // Find the user's selected card in the results by matching seo_card_alias
-        const userCardInResults = calculateResponse.data.find(
+        const userCardInResults = savingsArray.find(
           (card: any) => card.seo_card_alias === selectedCard.seo_card_alias
         );
         
@@ -181,26 +189,23 @@ const BeatMyCard = () => {
           cardService.getCardDetailsByAlias(topCard.seo_card_alias)
         ]);
 
-        // Extract annual_saving from API response (handle different field names)
-        const getUserSaving = (card: any) => 
-          card?.annual_saving || card?.['Total Net Saving'] || 0;
-
         if (userCard.status === "success" && userCard.data?.[0]) {
           setUserCardData({
             ...userCard.data[0],
-            annual_saving: getUserSaving(userCardInResults)
+            annual_saving: userCardInResults.total_savings || 0
           });
         }
 
         if (geniusCard.status === "success" && geniusCard.data?.[0]) {
           setGeniusCardData({
             ...geniusCard.data[0], 
-            annual_saving: getUserSaving(topCard)
+            annual_saving: topCard.total_savings || 0
           });
         }
 
         setStep('results');
       } else {
+        console.error("Invalid API response structure:", calculateResponse);
         toast.error("No results found. Please try again.");
       }
     } catch (error) {
