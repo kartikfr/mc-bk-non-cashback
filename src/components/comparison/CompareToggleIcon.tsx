@@ -20,23 +20,23 @@ export function CompareToggleIcon({ card, className }: CompareToggleIconProps) {
         toggleCard(card);
       }}
       className={cn(
-        "group flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium",
+        "group flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-xs font-medium shadow-md hover:shadow-lg",
         selected 
-          ? "bg-primary text-primary-foreground shadow-lg" 
-          : "bg-background/80 backdrop-blur-sm border-2 border-border hover:border-primary hover:bg-primary/10",
+          ? "bg-primary text-primary-foreground" 
+          : "bg-background/90 backdrop-blur-sm border border-border hover:border-primary hover:bg-primary/10",
         className
       )}
       aria-label={selected ? "Remove from comparison" : "Add to comparison"}
     >
       {selected ? (
         <>
-          <Check className="w-4 h-4" />
-          <span className="hidden sm:inline">Added</span>
+          <Check className="w-3.5 h-3.5" />
+          <span>Added</span>
         </>
       ) : (
         <>
-          <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-          <span className="hidden sm:inline">Add to Compare</span>
+          <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform duration-200" />
+          <span>Compare</span>
         </>
       )}
     </button>

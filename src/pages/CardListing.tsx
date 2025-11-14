@@ -744,6 +744,11 @@ const CardListing = () => {
                         className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2"
                       >
                         <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4">
+                          {/* Compare Toggle Icon - Top Right */}
+                          <div className="absolute top-3 right-3 z-20">
+                            <CompareToggleIcon card={card} />
+                          </div>
+
                           {/* Savings Badge - Top Left */}
                           {filters.category !== 'all' && (() => {
                             const categorySavings = cardSavings[filters.category] || {};
@@ -799,18 +804,13 @@ const CardListing = () => {
                         </div>
 
                         <div className="p-6">
-                          <div className="mb-3 flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-2 flex-wrap flex-1">
-                              <Badge variant="outline" className="text-xs">
-                                {card.card_type}
-                              </Badge>
-                              {card.banks?.name && (
-                                <span className="text-xs text-muted-foreground">{card.banks.name}</span>
-                              )}
-                            </div>
-                            <div className="flex-shrink-0">
-                              <CompareToggleIcon card={card} />
-                            </div>
+                          <div className="mb-2 flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs">
+                              {card.card_type}
+                            </Badge>
+                            {card.banks?.name && (
+                              <span className="text-xs text-muted-foreground">{card.banks.name}</span>
+                            )}
                           </div>
           
                           <h3 className="text-xl font-bold mb-4 line-clamp-2">{card.name}</h3>
