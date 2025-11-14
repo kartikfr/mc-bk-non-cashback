@@ -165,15 +165,19 @@ const CardListing = () => {
         });
       }
 
-      // 3) Credit Score buckets (minimum)
+      // 3) Credit Score buckets (maximum score)
       if (Array.isArray(incomingCards) && filters.credit_score) {
-        const minScore = parseInt(filters.credit_score as string, 10) || 0;
-        incomingCards = incomingCards.filter((card: any) => {
-          const scoreRaw = card.crif ?? card.credit_score ?? '';
-          const score = parseInt(scoreRaw?.toString().replace(/[^0-9]/g, ''), 10);
-          const scoreNum = Number.isFinite(score) ? score : 0;
-          return scoreNum >= minScore;
-        });
+        if (filters.credit_score.includes('-')) {
+          // Handle range format like "0-600", "0-650", etc.
+          const [minStr, maxStr] = filters.credit_score.split('-');
+          const maxScore = parseInt(maxStr, 10) || Number.POSITIVE_INFINITY;
+          incomingCards = incomingCards.filter((card: any) => {
+            const scoreRaw = card.crif ?? card.credit_score ?? '';
+            const score = parseInt(scoreRaw?.toString().replace(/[^0-9]/g, ''), 10);
+            const scoreNum = Number.isFinite(score) ? score : 0;
+            return scoreNum <= maxScore;
+          });
+        }
       }
 
       setCards(Array.isArray(incomingCards) ? incomingCards : []);
@@ -460,16 +464,16 @@ const CardListing = () => {
       {/* Credit Score - Collapsed by default */}
       <Collapsible defaultOpen={false}>
         <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
-          <h3 className="font-semibold">Minimum Credit Score</h3>
+          <h3 className="font-semibold">Credit Score</h3>
           <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-3 space-y-2">
           {[
             { label: 'All Scores', value: '' },
-            { label: '600+', value: '600' },
-            { label: '650+', value: '650' },
-            { label: '750+', value: '750' },
-            { label: '800+', value: '800' }
+            { label: 'Below 600', value: '0-600' },
+            { label: 'Upto 650', value: '0-650' },
+            { label: 'Upto 750', value: '0-750' },
+            { label: 'Upto 800', value: '0-800' }
           ].map((score) => (
             <label key={score.value} className="flex items-center gap-2 cursor-pointer">
               <input 
@@ -526,14 +530,16 @@ const CardListing = () => {
       {/* Hero Search */}
       <section className="pt-28 pb-12 bg-gradient-hero">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl lg:text-5xl font-bold text-center mb-3">
-            Discover India's Best Credit Cards
-          </h1>
-          <p className="text-center text-lg text-muted-foreground mb-8">
-            100+ Cards, Real Rewards, Plus Cashback
-          </p>
+          <div className="max-w-3xl mx-auto text-center mb-10">
+            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-4">
+              Discover India's Best Credit Cards
+            </h1>
+            <p className="text-lg lg:text-xl text-muted-foreground">
+              100+ Cards • Real Rewards • Plus Cashback
+            </p>
+          </div>
           
-          <div className="max-w-2xl mx-auto space-y-6">
+          <div className="max-w-2xl mx-auto">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -560,90 +566,6 @@ const CardListing = () => {
               <Button size="lg" onClick={handleSearch}>
                 Search
               </Button>
-            </div>
-
-            {/* Eligibility Check - More prominent */}
-            <div className="flex items-center justify-center gap-4">
-              {filters.category !== 'all' && (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setShowGeniusDialog(true)}
-                  className="gap-2 border-primary/50 hover:bg-primary/10 shadow-md"
-                >
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  Try Card Genius
-                </Button>
-              )}
-              
-              <div className="relative">
-                <Collapsible open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      size="lg"
-                      variant={eligibilitySubmitted ? "default" : "secondary"}
-                      className="gap-2 shadow-lg hover:shadow-xl transition-all"
-                    >
-                      <CheckCircle2 className="w-5 h-5" />
-                      {eligibilitySubmitted ? "Eligibility Applied" : "Check Eligibility"}
-                      <ChevronDown className={`w-4 h-4 transition-transform ${eligibilityOpen ? 'rotate-180' : ''}`} />
-                    </Button>
-                  </CollapsibleTrigger>
-                  
-                  <CollapsibleContent className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-96 bg-popover border border-border rounded-lg shadow-2xl p-6 z-50">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-semibold mb-2 block">Pincode</label>
-                      <Input
-                        type="text"
-                        placeholder="Enter your 6-digit pincode"
-                        className="h-11"
-                        value={eligibility.pincode}
-                        onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                        maxLength={6}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-semibold mb-2 block">Monthly In-hand Income (₹)</label>
-                      <Input
-                        type="number"
-                        placeholder="Enter your monthly income"
-                        className="h-11"
-                        value={eligibility.inhandIncome}
-                        onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value.replace(/\D/g, '') }))}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-semibold mb-2 block">Employment Status</label>
-                      <Select
-                        value={eligibility.empStatus}
-                        onValueChange={(value) => setEligibility(prev => ({ ...prev, empStatus: value }))}
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover z-[100]">
-                          <SelectItem value="salaried">Salaried</SelectItem>
-                          <SelectItem value="self-employed">Self Employed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Button 
-                      onClick={handleEligibilitySubmit}
-                      className="w-full h-12 text-base font-semibold"
-                      size="lg"
-                      disabled={!eligibility.pincode || !eligibility.inhandIncome}
-                    >
-                      <CheckCircle2 className="w-5 h-5 mr-2" />
-                      Apply Eligibility Criteria
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-                </Collapsible>
-              </div>
             </div>
           </div>
         </div>
@@ -822,11 +744,6 @@ const CardListing = () => {
                         className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2"
                       >
                         <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4">
-                          {/* Compare Toggle Icon - Top Right */}
-                          <div className="absolute top-3 right-3 z-20">
-                            <CompareToggleIcon card={card} />
-                          </div>
-
                           {/* Savings Badge - Top Left */}
                           {filters.category !== 'all' && (() => {
                             const categorySavings = cardSavings[filters.category] || {};
@@ -882,13 +799,18 @@ const CardListing = () => {
                         </div>
 
                         <div className="p-6">
-                          <div className="mb-2 flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs">
-                              {card.card_type}
-                            </Badge>
-                            {card.banks?.name && (
-                              <span className="text-xs text-muted-foreground">{card.banks.name}</span>
-                            )}
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2 flex-wrap flex-1">
+                              <Badge variant="outline" className="text-xs">
+                                {card.card_type}
+                              </Badge>
+                              {card.banks?.name && (
+                                <span className="text-xs text-muted-foreground">{card.banks.name}</span>
+                              )}
+                            </div>
+                            <div className="flex-shrink-0">
+                              <CompareToggleIcon card={card} />
+                            </div>
                           </div>
           
                           <h3 className="text-xl font-bold mb-4 line-clamp-2">{card.name}</h3>
