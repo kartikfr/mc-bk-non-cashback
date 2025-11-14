@@ -113,7 +113,7 @@ const HeroSection = () => {
                 className="group shadow-xl"
               >
                 <Sparkles className="mr-2 group-hover:rotate-12 transition-transform" />
-                Find Me The Best Credit Card
+                Discover Credit Cards
               </Button>
               <Button
                 size="lg"
@@ -124,7 +124,7 @@ const HeroSection = () => {
                 }}
                 className="shadow-lg"
               >
-                Try Card Genius
+                Try AI Card Recommendation
               </Button>
             </div>
 
