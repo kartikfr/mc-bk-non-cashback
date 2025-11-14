@@ -68,11 +68,13 @@ const BeatMyCard = () => {
   }, []);
 
   useEffect(() => {
-    const filtered = cards.filter(card =>
-      card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.banks.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredCards(filtered);
+    if (Array.isArray(cards)) {
+      const filtered = cards.filter(card =>
+        card.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        card.banks.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredCards(filtered);
+    }
   }, [searchQuery, cards]);
 
   const fetchCards = async () => {
@@ -90,13 +92,18 @@ const BeatMyCard = () => {
         cardGeniusPayload: []
       });
       
-      if (response.status === "success" && response.data) {
+      if (response.status === "success" && response.data && Array.isArray(response.data)) {
         setCards(response.data);
         setFilteredCards(response.data);
+      } else {
+        setCards([]);
+        setFilteredCards([]);
       }
     } catch (error) {
       toast.error("Failed to fetch cards");
       console.error(error);
+      setCards([]);
+      setFilteredCards([]);
     } finally {
       setIsLoading(false);
     }
