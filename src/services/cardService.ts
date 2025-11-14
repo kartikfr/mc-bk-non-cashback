@@ -83,6 +83,14 @@ export const cardService = {
     return response.json();
   },
 
+  async getPartnerCards() {
+    const response = await authManager.makeAuthenticatedRequest(
+      `${BASE_URL}/cardgenius/cards`,
+      { method: 'GET' }
+    );
+    return response.json();
+  },
+
   async checkEligibility(params: {
     cardAlias: string;
     pincode: string;
