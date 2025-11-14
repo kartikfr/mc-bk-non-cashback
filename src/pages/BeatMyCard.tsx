@@ -31,6 +31,17 @@ interface Card {
   reward_rate?: string;
   welcome_bonus?: string;
   key_benefits?: string[];
+  spending_breakdown_array?: SpendingBreakdownItem[];
+}
+
+interface SpendingBreakdownItem {
+  on: string;
+  spend: number;
+  points_earned: number;
+  savings: number;
+  explanation?: string;
+  conv_rate?: number;
+  maxCap?: number;
 }
 
 interface SpendingQuestion {
@@ -228,7 +239,8 @@ const BeatMyCard = () => {
             userCardData = {
               ...userCard.data[0],
               annual_saving: userCardInResults.total_savings || 0,
-              total_savings_yearly: userCardInResults.total_savings_yearly || 0
+              total_savings_yearly: userCardInResults.total_savings_yearly || 0,
+              spending_breakdown_array: userCardInResults.spending_breakdown_array || []
             };
           } else {
             // Fallback to selected card data with API savings
@@ -236,6 +248,7 @@ const BeatMyCard = () => {
               ...selectedCard,
               annual_saving: userCardInResults.total_savings || 0,
               total_savings_yearly: userCardInResults.total_savings_yearly || 0,
+              spending_breakdown_array: userCardInResults.spending_breakdown_array || [],
               name: userCardInResults.card_name || selectedCard.name
             };
             console.log("Using fallback user card data");
@@ -246,7 +259,8 @@ const BeatMyCard = () => {
             geniusCardData = {
               ...geniusCard.data[0], 
               annual_saving: topCard.total_savings || 0,
-              total_savings_yearly: topCard.total_savings_yearly || 0
+              total_savings_yearly: topCard.total_savings_yearly || 0,
+              spending_breakdown_array: topCard.spending_breakdown_array || []
             };
           } else {
             // Fallback: Create card data from API response
@@ -257,6 +271,7 @@ const BeatMyCard = () => {
               image: cards.find(c => c.seo_card_alias === topCard.seo_card_alias)?.image || selectedCard.image,
               annual_saving: topCard.total_savings || 0,
               total_savings_yearly: topCard.total_savings_yearly || 0,
+              spending_breakdown_array: topCard.spending_breakdown_array || [],
               banks: { name: topCard.card_name.split(' ')[0] } // Extract bank name from card name
             };
             console.log("Using fallback genius card data:", geniusCardData);
@@ -295,7 +310,7 @@ const BeatMyCard = () => {
     const categories: CategorySavings[] = [];
     
     // Map of spending categories to display names and emojis
-    const categoryMap: { [key: string]: { name: string; emoji: string; isAnnual?: boolean } } = {
+    const categoryMap: { [key: string]: { name: string; emoji: string } } = {
       amazon_spends: { name: 'Amazon Shopping', emoji: '🛍️' },
       flipkart_spends: { name: 'Flipkart Shopping', emoji: '📦' },
       other_online_spends: { name: 'Online Shopping', emoji: '💸' },
@@ -304,43 +319,67 @@ const BeatMyCard = () => {
       online_food_ordering: { name: 'Food Delivery', emoji: '🛵' },
       fuel: { name: 'Fuel', emoji: '⛽' },
       dining_or_going_out: { name: 'Dining Out', emoji: '🥗' },
-      flights_annual: { name: 'Flight Bookings', emoji: '✈️', isAnnual: true },
-      hotels_annual: { name: 'Hotel Stays', emoji: '🛌', isAnnual: true },
+      flights_annual: { name: 'Flight Bookings', emoji: '✈️' },
+      hotels_annual: { name: 'Hotel Stays', emoji: '🛌' },
       mobile_phone_bills: { name: 'Mobile & WiFi', emoji: '📱' },
       electricity_bills: { name: 'Electricity', emoji: '⚡' },
       water_bills: { name: 'Water', emoji: '💧' },
-      insurance_health_annual: { name: 'Health Insurance', emoji: '🛡️', isAnnual: true },
-      insurance_car_or_bike_annual: { name: 'Vehicle Insurance', emoji: '🚗', isAnnual: true },
+      insurance_health_annual: { name: 'Health Insurance', emoji: '🛡️' },
+      insurance_car_or_bike_annual: { name: 'Vehicle Insurance', emoji: '🚗' },
       rent: { name: 'House Rent', emoji: '🏠' },
       school_fees: { name: 'School Fees', emoji: '🎓' },
     };
 
-    // Generic reward rates (these would ideally come from the API)
-    // Using simplified calculation: assume average reward rate difference
-    const avgUserRate = 0.01; // 1% for user card
-    const avgGeniusRate = 0.02; // 2% for genius card (better)
+    // Create lookup maps for both cards' spending breakdown
+    const userBreakdownMap = new Map<string, number>();
+    const geniusBreakdownMap = new Map<string, number>();
     
-    Object.entries(spending).forEach(([key, value]) => {
-      if (value && value > 0 && categoryMap[key]) {
-        const categoryInfo = categoryMap[key];
-        const annualSpend = categoryInfo.isAnnual ? value : value * 12;
+    // Populate user card savings by category
+    if (userCard.spending_breakdown_array) {
+      userCard.spending_breakdown_array.forEach(item => {
+        if (item.on && item.savings) {
+          userBreakdownMap.set(item.on, item.savings);
+        }
+      });
+    }
+    
+    // Populate genius card savings by category
+    if (geniusCard.spending_breakdown_array) {
+      geniusCard.spending_breakdown_array.forEach(item => {
+        if (item.on && item.savings) {
+          geniusBreakdownMap.set(item.on, item.savings);
+        }
+      });
+    }
+
+    console.log("=== User Card Breakdown Map ===", Object.fromEntries(userBreakdownMap));
+    console.log("=== Genius Card Breakdown Map ===", Object.fromEntries(geniusBreakdownMap));
+    
+    // Build category comparison list
+    const allCategories = new Set([...userBreakdownMap.keys(), ...geniusBreakdownMap.keys()]);
+    
+    allCategories.forEach(categoryKey => {
+      if (categoryMap[categoryKey]) {
+        const categoryInfo = categoryMap[categoryKey];
+        const userSaving = Math.round(userBreakdownMap.get(categoryKey) || 0);
+        const geniusSaving = Math.round(geniusBreakdownMap.get(categoryKey) || 0);
         
-        // Calculate estimated savings for each category
-        const userCategorySaving = Math.round(annualSpend * avgUserRate);
-        const geniusCategorySaving = Math.round(annualSpend * avgGeniusRate);
-        
-        if (userCategorySaving > 0 || geniusCategorySaving > 0) {
+        // Only show categories with meaningful savings
+        if (userSaving > 0 || geniusSaving > 0) {
           categories.push({
             category: categoryInfo.name,
             emoji: categoryInfo.emoji,
-            userSaving: userCategorySaving,
-            geniusSaving: geniusCategorySaving,
+            userSaving: userSaving,
+            geniusSaving: geniusSaving,
           });
         }
       }
     });
 
-    return categories.sort((a, b) => b.geniusSaving - a.geniusSaving);
+    // Sort by the higher saving value between the two cards
+    return categories.sort((a, b) => 
+      Math.max(b.userSaving, b.geniusSaving) - Math.max(a.userSaving, a.geniusSaving)
+    );
   };
 
   const isUserWinner = userCardData && geniusCardData && 
