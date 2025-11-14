@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import EligibilityDialog from '@/components/EligibilityDialog';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { openRedirectInterstitial, extractBankName, extractBankLogo } from '@/utils/redirectHandler';
+import { CompareToggleIcon } from '@/components/comparison/CompareToggleIcon';
+import { ComparePanel } from '@/components/comparison/ComparePanel';
 
 interface CardData {
   id: number;
@@ -80,7 +82,15 @@ export default function CardDetails() {
   const [showFixedCTA, setShowFixedCTA] = useState(false);
   const [selectedBenefitCategory, setSelectedBenefitCategory] = useState<string>('All');
   const [showEligibilityDialog, setShowEligibilityDialog] = useState(false);
+  const [isComparePanelOpen, setIsComparePanelOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('');
   const heroRef = useRef<HTMLDivElement>(null);
+  const feesRef = useRef<HTMLDivElement>(null);
+  const benefitsRef = useRef<HTMLDivElement>(null);
+  const rewardsRef = useRef<HTMLDivElement>(null);
+  const feeStructureRef = useRef<HTMLDivElement>(null);
+  const allBenefitsRef = useRef<HTMLDivElement>(null);
+  const tncRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -93,11 +103,35 @@ export default function CardDetails() {
         const heroBottom = heroRef.current.getBoundingClientRect().bottom;
         setShowFixedCTA(heroBottom < 0);
       }
+
+      // Update active section for navigation
+      const sections = [
+        { ref: feesRef, id: 'fees' },
+        { ref: benefitsRef, id: 'benefits' },
+        { ref: rewardsRef, id: 'rewards' },
+        { ref: feeStructureRef, id: 'fee-structure' },
+        { ref: allBenefitsRef, id: 'all-benefits' },
+        { ref: tncRef, id: 'tnc' }
+      ];
+
+      for (const section of sections) {
+        if (section.ref.current) {
+          const rect = section.ref.current.getBoundingClientRect();
+          if (rect.top <= 200 && rect.bottom >= 200) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const fetchCardDetails = async () => {
     if (!alias) return;
@@ -264,29 +298,21 @@ export default function CardDetails() {
 
             {/* Card Info */}
             <div className="text-white space-y-6 animate-fade-in">
+              {/* Share Button - Top Right */}
+              <button
+                onClick={handleShare}
+                className="absolute top-4 right-4 w-10 h-10 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
+                aria-label="Share card"
+              >
+                <Share2 className="w-5 h-5 text-white" />
+              </button>
+
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-2">{card.name}</h1>
                 <div className="flex items-center gap-4 flex-wrap">
                   <Badge variant="secondary" className="text-sm">
                     {card.card_type}
                   </Badge>
-                  <div className="flex items-center gap-2">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < Math.floor(card.rating)
-                              ? 'fill-yellow-400 text-yellow-400'
-                              : 'text-gray-400'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm" aria-label={`${card.rating} out of 5 stars (${card.user_rating_count} reviews)`}>
-                      {card.rating} ({card.user_rating_count?.toLocaleString()} reviews)
-                    </span>
-                  </div>
                 </div>
               </div>
 
@@ -304,11 +330,11 @@ export default function CardDetails() {
               </div>
 
               {/* CTAs */}
-              <div className="flex gap-4 flex-wrap">
+              <div className="flex gap-3 flex-wrap items-center">
                 <Button 
                   size="lg" 
                   onClick={handleApply}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                  className="bg-white text-primary hover:bg-white/90 font-semibold"
                 >
                   Apply Now
                   <ExternalLink className="ml-2 w-4 h-4" />
@@ -318,7 +344,6 @@ export default function CardDetails() {
                   variant="outline"
                   onClick={() => {
                     setShowEligibilityDialog(true);
-                    // Track analytics
                     if (typeof window !== 'undefined' && (window as any).gtag) {
                       (window as any).gtag('event', 'eligibility_modal_open', {
                         card_alias: alias,
@@ -326,63 +351,78 @@ export default function CardDetails() {
                       });
                     }
                   }}
-                  className="border-white text-white hover:bg-white/10 hidden md:flex"
-                >
-                  <Shield className="mr-2 w-4 h-4" />
-                  Check Eligibility
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  onClick={handleShare}
                   className="border-white text-white hover:bg-white/10"
                 >
-                  <Share2 className="mr-2 w-4 h-4" />
-                  Share
+                  <Shield className="mr-2 w-4 h-4" />
+                  Quick Eligibility Check - No Docs
                 </Button>
+                <div className="ml-auto">
+                  <CompareToggleIcon card={card} />
+                </div>
               </div>
-
-              {/* Mobile Check Eligibility - Full Width Below CTAs */}
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => {
-                  setShowEligibilityDialog(true);
-                  if (typeof window !== 'undefined' && (window as any).gtag) {
-                    (window as any).gtag('event', 'eligibility_modal_open', {
-                      card_alias: alias,
-                      card_name: card.name
-                    });
-                  }
-                }}
-                className="border-white text-white hover:bg-white/10 w-full md:hidden"
-              >
-                <Shield className="mr-2 w-4 h-4" />
-                Check Eligibility
-              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Fixed CTA (Mobile) */}
+      {/* Sticky Apply Now Button */}
       {showFixedCTA && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 z-50 md:hidden animate-slide-in-right">
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={handleApply}
-          >
-            Apply Now - Instant Decision in 60s
-          </Button>
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border p-3 z-50 shadow-lg animate-slide-in-right">
+          <div className="container mx-auto px-4 flex gap-3">
+            <Button 
+              className="flex-1" 
+              size="lg"
+              onClick={handleApply}
+            >
+              Apply Now - Instant Decision
+              <ExternalLink className="ml-2 w-4 h-4" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setIsComparePanelOpen(true)}
+            >
+              Compare
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Navigation */}
+      {showFixedCTA && (
+        <div className="fixed top-24 left-0 right-0 bg-background/95 backdrop-blur-sm border-b border-border z-40 shadow-md">
+          <div className="container mx-auto px-4">
+            <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+              {[
+                { id: 'fees', label: 'Fees', ref: feesRef },
+                { id: 'benefits', label: 'Benefits', ref: benefitsRef },
+                { id: 'rewards', label: 'Rewards', ref: rewardsRef },
+                { id: 'fee-structure', label: 'Fee Structure', ref: feeStructureRef },
+                { id: 'all-benefits', label: 'All Benefits', ref: allBenefitsRef },
+                { id: 'tnc', label: 'T&Cs', ref: tncRef }
+              ].map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => scrollToSection(section.ref)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${
+                    activeSection === section.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
       <div className="container mx-auto px-4 py-12 space-y-12">
         {/* Fees & Eligibility - Moved to top as users want to see this first */}
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-2 gap-6" ref={feesRef}>
           {/* Fees */}
-          <section className="bg-card border border-border rounded-xl p-6">
+          <section className="bg-card border border-border rounded-xl p-6" id="fees">
             <h2 className="text-2xl font-bold text-foreground mb-6">Fees</h2>
             <div className="space-y-4">
               <div className="flex justify-between items-start pb-4 border-b border-border">
@@ -436,7 +476,7 @@ export default function CardDetails() {
 
         {/* All Benefits - Improved layout */}
         {sortedUSPs.length > 2 && (
-          <section className="animate-fade-in">
+          <section className="animate-fade-in" ref={benefitsRef} id="benefits">
             <h2 className="text-2xl font-bold text-foreground mb-6">Key Benefits</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {sortedUSPs.slice(2).map((usp, index) => (
@@ -475,7 +515,7 @@ export default function CardDetails() {
 
 
         {/* Rewards & Redemption - Aligned with Design System */}
-        <section className="bg-card border border-border rounded-xl p-8">
+        <section className="bg-card border border-border rounded-xl p-8" ref={rewardsRef} id="rewards">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-sm">
               <Gift className="w-7 h-7 text-primary-foreground" />
@@ -517,7 +557,7 @@ export default function CardDetails() {
 
         {/* Bank Fee Structure */}
         {card.bank_fee_structure && (
-          <section>
+          <section ref={feeStructureRef} id="fee-structure">
             <h2 className="text-2xl font-bold text-foreground mb-6">Fee Structure</h2>
             <Accordion type="single" collapsible className="bg-card border border-border rounded-xl">
               <AccordionItem value="forex">
@@ -596,7 +636,7 @@ export default function CardDetails() {
 
         {/* All Card Benefits - With Horizontal Scroll Categories */}
         {card.product_benefits && card.product_benefits.length > 0 && (
-          <section className="animate-fade-in">
+          <section className="animate-fade-in" ref={allBenefitsRef} id="all-benefits">
             <h2 className="text-3xl font-bold text-foreground mb-6">All Card Benefits</h2>
             
             {/* Horizontal Scrollable Category Pills */}
@@ -709,7 +749,7 @@ export default function CardDetails() {
         </section>
 
         {/* Terms & Conditions - Improved */}
-        <section>
+        <section ref={tncRef} id="tnc">
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <button
               onClick={(e) => {
@@ -725,9 +765,9 @@ export default function CardDetails() {
               className="w-full px-6 py-5 flex items-center justify-between hover:bg-muted/50 transition-colors group"
             >
               <h2 className="text-xl font-bold text-foreground">Terms & Conditions</h2>
-              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-hover:text-foreground" />
+              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform rotate-180 group-hover:text-foreground" />
             </button>
-            <div className="hidden px-6 pb-6">
+            <div className="px-6 pb-6">
               <div className="pt-4 border-t border-border">
                 <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{card.tnc}</p>
               </div>
@@ -770,6 +810,12 @@ export default function CardDetails() {
         cardAlias={alias || ''}
         cardName={card.name}
         networkUrl={card.network_url}
+      />
+
+      {/* Comparison Panel */}
+      <ComparePanel
+        open={isComparePanelOpen}
+        onOpenChange={setIsComparePanelOpen}
       />
     </div>
   );
