@@ -397,29 +397,29 @@ const BeatMyCard = () => {
       <div className="min-h-screen bg-background">
         <Navigation />
         
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-16">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
+            <div className="text-center mb-10">
+              <h1 className="text-5xl md:text-6xl font-bold mb-5 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
                 Beat My Card
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-6">
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Select your current card and see if Card Genius can find a better match
               </p>
               
               {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-secondary/10 text-secondary border-secondary/20">
+              <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-secondary/10 text-secondary border-secondary/20 hover:bg-secondary/20 transition-colors">
                   <Sparkles className="w-4 h-4 mr-2" />
                   AI-Powered
                 </Badge>
-                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-primary/10 text-primary border-primary/20">
+                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors">
                   <Shield className="w-4 h-4 mr-2" />
                   100% Secure
                 </Badge>
-                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-green-500/10 text-green-600 border-green-500/20">
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Trusted Nationwide
+                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 transition-colors">
+                  <Zap className="w-4 h-4 mr-2" />
+                  Instant Comparison
                 </Badge>
               </div>
             </div>
