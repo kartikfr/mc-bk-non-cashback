@@ -150,7 +150,7 @@ const BeatMyCard = () => {
 
       const calculateResponse = await cardService.calculateCardGenius(completePayload);
       
-      console.log("Card Genius API Response:", calculateResponse);
+      console.log("=== Card Genius API Response ===", calculateResponse);
       
       // API returns: { status: "success", data: { success: true, savings: [...] } }
       if (calculateResponse.status === "success" && 
@@ -159,7 +159,7 @@ const BeatMyCard = () => {
           calculateResponse.data.savings.length > 0) {
         
         const savingsArray = calculateResponse.data.savings;
-        console.log("Savings Array:", savingsArray);
+        console.log("=== Savings Array ===", savingsArray.length, "cards found");
         
         // Sort by total_savings to get the top card
         const sortedCards = [...savingsArray].sort((a: any, b: any) => {
@@ -169,19 +169,24 @@ const BeatMyCard = () => {
         });
         
         const topCard = sortedCards[0];
-        console.log("Top Card:", topCard);
+        console.log("=== Top Card ===", topCard?.card_name, "with savings:", topCard?.total_savings);
         
         // Find the user's selected card in the results by matching seo_card_alias
         const userCardInResults = savingsArray.find(
           (card: any) => card.seo_card_alias === selectedCard.seo_card_alias
         );
         
-        console.log("User's Selected Card in Results:", userCardInResults);
+        console.log("=== User's Selected Card in Results ===", userCardInResults);
         
         if (!userCardInResults) {
+          console.error("User's card not found in results. Selected:", selectedCard.seo_card_alias);
           toast.error("Your selected card was not found in the results");
           return;
         }
+        
+        console.log("=== Fetching detailed card data ===");
+        console.log("User card alias:", selectedCard.seo_card_alias);
+        console.log("Top card alias:", topCard.seo_card_alias);
         
         // Fetch detailed data for both cards
         const [userCard, geniusCard] = await Promise.all([
@@ -189,20 +194,36 @@ const BeatMyCard = () => {
           cardService.getCardDetailsByAlias(topCard.seo_card_alias)
         ]);
 
+        console.log("=== User Card Details Response ===", userCard);
+        console.log("=== Genius Card Details Response ===", geniusCard);
+
         if (userCard.status === "success" && userCard.data?.[0]) {
-          setUserCardData({
+          const userData = {
             ...userCard.data[0],
             annual_saving: userCardInResults.total_savings || 0
-          });
+          };
+          console.log("=== Setting User Card Data ===", userData);
+          setUserCardData(userData);
+        } else {
+          console.error("Failed to load user card details");
+          toast.error("Failed to load your card details");
+          return;
         }
 
         if (geniusCard.status === "success" && geniusCard.data?.[0]) {
-          setGeniusCardData({
+          const geniusData = {
             ...geniusCard.data[0], 
             annual_saving: topCard.total_savings || 0
-          });
+          };
+          console.log("=== Setting Genius Card Data ===", geniusData);
+          setGeniusCardData(geniusData);
+        } else {
+          console.error("Failed to load genius card details");
+          toast.error("Failed to load recommended card details");
+          return;
         }
 
+        console.log("=== Setting step to results ===");
         setStep('results');
       } else {
         console.error("Invalid API response structure:", calculateResponse);
@@ -644,7 +665,36 @@ const BeatMyCard = () => {
     );
   }
 
-  return null;
+  // Loading state for results
+  if (step === 'results' && (!userCardData || !geniusCardData)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-xl text-muted-foreground">Loading comparison results...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback - should not reach here
+  console.log("=== Fallback Render ===", { step, hasUserCard: !!userCardData, hasGeniusCard: !!geniusCardData });
+  
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center max-w-md">
+        <p className="text-xl text-muted-foreground mb-4">Something went wrong</p>
+        <Button onClick={() => {
+          setStep('select');
+          setCurrentStep(0);
+          setResponses({});
+          setSelectedCard(null);
+        }}>
+          Start Over
+        </Button>
+      </div>
+    </div>
+  );
 };
 
 export default BeatMyCard;
