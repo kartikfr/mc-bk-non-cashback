@@ -12,7 +12,7 @@ interface Card {
   name: string;
   seo_card_alias: string;
   image: string;
-  banks: {
+  banks?: {
     name: string;
   };
   annual_saving?: number;
@@ -330,7 +330,7 @@ const BeatMyCard = () => {
                   className="w-full h-48 object-contain mb-4"
                 />
                 <h3 className="text-xl font-bold mb-1">{userCardData.name}</h3>
-                <p className="text-muted-foreground mb-4">{userCardData.banks.name}</p>
+                <p className="text-muted-foreground mb-4">{userCardData.banks?.name || 'Credit Card'}</p>
                 
                 <div className="bg-muted/50 rounded-lg p-4">
                   <p className="text-sm text-muted-foreground mb-1">You Save Annually</p>
@@ -356,7 +356,7 @@ const BeatMyCard = () => {
                   className="w-full h-48 object-contain mb-4"
                 />
                 <h3 className="text-xl font-bold mb-1">{geniusCardData.name}</h3>
-                <p className="text-muted-foreground mb-4">{geniusCardData.banks.name}</p>
+                <p className="text-muted-foreground mb-4">{geniusCardData.banks?.name || 'Credit Card'}</p>
                 
                 <div className="bg-muted/50 rounded-lg p-4">
                   <p className="text-sm text-muted-foreground mb-1">You Save Annually</p>
