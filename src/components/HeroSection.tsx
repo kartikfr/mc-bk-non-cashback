@@ -10,7 +10,6 @@ const HeroSection = () => {
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const subheadlineRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
-  const statsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timeline = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -30,17 +29,6 @@ const HeroSection = () => {
         },
         "-=0.6"
       );
-    
-    // Animate stats separately without affecting buttons
-    if (statsRef.current) {
-      gsap.from(statsRef.current.children, {
-        scale: 0.8,
-        opacity: 0,
-        stagger: 0.1,
-        duration: 0.5,
-        delay: 0.8,
-      });
-    }
   }, []);
 
   return (
@@ -126,22 +114,6 @@ const HeroSection = () => {
               >
                 Try AI Card Recommendation
               </Button>
-            </div>
-
-            {/* Stats */}
-            <div ref={statsRef} className="grid grid-cols-3 gap-6 pt-8 border-t border-charcoal-200">
-              <div className="text-center lg:text-left">
-                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">100+</div>
-                <div className="text-sm text-charcoal-600 mt-1">Credit Cards</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">₹10K</div>
-                <div className="text-sm text-charcoal-600 mt-1">Avg. Yearly Savings</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-3xl md:text-4xl font-mono font-bold text-primary">6+</div>
-                <div className="text-sm text-charcoal-600 mt-1">Categories Covered</div>
-              </div>
             </div>
           </div>
 
