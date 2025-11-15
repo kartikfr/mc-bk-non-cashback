@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { openRedirectInterstitial } from '@/utils/redirectHandler';
+import { useNavigate } from 'react-router-dom';
 
 interface EligibilityResultDialogProps {
   open: boolean;
@@ -24,6 +25,8 @@ export default function EligibilityResultDialog({
   networkUrl,
   onRecheck
 }: EligibilityResultDialogProps) {
+  const navigate = useNavigate();
+  
   // Robust eligibility detection across possible response shapes
   const raw = result?.data;
   let cards: any[] = [];
@@ -121,8 +124,11 @@ export default function EligibilityResultDialog({
       });
     }
 
-    // Navigate to cards listing page
-    window.location.href = '/cards';
+    // Navigate to cards listing page with smooth scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      navigate('/cards');
+    }, 300);
   };
 
   const handleRecheckClick = () => {
