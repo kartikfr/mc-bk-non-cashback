@@ -3,6 +3,7 @@ import { useComparison } from '@/contexts/ComparisonContext';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -56,12 +57,16 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
     });
   };
 
-  // Fetch all cards once on mount
+  // Fetch all cards once when dialog opens
   const [allCards, setAllCards] = useState<any[]>([]);
   const [isLoadingCards, setIsLoadingCards] = useState(false);
 
   useEffect(() => {
+    if (!open || allCards.length > 0) return;
+    
+    console.log('Fetching cards for comparison...');
     setIsLoadingCards(true);
+    
     cardService.getCardListing({
       slug: '',
       banks_ids: [],
@@ -72,14 +77,28 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
       free_cards: '',
       eligiblityPayload: {},
       cardGeniusPayload: []
-    }).then(response => {
-      if (response.data?.data) {
+    })
+    .then(response => {
+      console.log('API Response:', response);
+      // API returns response.data.cards based on network logs
+      if (response.data?.cards) {
+        console.log('Cards loaded:', response.data.cards.length);
+        setAllCards(response.data.cards);
+      } else if (response.data?.data) {
+        // Fallback in case structure differs
+        console.log('Cards loaded (fallback):', response.data.data.length);
         setAllCards(response.data.data);
+      } else {
+        console.error('Unexpected API response structure:', response);
       }
-    }).finally(() => {
+    })
+    .catch(error => {
+      console.error('Error fetching cards:', error);
+    })
+    .finally(() => {
       setIsLoadingCards(false);
     });
-  }, []);
+  }, [open, allCards.length]);
 
   // Search for cards - slot 0
   useEffect(() => {
@@ -242,9 +261,14 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
       >
         <DialogHeader className="p-6 pb-4 border-b sticky top-0 bg-background z-10">
           <div className="flex items-center justify-between">
-            <DialogTitle id="compare-dialog-title" className="text-2xl font-bold">
-              Compare Cards ({selectedCards.length}/{maxCompare})
-            </DialogTitle>
+            <div>
+              <DialogTitle id="compare-dialog-title" className="text-2xl font-bold">
+                Compare Cards ({selectedCards.length}/{maxCompare})
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                Search and select up to {maxCompare} cards to compare their features side by side
+              </DialogDescription>
+            </div>
             {selectedCards.length >= 2 && (
               <Button
                 variant="outline"
@@ -321,30 +345,34 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full">
-                      <div className="w-full mb-4">
+                      <div className="w-full mb-4 space-y-2">
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-primary" />
                           <Input
-                            placeholder="Search for a card..."
+                            placeholder={isLoadingCards ? "Loading cards..." : `Search ${allCards.length} cards...`}
                             value={searchQueries[slotIndex]}
                             onChange={(e) => handleSearchChange(slotIndex, e.target.value)}
-                            className="pl-10"
+                            className="pl-11 border-2 border-primary/20 focus:border-primary h-12 text-base"
+                            disabled={isLoadingCards}
                           />
                         </div>
                         
                         {/* Search Results Dropdown */}
-                        {searchResults[slotIndex].length > 0 && (
-                          <div className="absolute z-20 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-auto">
+                        {searchQueries[slotIndex].length >= 2 && searchResults[slotIndex].length > 0 && (
+                          <div className="absolute z-20 w-full mt-1 bg-card border-2 border-primary rounded-lg shadow-xl max-h-60 overflow-auto">
+                            <div className="sticky top-0 bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+                              {searchResults[slotIndex].length} card{searchResults[slotIndex].length !== 1 ? 's' : ''} found
+                            </div>
                             {searchResults[slotIndex].map((result: any) => (
                               <button
                                 key={result.id || result.seo_card_alias}
                                 onClick={() => handleSelectCard(result, slotIndex)}
-                                className="w-full p-3 text-left hover:bg-muted transition-colors flex items-center gap-3 border-b border-border last:border-0"
+                                className="w-full p-3 text-left hover:bg-primary/10 transition-colors flex items-center gap-3 border-b border-border last:border-0"
                               >
                                 <img 
                                   src={result.card_bg_image || result.image || '/placeholder.svg'}
                                   alt={result.name}
-                                  className="w-12 h-8 object-contain"
+                                  className="w-16 h-10 object-contain rounded border border-border"
                                   onError={(e) => {
                                     e.currentTarget.src = '/placeholder.svg';
                                   }}
@@ -358,8 +386,16 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
                           </div>
                         )}
                         
+                        {/* No Results Message */}
+                        {searchQueries[slotIndex].length >= 2 && searchResults[slotIndex].length === 0 && !isLoadingCards && (
+                          <div className="text-center text-sm text-muted-foreground mt-2 p-3 border border-dashed border-border rounded-lg">
+                            No cards found. Try a different search term.
+                          </div>
+                        )}
+                        
                         {isLoadingCards && (
-                          <div className="text-center text-sm text-muted-foreground mt-2">
+                          <div className="text-center text-sm text-muted-foreground mt-2 flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                             Loading cards...
                           </div>
                         )}
@@ -367,7 +403,12 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
                       
                       <div className="text-center text-muted-foreground">
                         <Plus className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Search and select a card</p>
+                        <p className="text-sm font-medium">
+                          {isLoadingCards ? 'Please wait...' : 'Search and select a card to compare'}
+                        </p>
+                        {!isLoadingCards && allCards.length > 0 && (
+                          <p className="text-xs mt-1">{allCards.length} cards available</p>
+                        )}
                       </div>
                     </div>
                   )}
