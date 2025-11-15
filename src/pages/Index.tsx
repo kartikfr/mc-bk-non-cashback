@@ -10,7 +10,7 @@ import BeatMyCardCTA from "@/components/BeatMyCardCTA";
 import MidPageCTA from "@/components/MidPageCTA";
 import TestimonialSection from "@/components/TestimonialSection";
 import BlogSection from "@/components/BlogSection";
-import FinalCTA from "@/components/FinalCTA";
+// import FinalCTA from "@/components/FinalCTA";
 
 const Index = () => {
   return (
@@ -26,7 +26,7 @@ const Index = () => {
       {/* <MidPageCTA /> */}
       <TestimonialSection />
       <BlogSection />
-      <FinalCTA />
+      {/* <FinalCTA /> */}
       
       {/* Footer */}
       <footer className="bg-foreground text-background py-12">
