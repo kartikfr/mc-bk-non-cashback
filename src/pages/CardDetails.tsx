@@ -359,7 +359,7 @@ export default function CardDetails() {
                   className="border-white text-white hover:bg-white/10"
                 >
                   <Shield className="mr-2 w-4 h-4" />
-                  Quick Eligibility Check - No Docs
+                  Check Eligibility
                 </Button>
                 <Button
                   size="lg"

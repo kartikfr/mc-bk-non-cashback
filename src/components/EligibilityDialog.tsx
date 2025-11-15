@@ -207,10 +207,7 @@ export default function EligibilityDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[500px]" aria-labelledby="eligibility-dialog-title">
           <DialogHeader>
-            <DialogTitle id="eligibility-dialog-title">Quick Eligibility Check</DialogTitle>
-            <DialogDescription>
-              Get an instant eligibility answer — no documents required.
-            </DialogDescription>
+            <DialogTitle id="eligibility-dialog-title">Quick Eligibility Check - No Docs</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
