@@ -340,16 +340,28 @@ const CardGenius = () => {
       const data = await response.json();
       
       if (data.status && data.data) {
-        // Extract seo_card_alias from the response
-        const aliases = data.data.map((card: any) => card.seo_card_alias);
+        // Filter only eligible cards (where eligible === true)
+        const eligibleCards = data.data.filter((card: any) => card.eligible === true);
+        const ineligibleCount = data.data.length - eligibleCards.length;
+        
+        // Extract seo_card_alias from eligible cards only
+        const aliases = eligibleCards.map((card: any) => card.seo_card_alias);
         setEligibleCardAliases(aliases);
         setEligibilityApplied(true);
         setEligibilityOpen(false);
         
-        toast({
-          title: "Eligibility Applied",
-          description: `Showing ${aliases.length} eligible cards`,
-        });
+        if (aliases.length > 0) {
+          toast({
+            title: "Eligibility Applied",
+            description: `${ineligibleCount} cards filtered out. Showing ${aliases.length} eligible cards.`,
+          });
+        } else {
+          toast({
+            title: "No Eligible Cards",
+            description: "No cards match your eligibility criteria",
+            variant: "destructive"
+          });
+        }
       } else {
         toast({
           title: "No Eligible Cards",
