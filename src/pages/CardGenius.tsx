@@ -381,8 +381,26 @@ const CardGenius = () => {
 
 
   if (showResults) {
-    const totalMonthlySpend = Object.values(responses).reduce((acc, val) => acc + (val || 0), 0);
-    const totalAnnualSpend = totalMonthlySpend * 12;
+    // Fields that are already annual and should not be multiplied by 12
+    const annualFields = ['flights_annual', 'hotels_annual', 'domestic_lounge_usage_quarterly', 
+                          'international_lounge_usage_quarterly', 'insurance_health_annual', 
+                          'insurance_car_or_bike_annual'];
+    
+    let totalMonthlySpend = 0;
+    let totalAnnualFieldsSpend = 0;
+    
+    Object.entries(responses).forEach(([key, value]) => {
+      if (annualFields.includes(key)) {
+        // Lounge usage fields are counts, not money
+        if (!key.includes('lounge_usage')) {
+          totalAnnualFieldsSpend += (value || 0);
+        }
+      } else {
+        totalMonthlySpend += (value || 0);
+      }
+    });
+    
+    const totalAnnualSpend = (totalMonthlySpend * 12) + totalAnnualFieldsSpend;
 
     if (selectedCard) {
       // Detailed card view
