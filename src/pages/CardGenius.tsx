@@ -198,6 +198,24 @@ const CardGenius = () => {
     }
   }, [showResults, results]);
 
+  // Keyboard navigation for table scrolling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showResults && scrollContainerRef.current) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handleScroll('left');
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleScroll('right');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showResults]);
+
   const handleNext = async () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(prev => prev + 1);
@@ -840,6 +858,13 @@ const CardGenius = () => {
                 </div>
               </PopoverContent>
             </Popover>
+            
+            {/* Keyboard hint */}
+            <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
+              <span>Scroll table:</span>
+              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">←</kbd>
+              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">→</kbd>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -884,7 +909,7 @@ const CardGenius = () => {
               {showLeftScroll && (
                 <button
                   onClick={() => handleScroll('left')}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110 animate-fade-in"
                   aria-label="Scroll left"
                 >
                   <ArrowLeft className="w-5 h-5 text-foreground" />
@@ -895,14 +920,18 @@ const CardGenius = () => {
               {showRightScroll && (
                 <button
                   onClick={() => handleScroll('right')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110 animate-fade-in"
                   aria-label="Scroll right"
                 >
                   <ArrowRight className="w-5 h-5 text-foreground" />
                 </button>
               )}
               
-              <div ref={scrollContainerRef} className="overflow-x-auto pb-3 scroll-smooth">
+              <div 
+                ref={scrollContainerRef} 
+                className="overflow-x-auto pb-3 scroll-smooth"
+                onScroll={checkScrollButtons}
+              >
                 <table className="w-full table-fixed min-w-[1200px]">
                   <thead className="bg-muted/50">
                     <tr>
@@ -912,7 +941,17 @@ const CardGenius = () => {
                       {activeTab === 'quick' && (
                         <>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            Total Savings
+                            <div className="flex items-center justify-center gap-1">
+                              Total Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Total savings earned across all spending categories combined</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">+</span>
@@ -969,35 +1008,45 @@ const CardGenius = () => {
                       {activeTab === 'detailed' && (
                          <>
                           {spendingCategories.map((category, idx) => {
-                            // Simplified category names
-                            const categoryNames: Record<string, string> = {
-                              'flights_annual': 'Flights',
-                              'hotels_annual': 'Hotels',
-                              'fuel': 'Fuel',
-                              'dining_or_going_out': 'Dining',
-                              'amazon_spends': 'Amazon',
-                              'flipkart_spends': 'Flipkart',
-                              'other_online_spends': 'Online Shopping',
-                              'other_offline_spends': 'Offline Shopping',
-                              'grocery_spends_online': 'Groceries',
-                              'online_food_ordering': 'Food Delivery',
-                              'mobile_phone_bills': 'Mobile Bills',
-                              'electricity_bills': 'Electricity',
-                              'water_bills': 'Water',
-                              'insurance_health_annual': 'Health Insurance',
-                              'insurance_car_or_bike_annual': 'Vehicle Insurance',
-                              'rent': 'Rent',
-                              'school_fees': 'School Fees',
-                              'domestic_lounge_usage_quarterly': 'Domestic Lounge',
-                              'international_lounge_usage_quarterly': 'Intl Lounge'
+                            // Simplified category names with tooltips
+                            const categoryInfo: Record<string, { name: string; tooltip: string }> = {
+                              'flights_annual': { name: 'Flights', tooltip: 'Total yearly savings on flight bookings' },
+                              'hotels_annual': { name: 'Hotels', tooltip: 'Total yearly savings on hotel stays' },
+                              'fuel': { name: 'Fuel', tooltip: 'Total yearly savings on fuel purchases' },
+                              'dining_or_going_out': { name: 'Dining', tooltip: 'Total yearly savings on dining out' },
+                              'amazon_spends': { name: 'Amazon', tooltip: 'Total yearly savings on Amazon purchases' },
+                              'flipkart_spends': { name: 'Flipkart', tooltip: 'Total yearly savings on Flipkart purchases' },
+                              'other_online_spends': { name: 'Online Shopping', tooltip: 'Total yearly savings on other online shopping' },
+                              'other_offline_spends': { name: 'Offline Shopping', tooltip: 'Total yearly savings on offline store purchases' },
+                              'grocery_spends_online': { name: 'Groceries', tooltip: 'Total yearly savings on grocery shopping' },
+                              'online_food_ordering': { name: 'Food Delivery', tooltip: 'Total yearly savings on food delivery orders' },
+                              'mobile_phone_bills': { name: 'Mobile Bills', tooltip: 'Total yearly savings on mobile and WiFi bills' },
+                              'electricity_bills': { name: 'Electricity', tooltip: 'Total yearly savings on electricity bills' },
+                              'water_bills': { name: 'Water', tooltip: 'Total yearly savings on water bills' },
+                              'insurance_health_annual': { name: 'Health Insurance', tooltip: 'Total yearly savings on health insurance premiums' },
+                              'insurance_car_or_bike_annual': { name: 'Vehicle Insurance', tooltip: 'Total yearly savings on vehicle insurance' },
+                              'rent': { name: 'Rent', tooltip: 'Total yearly savings on rent payments' },
+                              'school_fees': { name: 'School Fees', tooltip: 'Total yearly savings on school fee payments' },
+                              'domestic_lounge_usage_quarterly': { name: 'Domestic Lounge', tooltip: 'Savings from domestic airport lounge access' },
+                              'international_lounge_usage_quarterly': { name: 'Intl Lounge', tooltip: 'Savings from international airport lounge access' }
                             };
                             
-                            const displayName = categoryNames[category] || category.replace(/_/g, ' ');
+                            const info = categoryInfo[category] || { name: category.replace(/_/g, ' '), tooltip: 'Total yearly savings in this category' };
                             
                             return (
                               <React.Fragment key={category}>
                                 <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
-                                  {displayName}
+                                  <div className="flex items-center justify-center gap-1">
+                                    {info.name}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <p>{info.tooltip}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
                                 </th>
                                 {idx < spendingCategories.length - 1 && (
                                   <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
@@ -1011,7 +1060,17 @@ const CardGenius = () => {
                             <span className="text-2xl">=</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            Total Savings
+                            <div className="flex items-center justify-center gap-1">
+                              Total Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Total savings earned across all spending categories combined</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">+</span>
