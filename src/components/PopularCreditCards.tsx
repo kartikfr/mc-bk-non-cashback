@@ -213,7 +213,10 @@ const PopularCreditCards = () => {
               <div className="mt-12 flex justify-center">
                 <Button
                   size="lg"
-                  onClick={() => navigate(`/cards?category=${category.filterValue}`)}
+                  onClick={() => {
+                    navigate(`/cards?category=${category.filterValue}`);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   className="min-w-[200px]"
                 >
                   View All Cards

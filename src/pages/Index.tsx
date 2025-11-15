@@ -50,9 +50,9 @@ const Index = () => {
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm opacity-80">
-                <li><a href="#" className="hover:opacity-100">Privacy Policy</a></li>
-                <li><a href="#" className="hover:opacity-100">Terms of Service</a></li>
-                <li><a href="#" className="hover:opacity-100">Cookie Policy</a></li>
+                <li><Link to="/about" className="hover:opacity-100">Privacy Policy</Link></li>
+                <li><Link to="/about" className="hover:opacity-100">Terms of Service</Link></li>
+                <li><Link to="/about" className="hover:opacity-100">Cookie Policy</Link></li>
               </ul>
             </div>
             <div>
