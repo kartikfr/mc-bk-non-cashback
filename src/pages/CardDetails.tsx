@@ -362,25 +362,25 @@ export default function CardDetails() {
                   Check Eligibility
                 </Button>
                 <Button
-                  size="lg"
-                  variant={isSelected(card.seo_card_alias) ? "default" : "outline"}
+                  size="sm"
+                  variant={isSelected(card.seo_card_alias) ? "secondary" : "ghost"}
                   onClick={() => {
                     toggleCard(card);
                     setIsComparePanelOpen(true);
                   }}
                   className={isSelected(card.seo_card_alias) 
-                    ? "border-2 border-white bg-white text-primary hover:bg-white/90 font-semibold" 
-                    : "border-2 border-white text-white hover:bg-white hover:text-primary font-semibold"
+                    ? "border border-white/50 text-white bg-white/20 hover:bg-white/30" 
+                    : "border border-white/30 text-white/80 hover:text-white hover:bg-white/10"
                   }
                 >
                   {isSelected(card.seo_card_alias) ? (
                     <>
-                      <Check className="mr-2 w-5 h-5" />
-                      Added to Compare
+                      <Check className="mr-2 w-4 h-4" />
+                      Added
                     </>
                   ) : (
                     <>
-                      <Plus className="mr-2 w-5 h-5" />
+                      <Plus className="mr-2 w-4 h-4" />
                       Compare
                     </>
                   )}
@@ -404,25 +404,25 @@ export default function CardDetails() {
               <ExternalLink className="ml-2 w-4 h-4" />
             </Button>
             <Button
-              size="lg"
-              variant={isSelected(card.seo_card_alias) ? "default" : "outline"}
+              size="sm"
+              variant={isSelected(card.seo_card_alias) ? "secondary" : "ghost"}
               onClick={() => {
                 toggleCard(card);
                 setIsComparePanelOpen(true);
               }}
               className={isSelected(card.seo_card_alias)
-                ? "border-2 border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-                : "border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
+                ? "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                : "border border-border text-muted-foreground hover:text-foreground hover:bg-accent"
               }
             >
               {isSelected(card.seo_card_alias) ? (
                 <>
-                  <Check className="mr-2 w-5 h-5" />
+                  <Check className="mr-2 w-4 h-4" />
                   Added
                 </>
               ) : (
                 <>
-                  <Plus className="mr-2 w-5 h-5" />
+                  <Plus className="mr-2 w-4 h-4" />
                   Compare
                 </>
               )}
