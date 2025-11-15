@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
-import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp, CheckCircle2 } from "lucide-react";
 import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,20 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import logo from "@/assets/moneycontrol-logo.png";
 
 interface SpendingQuestion {
@@ -80,6 +94,7 @@ const funFacts = [
 interface CardResult {
   card_name: string;
   card_bg_image?: string;
+  seo_card_alias: string;
   joining_fees: number;
   total_savings: number;
   total_savings_yearly: number;
@@ -118,6 +133,16 @@ const CardGenius = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  
+  // Eligibility states
+  const [eligibilityOpen, setEligibilityOpen] = useState(false);
+  const [eligibilityData, setEligibilityData] = useState({
+    pincode: "",
+    inhandIncome: "",
+    empStatus: ""
+  });
+  const [eligibilityApplied, setEligibilityApplied] = useState(false);
+  const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>([]);
 
   useEffect(() => {
     setShowWelcomeDialog(true);
@@ -194,6 +219,7 @@ const CardGenius = () => {
               return {
                 card_name: cardDetails.data?.card_name || saving.card_name || saving.card_alias,
                 card_bg_image: cardBgImage,
+                seo_card_alias: cardDetails.data?.seo_card_alias || saving.seo_card_alias || saving.card_alias,
                 joining_fees: joiningFees,
                 total_savings: saving.total_savings || 0,
                 total_savings_yearly: totalSavingsYearly,
@@ -214,6 +240,7 @@ const CardGenius = () => {
               return {
                 card_name: saving.card_name || saving.card_alias,
                 card_bg_image: saving.card_bg_image || '',
+                seo_card_alias: saving.seo_card_alias || saving.card_alias,
                 joining_fees: joiningFees,
                 total_savings: saving.total_savings || 0,
                 total_savings_yearly: totalSavingsYearly,
@@ -284,6 +311,59 @@ const CardGenius = () => {
   const handlePrev = () => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleEligibilityCheck = async () => {
+    if (!eligibilityData.pincode || !eligibilityData.inhandIncome || !eligibilityData.empStatus) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('https://bk-api.bankkaro.com/sp/api/cg-eligiblity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pincode: eligibilityData.pincode,
+          inhandIncome: eligibilityData.inhandIncome,
+          empStatus: eligibilityData.empStatus
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        // Extract seo_card_alias from the response
+        const aliases = data.data.map((card: any) => card.seo_card_alias);
+        setEligibleCardAliases(aliases);
+        setEligibilityApplied(true);
+        setEligibilityOpen(false);
+        
+        toast({
+          title: "Eligibility Applied",
+          description: `Showing ${aliases.length} eligible cards`,
+        });
+      } else {
+        toast({
+          title: "No Eligible Cards",
+          description: "No cards match your eligibility criteria",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Eligibility check error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check eligibility. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -546,10 +626,18 @@ const CardGenius = () => {
       );
     }
 
-    // Filter results based on lifetime free filter
-    const filteredResults = showLifetimeFreeOnly 
-      ? results.filter(card => card.joining_fees === 0)
-      : results;
+    // Filter results based on lifetime free and eligibility filters
+    let filteredResults = results;
+    
+    if (showLifetimeFreeOnly) {
+      filteredResults = filteredResults.filter(card => card.joining_fees === 0);
+    }
+    
+    if (eligibilityApplied && eligibleCardAliases.length > 0) {
+      filteredResults = filteredResults.filter(card => 
+        eligibleCardAliases.includes(card.seo_card_alias)
+      );
+    }
 
     // Get categories where user has spending (non-zero responses)
     const spendingCategories = Object.entries(responses)
@@ -601,7 +689,7 @@ const CardGenius = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex flex-wrap gap-3 mb-6">
             <Button 
               variant={showLifetimeFreeOnly ? "default" : "outline"} 
               size="sm"
@@ -609,6 +697,73 @@ const CardGenius = () => {
             >
               Lifetime Free Cards
             </Button>
+            
+            <Popover open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant={eligibilityApplied ? "default" : "outline"}
+                  className="gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {eligibilityApplied ? "Eligibility Applied" : "Check Eligibility"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-80 p-6 bg-card rounded-xl shadow-2xl border-2 border-primary/20 z-50" 
+                align="start"
+                sideOffset={8}
+              >
+                <h3 className="font-semibold text-lg mb-4">Check Your Eligibility</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="pincode">Pincode</Label>
+                    <Input
+                      id="pincode"
+                      type="text"
+                      placeholder="Enter your pincode"
+                      value={eligibilityData.pincode}
+                      onChange={(e) => setEligibilityData({ ...eligibilityData, pincode: e.target.value })}
+                      maxLength={6}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="income">In-hand Income (Monthly)</Label>
+                    <Input
+                      id="income"
+                      type="text"
+                      placeholder="e.g., 50000"
+                      value={eligibilityData.inhandIncome}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        setEligibilityData({ ...eligibilityData, inhandIncome: value });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="empStatus">Employment Status</Label>
+                    <Select
+                      value={eligibilityData.empStatus}
+                      onValueChange={(value) => setEligibilityData({ ...eligibilityData, empStatus: value })}
+                    >
+                      <SelectTrigger id="empStatus">
+                        <SelectValue placeholder="Select employment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="salaried">Salaried</SelectItem>
+                        <SelectItem value="self_employed">Self Employed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    onClick={handleEligibilityCheck} 
+                    className="w-full"
+                  >
+                    Apply Eligibility
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Tabs */}
@@ -731,16 +886,16 @@ const CardGenius = () => {
                               || category.replace(/_/g, ' ');
                             
                             return (
-                              <>
-                                <th key={category} className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                              <React.Fragment key={category}>
+                                <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
                                   {displayName}
                                 </th>
                                 {idx < spendingCategories.length - 1 && (
-                                  <th key={`${category}-plus`} className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                                  <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
                                     <span className="text-2xl">+</span>
                                   </th>
                                 )}
-                              </>
+                              </React.Fragment>
                             );
                           })}
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
@@ -857,14 +1012,14 @@ const CardGenius = () => {
                                 const breakdown = card.spending_breakdown[category];
                                 const yearlySavings = breakdown?.savings ? breakdown.savings * 12 : 0;
                                 return (
-                                  <>
-                                    <td key={category} className="p-4 text-center font-semibold text-green-600 whitespace-nowrap">
+                                  <React.Fragment key={category}>
+                                    <td className="p-4 text-center font-semibold text-green-600 whitespace-nowrap">
                                       ₹{yearlySavings.toLocaleString()}
                                     </td>
                                     {idx < spendingCategories.length - 1 && (
-                                      <td key={`${category}-plus`} className="p-4"></td>
+                                      <td className="p-4"></td>
                                     )}
-                                  </>
+                                  </React.Fragment>
                                 );
                               })}
                               <td className="p-4"></td>
