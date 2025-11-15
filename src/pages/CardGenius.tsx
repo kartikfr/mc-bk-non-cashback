@@ -814,21 +814,21 @@ const CardGenius = () => {
           <TooltipProvider>
             <div className="bg-white rounded-xl border border-border overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left p-4 font-semibold text-sm text-foreground whitespace-nowrap">Credit Cards</th>
+                      <th className="text-left p-4 font-semibold text-sm text-foreground w-64">Credit Cards</th>
                       
                       {/* Quick Insights Tab - Show summary columns */}
                       {activeTab === 'quick' && (
                         <>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
                             Total Savings
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
                             <div className="flex items-center justify-center gap-1">
                               Milestone Benefits
                               <Tooltip>
@@ -841,10 +841,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">-</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
                             <div className="flex items-center justify-center gap-1">
                               Joining Fees
                               <Tooltip>
@@ -857,10 +857,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">=</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
                             <div className="flex items-center justify-center gap-1">
                               Net Savings
                               <Tooltip>
@@ -899,27 +899,27 @@ const CardGenius = () => {
                             
                             return (
                               <React.Fragment key={category}>
-                                <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                                <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
                                   {displayName}
                                 </th>
                                 {idx < spendingCategories.length - 1 && (
-                                  <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                                  <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                                     <span className="text-2xl">+</span>
                                   </th>
                                 )}
                               </React.Fragment>
                             );
                           })}
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">=</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
                             Total Savings
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
                             <div className="flex items-center justify-center gap-1">
                               Milestone Benefits
                               <Tooltip>
@@ -932,10 +932,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">-</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
                             <div className="flex items-center justify-center gap-1">
                               Joining Fees
                               <Tooltip>
@@ -944,14 +944,14 @@ const CardGenius = () => {
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Annual or one-time fees charged by the bank for this credit card</p>
-                              </TooltipContent>
+                                </TooltipContent>
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground whitespace-nowrap w-12">
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">=</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
                             <div className="flex items-center justify-center gap-1">
                               Net Savings
                               <Tooltip>
@@ -983,13 +983,13 @@ const CardGenius = () => {
                               <img
                                 src={card.card_bg_image}
                                 alt={card.card_name}
-                                className="w-20 h-12 object-contain"
+                                className="w-20 h-12 object-contain flex-shrink-0"
                                 onError={(e) => {
                                   e.currentTarget.src = "/placeholder.svg";
                                 }}
                               />
-                              <div>
-                                <p className="font-semibold text-foreground whitespace-nowrap">{card.card_name}</p>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-foreground break-words">{card.card_name}</p>
                               </div>
                             </div>
                           </td>
@@ -997,19 +997,19 @@ const CardGenius = () => {
                           {/* Quick Insights Tab - Show summary data */}
                           {activeTab === 'quick' && (
                             <>
-                              <td className="p-4 text-center font-semibold text-green-600 whitespace-nowrap">
+                              <td className="p-4 text-center font-semibold text-green-600">
                                 ₹{card.total_savings_yearly.toLocaleString()}
                               </td>
                               <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-blue-600 whitespace-nowrap">
+                              <td className="p-4 text-center font-semibold text-blue-600">
                                 ₹{card.total_extra_benefits.toLocaleString()}
                               </td>
                               <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-red-600 whitespace-nowrap">
+                              <td className="p-4 text-center font-semibold text-red-600">
                                 ₹{card.joining_fees.toLocaleString()}
                               </td>
                               <td className="p-4"></td>
-                              <td className="p-4 text-center whitespace-nowrap">
+                              <td className="p-4 text-center">
                                 <span className="font-bold text-lg text-green-700">
                                   ₹{card.net_savings.toLocaleString()}
                                 </span>
@@ -1025,7 +1025,7 @@ const CardGenius = () => {
                                 const yearlySavings = breakdown?.savings ? breakdown.savings * 12 : 0;
                                 return (
                                   <React.Fragment key={category}>
-                                    <td className="p-4 text-center font-semibold text-green-600 whitespace-nowrap">
+                                    <td className="p-4 text-center font-semibold text-green-600">
                                       ₹{yearlySavings.toLocaleString()}
                                     </td>
                                     {idx < spendingCategories.length - 1 && (
@@ -1035,19 +1035,19 @@ const CardGenius = () => {
                                 );
                               })}
                               <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-green-600 whitespace-nowrap">
+                              <td className="p-4 text-center font-semibold text-green-600">
                                 ₹{card.total_savings_yearly.toLocaleString()}
                               </td>
                               <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-blue-600 whitespace-nowrap">
+                              <td className="p-4 text-center font-semibold text-blue-600">
                                 ₹{card.total_extra_benefits.toLocaleString()}
                               </td>
                               <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-red-600 whitespace-nowrap">
+                              <td className="p-4 text-center font-semibold text-red-600">
                                 ₹{card.joining_fees.toLocaleString()}
                               </td>
                               <td className="p-4"></td>
-                              <td className="p-4 text-center whitespace-nowrap">
+                              <td className="p-4 text-center">
                                 <span className="font-bold text-lg text-green-700">
                                   ₹{card.net_savings.toLocaleString()}
                                 </span>
