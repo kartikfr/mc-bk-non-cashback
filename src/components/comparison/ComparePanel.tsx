@@ -30,10 +30,11 @@ import { useDebounce } from '@/hooks/useDebounce';
 interface ComparePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preSelectedCard?: any;
 }
 
-export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
-  const { selectedCards, removeCard, toggleCard, maxCompare } = useComparison();
+export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePanelProps) {
+  const { selectedCards, removeCard, toggleCard, maxCompare, isSelected } = useComparison();
   const [showDifferencesOnly, setShowDifferencesOnly] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['summary']));
   const [searchQueries, setSearchQueries] = useState<string[]>(['', '', '']);
@@ -99,6 +100,13 @@ export function ComparePanel({ open, onOpenChange }: ComparePanelProps) {
       setIsLoadingCards(false);
     });
   }, [open, allCards.length]);
+
+  // Auto-select the pre-selected card when panel opens
+  useEffect(() => {
+    if (open && preSelectedCard && !isSelected(preSelectedCard.seo_card_alias || preSelectedCard.id?.toString())) {
+      toggleCard(preSelectedCard);
+    }
+  }, [open, preSelectedCard]);
 
   // Search for cards - slot 0
   useEffect(() => {

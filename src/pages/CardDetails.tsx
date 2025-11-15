@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { cardService } from '@/services/cardService';
 import Navigation from '@/components/Navigation';
-import { Star, ChevronDown, ChevronUp, Share2, ExternalLink, Gift, Award, Sparkles, ArrowLeft, Shield, Plus } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp, Share2, ExternalLink, Gift, Award, Sparkles, ArrowLeft, Shield, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -18,12 +18,14 @@ interface CardData {
   id: number;
   name: string;
   nick_name: string;
+  seo_card_alias: string;
   card_type: string;
   rating: number;
   user_rating_count: number;
   image: string;
   card_bg_image: string;
   card_bg_gradient: string;
+  card_apply_link: string;
   age_criteria: string;
   min_age: number;
   max_age: number;
@@ -56,6 +58,7 @@ interface CardData {
   }>;
   product_benefits?: Array<{
     benefit_type: string;
+    benefit_name?: string;
     sub_type: string;
     html_text: string;
   }>;
@@ -85,7 +88,7 @@ export default function CardDetails() {
   const [showEligibilityDialog, setShowEligibilityDialog] = useState(false);
   const [isComparePanelOpen, setIsComparePanelOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
-  const { toggleCard } = useComparison();
+  const { toggleCard, isSelected } = useComparison();
   const heroRef = useRef<HTMLDivElement>(null);
   const feesRef = useRef<HTMLDivElement>(null);
   const benefitsRef = useRef<HTMLDivElement>(null);
@@ -359,16 +362,28 @@ export default function CardDetails() {
                   Quick Eligibility Check - No Docs
                 </Button>
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  size="lg"
+                  variant={isSelected(card.seo_card_alias) ? "default" : "outline"}
                   onClick={() => {
                     toggleCard(card);
                     setIsComparePanelOpen(true);
                   }}
-                  className="text-white/70 hover:text-white hover:bg-white/10"
+                  className={isSelected(card.seo_card_alias) 
+                    ? "border-2 border-white bg-white text-primary hover:bg-white/90 font-semibold" 
+                    : "border-2 border-white text-white hover:bg-white hover:text-primary font-semibold"
+                  }
                 >
-                  <Plus className="mr-2 w-4 h-4" />
-                  Compare
+                  {isSelected(card.seo_card_alias) ? (
+                    <>
+                      <Check className="mr-2 w-5 h-5" />
+                      Added to Compare
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 w-5 h-5" />
+                      Compare
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -390,11 +405,27 @@ export default function CardDetails() {
             </Button>
             <Button
               size="lg"
-              variant="outline"
-              onClick={() => setIsComparePanelOpen(true)}
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              variant={isSelected(card.seo_card_alias) ? "default" : "outline"}
+              onClick={() => {
+                toggleCard(card);
+                setIsComparePanelOpen(true);
+              }}
+              className={isSelected(card.seo_card_alias)
+                ? "border-2 border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                : "border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
+              }
             >
-              Compare
+              {isSelected(card.seo_card_alias) ? (
+                <>
+                  <Check className="mr-2 w-5 h-5" />
+                  Added
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 w-5 h-5" />
+                  Compare
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -832,9 +863,10 @@ export default function CardDetails() {
       />
 
       {/* Comparison Panel */}
-      <ComparePanel
-        open={isComparePanelOpen}
+      <ComparePanel 
+        open={isComparePanelOpen} 
         onOpenChange={setIsComparePanelOpen}
+        preSelectedCard={card}
       />
     </div>
   );
