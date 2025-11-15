@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
@@ -145,6 +145,11 @@ const CardGenius = () => {
   });
   const [eligibilityApplied, setEligibilityApplied] = useState(false);
   const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>([]);
+  
+  // Scroll states
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true);
 
   useEffect(() => {
     setShowWelcomeDialog(true);
@@ -156,6 +161,42 @@ const CardGenius = () => {
   const handleValueChange = (value: number) => {
     setResponses(prev => ({ ...prev, [currentQuestion.field]: value }));
   };
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400;
+      const newScrollLeft = direction === 'left' 
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const checkScrollButtons = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftScroll(scrollLeft > 10);
+      setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      checkScrollButtons();
+      container.addEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      
+      return () => {
+        container.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
+    }
+  }, [showResults, results]);
 
   const handleNext = async () => {
     if (currentStep < questions.length - 1) {
@@ -835,11 +876,33 @@ const CardGenius = () => {
 
           {/* Results Table */}
           <TooltipProvider>
-            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="relative bg-white rounded-xl border border-border shadow-sm overflow-hidden">
               {/* Scroll hint indicator */}
               <div className="bg-gradient-to-r from-transparent via-muted/20 to-transparent h-1"></div>
               
-              <div className="overflow-x-auto pb-3 scroll-smooth">
+              {/* Left Scroll Button */}
+              {showLeftScroll && (
+                <button
+                  onClick={() => handleScroll('left')}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110"
+                  aria-label="Scroll left"
+                >
+                  <ArrowLeft className="w-5 h-5 text-foreground" />
+                </button>
+              )}
+              
+              {/* Right Scroll Button */}
+              {showRightScroll && (
+                <button
+                  onClick={() => handleScroll('right')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110"
+                  aria-label="Scroll right"
+                >
+                  <ArrowRight className="w-5 h-5 text-foreground" />
+                </button>
+              )}
+              
+              <div ref={scrollContainerRef} className="overflow-x-auto pb-3 scroll-smooth">
                 <table className="w-full table-fixed min-w-[1200px]">
                   <thead className="bg-muted/50">
                     <tr>
@@ -855,19 +918,49 @@ const CardGenius = () => {
                             <span className="text-2xl">+</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
-                            Milestones
+                            <div className="flex items-center justify-center gap-1">
+                              Milestones
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Additional benefits like vouchers, reward points, or perks earned by achieving spending milestones</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">-</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            Joining Fee
+                            <div className="flex items-center justify-center gap-1">
+                              Joining Fee
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Annual or one-time fees charged by the bank for this credit card</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">=</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            Net Savings
+                            <div className="flex items-center justify-center gap-1">
+                              Net Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Your actual profit calculated as: Total Savings + Milestone Benefits - Joining Fees</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                         </>
                       )}
@@ -924,19 +1017,49 @@ const CardGenius = () => {
                             <span className="text-2xl">+</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
-                            Milestones
+                            <div className="flex items-center justify-center gap-1">
+                              Milestones
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Additional benefits like vouchers, reward points, or perks earned by achieving spending milestones</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">-</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            Joining Fee
+                            <div className="flex items-center justify-center gap-1">
+                              Joining Fee
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Annual or one-time fees charged by the bank for this credit card</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">=</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            Net Savings
+                            <div className="flex items-center justify-center gap-1">
+                              Net Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Your actual profit calculated as: Total Savings + Milestone Benefits - Joining Fees</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </th>
                         </>
                       )}
