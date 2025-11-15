@@ -10,6 +10,8 @@ interface SpendingInputProps {
   max?: number;
   step?: number;
   className?: string;
+  showCurrency?: boolean;
+  suffix?: string;
 }
 
 export const SpendingInput = ({
@@ -18,9 +20,11 @@ export const SpendingInput = ({
   value,
   onChange,
   min = 0,
-  max = 100000,
+  max = 1000000,
   step = 500,
   className,
+  showCurrency = true,
+  suffix = "",
 }: SpendingInputProps) => {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
@@ -31,9 +35,8 @@ export const SpendingInput = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value) || 0;
-    const clamped = Math.min(Math.max(val, min), max);
-    setLocalValue(clamped);
-    onChange(clamped);
+    setLocalValue(val);
+    onChange(val);
   };
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,23 +56,30 @@ export const SpendingInput = ({
       </label>
 
       <div className="relative mb-6">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-500 text-xl pointer-events-none">
-          ₹
-        </span>
+        {showCurrency && (
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-500 text-xl pointer-events-none">
+            ₹
+          </span>
+        )}
         <input
           type="number"
           value={localValue}
           onChange={handleInputChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className="w-full pl-12 pr-4 py-4 text-2xl font-mono font-bold text-primary border-2 border-charcoal-200 rounded-xl 
-                     focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10
-                     transition-all duration-300"
+          className={cn(
+            "w-full pr-4 py-4 text-2xl font-mono font-bold text-primary border-2 border-charcoal-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-300",
+            showCurrency ? "pl-12" : "pl-4"
+          )}
           placeholder="0"
           min={min}
-          max={max}
           step={step}
         />
+        {suffix && (
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-500 text-sm pointer-events-none">
+            {suffix}
+          </span>
+        )}
       </div>
 
       <div className="relative pt-2">
@@ -106,8 +116,8 @@ export const SpendingInput = ({
                      [&::-moz-range-thumb]:shadow-lg"
         />
         <div className="flex justify-between mt-3 text-sm text-charcoal-500">
-          <span>₹{min.toLocaleString('en-IN')}</span>
-          <span>₹{max.toLocaleString('en-IN')}</span>
+          <span>{showCurrency ? '₹' : ''}{min.toLocaleString('en-IN')}{suffix}</span>
+          <span>{showCurrency ? '₹' : ''}{max.toLocaleString('en-IN')}{suffix}</span>
         </div>
       </div>
     </div>
