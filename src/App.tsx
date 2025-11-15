@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ComparisonProvider } from "./contexts/ComparisonContext";
+import ScrollToTop from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import CardListing from "./pages/CardListing";
 import CardGenius from "./pages/CardGenius";
@@ -19,6 +20,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
+      <ScrollToTop />
       <TooltipProvider>
         <ComparisonProvider maxCompare={3}>
           <Toaster />
