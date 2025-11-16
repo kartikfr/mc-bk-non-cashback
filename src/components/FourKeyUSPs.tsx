@@ -1,12 +1,52 @@
 import { useNavigate } from "react-router-dom";
-import { CreditCard, Sparkles, Target, TrendingUp, ArrowRight } from "lucide-react";
+import { Target, ArrowRight, Wand2, Layers } from "lucide-react";
+
+// Custom SVG Icons for better visual representation
+const CardWithTags = ({ className = "w-12 h-12" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Main card */}
+    <rect x="8" y="18" width="32" height="20" rx="2" />
+    {/* Card stripe */}
+    <line x1="8" y1="26" x2="40" y2="26" strokeWidth="3" />
+    {/* Category tags */}
+    <rect x="26" y="12" width="8" height="4" rx="1" />
+    <rect x="30" y="8" width="6" height="4" rx="1" />
+    <rect x="34" y="4" width="4" height="4" rx="1" />
+  </svg>
+);
+
+const MagicWandSparkles = ({ className = "w-12 h-12" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Wand stick */}
+    <line x1="10" y1="38" x2="30" y2="18" />
+    {/* Wand tip star */}
+    <path d="M30 18l2-6 2 6 6 2-6 2-2 6-2-6-6-2z" />
+    {/* Sparkle 1 */}
+    <path d="M14 14l1-3 1 3 3 1-3 1-1 3-1-3-3-1z" />
+    {/* Sparkle 2 */}
+    <path d="M38 30l1-3 1 3 3 1-3 1-1 3-1-3-3-1z" />
+  </svg>
+);
+
+const StackedCards = ({ className = "w-12 h-12" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Card 1 (back) */}
+    <rect x="6" y="14" width="28" height="18" rx="2" opacity="0.4" />
+    {/* Card 2 (middle) */}
+    <rect x="10" y="17" width="28" height="18" rx="2" opacity="0.7" />
+    {/* Card 3 (front) */}
+    <rect x="14" y="20" width="28" height="18" rx="2" />
+    {/* Card detail line */}
+    <line x1="18" y1="28" x2="38" y2="28" />
+  </svg>
+);
 
 const FourKeyUSPs = () => {
   const navigate = useNavigate();
 
   const features = [
     {
-      icon: CreditCard,
+      icon: CardWithTags,
       iconColor: "bg-blue-500",
       title: "Card Genius by Category",
       description: "Choose your spending category, answer a few questions, and find the perfect card tailored to your needs",
@@ -14,7 +54,7 @@ const FourKeyUSPs = () => {
       redirect: "/card-genius-category"
     },
     {
-      icon: Sparkles,
+      icon: MagicWandSparkles,
       iconColor: "bg-purple-500",
       title: "Super Card Genius",
       description: "Complete our 19-question assessment and get personalized card recommendations ranked by Net Annual Savings",
@@ -30,7 +70,7 @@ const FourKeyUSPs = () => {
       redirect: "/beat-my-card"
     },
     {
-      icon: TrendingUp,
+      icon: StackedCards,
       iconColor: "bg-orange-500",
       title: "Browse All Cards",
       description: "Explore our comprehensive database of credit cards with detailed comparisons and real user reviews",
