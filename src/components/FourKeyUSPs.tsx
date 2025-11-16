@@ -11,7 +11,7 @@ const FourKeyUSPs = () => {
       title: "Card Genius by Category",
       description: "Choose your spending category, answer a few questions, and find the perfect card tailored to your needs",
       cta: "Get Started",
-      redirect: "/card-genius"
+      redirect: "/card-genius-category"
     },
     {
       icon: Sparkles,

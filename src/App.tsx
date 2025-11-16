@@ -8,6 +8,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import CardListing from "./pages/CardListing";
 import CardGenius from "./pages/CardGenius";
+import CardGeniusCategory from "./pages/CardGeniusCategory";
 import BeatMyCard from "./pages/BeatMyCard";
 import CardDetails from "./pages/CardDetails";
 import BlogPost from "./pages/BlogPost";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/cards" element={<CardListing />} />
             <Route path="/cards/:alias" element={<CardDetails />} />
             <Route path="/card-genius" element={<CardGenius />} />
+            <Route path="/card-genius-category" element={<CardGeniusCategory />} />
             <Route path="/beat-my-card" element={<BeatMyCard />} />
             <Route path="/redirect" element={<RedirectInterstitial />} />
             <Route path="/blog/:slug" element={<BlogPost />} />

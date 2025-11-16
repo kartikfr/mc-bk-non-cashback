@@ -1,22 +1,11 @@
-import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
-import HeroSection from "@/components/HeroSection";
-import BankCarousel from "@/components/BankCarousel";
-import FourKeyUSPs from "@/components/FourKeyUSPs";
-import PopularCreditCards from "@/components/PopularCreditCards";
-import TestimonialSection from "@/components/TestimonialSection";
-import BlogSection from "@/components/BlogSection";
+import CategoryCardGenius from "@/components/CategoryCardGenius";
 
-const Index = () => {
+const CardGeniusCategory = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <HeroSection />
-      <BankCarousel />
-      <FourKeyUSPs />
-      <PopularCreditCards />
-      <TestimonialSection />
-      <BlogSection />
+      <CategoryCardGenius />
       
       {/* Footer */}
       <footer className="bg-foreground text-background py-16">
@@ -34,11 +23,11 @@ const Index = () => {
             <div className="space-y-4">
               <h4 className="font-bold text-xl mb-6">Quick Links</h4>
               <ul className="space-y-3 text-sm opacity-80">
-                <li><Link to="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
-                <li><Link to="/cards" className="hover:opacity-100 transition-opacity">All Cards</Link></li>
-                <li><Link to="/card-genius" className="hover:opacity-100 transition-opacity">Card Genius</Link></li>
-                <li><Link to="/beat-my-card" className="hover:opacity-100 transition-opacity">Beat My Card</Link></li>
-                <li><Link to="/about" className="hover:opacity-100 transition-opacity">About Us</Link></li>
+                <li><a href="/" className="hover:opacity-100 transition-opacity">Home</a></li>
+                <li><a href="/cards" className="hover:opacity-100 transition-opacity">All Cards</a></li>
+                <li><a href="/card-genius" className="hover:opacity-100 transition-opacity">Card Genius</a></li>
+                <li><a href="/beat-my-card" className="hover:opacity-100 transition-opacity">Beat My Card</a></li>
+                <li><a href="/about" className="hover:opacity-100 transition-opacity">About Us</a></li>
               </ul>
             </div>
             <div className="space-y-4">
@@ -63,4 +52,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default CardGeniusCategory;
