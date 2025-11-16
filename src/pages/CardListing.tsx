@@ -752,7 +752,7 @@ const CardListing = () => {
                     key={card.id || index}
                     className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2 flex flex-col h-full"
                   >
-                        <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4">
+                        <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 flex-shrink-0">
                           {/* Compare Toggle Icon - Top Right */}
                           <div className="absolute top-3 right-3 z-20">
                             <CompareToggleIcon card={card} />
@@ -824,18 +824,18 @@ const CardListing = () => {
           
                           <h3 className="text-xl font-bold mb-4 line-clamp-2 min-h-[3.5rem]">{card.name}</h3>
                           
-                          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-4">
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Joining Fee</p>
-                              <p className="text-sm font-semibold">
+                          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-6 min-h-[88px] flex-grow-0">
+                            <div className="flex flex-col">
+                              <p className="text-xs text-muted-foreground mb-1.5">Joining Fee</p>
+                              <p className="text-sm font-semibold mt-auto">
                                 {card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase() === "free" 
                                   ? "Free" 
                                   : `₹${card.joining_fee_text}`}
                               </p>
                             </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Annual Fee</p>
-                              <p className="text-sm font-semibold">
+                            <div className="flex flex-col">
+                              <p className="text-xs text-muted-foreground mb-1.5">Annual Fee</p>
+                              <p className="text-sm font-semibold mt-auto">
                                 {card.annual_fee_text === "0" || card.annual_fee_text?.toLowerCase() === "free" 
                                   ? "Free" 
                                   : `₹${card.annual_fee_text}`}
