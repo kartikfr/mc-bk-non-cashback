@@ -388,7 +388,7 @@ const CategoryCardGenius = () => {
       handleViewDetails(card);
     }
   };
-  return <section className="py-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
+  return <section className="pt-32 pb-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
       <div className="container mx-auto px-4">
         {/* Header - Always visible */}
         <div className="text-center mb-12 my-0 py-0">
