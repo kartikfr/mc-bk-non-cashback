@@ -82,9 +82,9 @@ const PopularCreditCards = () => {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {cards[key]?.map((card: any, index: number) => {
               const topUsps = card.product_usps?.filter((usp: any) => usp.priority <= 2).sort((a: any, b: any) => a.priority - b.priority).slice(0, 2) || [];
-              return <div key={card.id || index} className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              return <div key={card.id || index} className="bg-card rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group flex flex-col h-full">
                       {/* Card Image */}
-                      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+                      <div className="relative h-64 overflow-hidden bg-gradient-to-br from-muted to-muted/50 flex-shrink-0">
                         <img src={card.card_bg_image} alt={card.name} className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500" />
                         
                         {/* Tags overlay */}
@@ -95,9 +95,9 @@ const PopularCreditCards = () => {
                         </div>
                       </div>
 
-                      <div className="p-6">
+                      <div className="p-6 flex flex-col flex-grow">
                         {/* Card Name */}
-                        <h3 className="text-xl font-bold mb-2 line-clamp-2">
+                        <h3 className="text-xl font-bold mb-4 line-clamp-2 min-h-[3.5rem]">
                           {card.name}
                         </h3>
 
@@ -118,7 +118,7 @@ const PopularCreditCards = () => {
                         </div>
 
                         {/* USPs */}
-                        <div className="space-y-3 mb-6">
+                        <div className="space-y-3 mb-6 flex-grow min-h-[180px]">
                           {topUsps.map((usp: any, i: number) => <div key={i} className="flex gap-3">
                               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                                 <span className="text-primary text-xs font-bold">{i + 1}</span>
@@ -133,7 +133,7 @@ const PopularCreditCards = () => {
                         </div>
 
                         {/* CTA Buttons */}
-                        <div className="space-y-2">
+                        <div className="space-y-2 mt-auto">
                           <Button className="w-full" size="lg" onClick={() => openRedirectInterstitial({
                       networkUrl: card.network_url,
                       bankName: extractBankName(card),
