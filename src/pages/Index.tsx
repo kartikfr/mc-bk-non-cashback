@@ -1,32 +1,22 @@
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
-import BankCarousel from "@/components/BankCarousel";
+import TrustedBanks from "@/components/TrustedBanks";
+import FourKeyUSPs from "@/components/FourKeyUSPs";
 import PopularCreditCards from "@/components/PopularCreditCards";
-import CategoryCardGenius from "@/components/CategoryCardGenius";
-import CardGeniusCTA from "@/components/CardGeniusCTA";
-import CTAConnector from "@/components/CTAConnector";
-import BeatMyCardCTA from "@/components/BeatMyCardCTA";
-import MidPageCTA from "@/components/MidPageCTA";
 import TestimonialSection from "@/components/TestimonialSection";
 import BlogSection from "@/components/BlogSection";
-// import FinalCTA from "@/components/FinalCTA";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       <HeroSection />
-      <BankCarousel />
+      <TrustedBanks />
+      <FourKeyUSPs />
       <PopularCreditCards />
-      <CategoryCardGenius />
-      <CardGeniusCTA />
-      <CTAConnector />
-      <BeatMyCardCTA />
-      {/* <MidPageCTA /> */}
       <TestimonialSection />
       <BlogSection />
-      {/* <FinalCTA /> */}
       
       {/* Footer */}
       <footer className="bg-foreground text-background py-16">

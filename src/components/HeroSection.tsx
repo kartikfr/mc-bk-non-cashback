@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { CreditCard3D } from "./CreditCard3D";
 import { gsap } from "gsap";
-import { Sparkles, GitCompare, Cpu, Wallet } from "lucide-react";
+import { Sparkles, CreditCard } from "lucide-react";
 const HeroSection = () => {
   const navigate = useNavigate();
   const headlineRef = useRef<HTMLHeadingElement>(null);
@@ -45,7 +45,7 @@ const HeroSection = () => {
           <div className="text-center lg:text-left space-y-8">
             <h1 ref={headlineRef} className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-charcoal-900 leading-tight">
               Stop Leaving{" "}
-              <span className="bg-gradient-accent bg-clip-text text-transparent">
+              <span className="text-[hsl(145,100%,33%)]">
                 Money
               </span>{" "}
               on the Table
@@ -55,41 +55,29 @@ const HeroSection = () => {
               Find the credit card that pays you back for living your life. Get personalized recommendations in 60 seconds.
             </p>
 
-            {/* Trust Indicators */}
-            <div className="flex flex-wrap justify-center lg:justify-start gap-6 text-sm text-charcoal-600">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-primary" />
-                <span className="font-medium">AI-Powered Picks</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-primary" />
-                <span className="font-medium">100% Free & Unbiased</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <GitCompare className="w-5 h-5 text-primary" />
-                <span className="font-medium">Compare 100+ Cards</span>
-              </div>
-            </div>
-
-            {/* CTA Buttons - Always Visible */}
+            {/* CTA Buttons */}
             <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start opacity-100">
-              <Button size="lg" onClick={() => {
-              navigate("/cards");
-              setTimeout(() => window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-              }), 100);
-            }} className="group shadow-xl">
-                <Sparkles className="mr-2 group-hover:rotate-12 transition-transform" />
+              <Button 
+                size="lg" 
+                onClick={() => {
+                  navigate("/cards");
+                  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+                }} 
+                className="group shadow-xl text-lg px-8 py-6"
+              >
+                <CreditCard className="mr-2 w-5 h-5" />
                 Discover Credit Cards
               </Button>
-              <Button size="lg" variant="outline" onClick={() => {
-              navigate("/card-genius");
-              setTimeout(() => window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-              }), 100);
-            }} className="shadow-lg">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={() => {
+                  navigate("/card-genius");
+                  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+                }} 
+                className="shadow-lg text-lg px-8 py-6 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Sparkles className="mr-2 w-5 h-5" />
                 Try AI Card Recommendation
               </Button>
             </div>
