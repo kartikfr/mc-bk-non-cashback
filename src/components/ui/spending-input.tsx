@@ -11,6 +11,7 @@ interface SpendingInputProps {
   step?: number;
   className?: string;
   showCurrency?: boolean;
+  showRupee?: boolean;
   suffix?: string;
 }
 
@@ -24,6 +25,7 @@ export const SpendingInput = ({
   step = 500,
   className,
   showCurrency = true,
+  showRupee = true,
   suffix = "",
 }: SpendingInputProps) => {
   const [localValue, setLocalValue] = useState(value);
@@ -56,7 +58,7 @@ export const SpendingInput = ({
       </label>
 
       <div className="relative mb-6">
-        {showCurrency && (
+        {showRupee && showCurrency && (
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-500 text-xl pointer-events-none">
             ₹
           </span>
@@ -69,7 +71,7 @@ export const SpendingInput = ({
           onBlur={() => setIsFocused(false)}
           className={cn(
             "w-full pr-4 py-4 text-2xl font-mono font-bold text-primary border-2 border-charcoal-200 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-300",
-            showCurrency ? "pl-12" : "pl-4"
+            (showRupee && showCurrency) ? "pl-12" : "pl-4"
           )}
           placeholder="0"
           min={min}
@@ -116,8 +118,8 @@ export const SpendingInput = ({
                      [&::-moz-range-thumb]:shadow-lg"
         />
         <div className="flex justify-between mt-3 text-sm text-charcoal-500">
-          <span>{showCurrency ? '₹' : ''}{min.toLocaleString('en-IN')}{suffix}</span>
-          <span>{showCurrency ? '₹' : ''}{max.toLocaleString('en-IN')}{suffix}</span>
+          <span>{(showRupee && showCurrency) ? '₹' : ''}{min.toLocaleString('en-IN')}{suffix}</span>
+          <span>{(showRupee && showCurrency) ? '₹' : ''}{max.toLocaleString('en-IN')}{suffix}</span>
         </div>
       </div>
     </div>

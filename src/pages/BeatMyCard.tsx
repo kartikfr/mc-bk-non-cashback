@@ -9,6 +9,8 @@ import { CardSearchDropdown } from "@/components/CardSearchDropdown";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { openRedirectInterstitial } from "@/utils/redirectHandler";
 import { Badge } from "@/components/ui/badge";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 interface CategorySavings {
   category: string;
   emoji: string;
@@ -49,6 +51,7 @@ interface SpendingQuestion {
   min: number;
   max: number;
   step: number;
+  isCount?: boolean;
 }
 const questions: SpendingQuestion[] = [{
   field: 'amazon_spends',
@@ -126,14 +129,16 @@ const questions: SpendingQuestion[] = [{
   emoji: '🇮🇳',
   min: 0,
   max: 50,
-  step: 1
+  step: 1,
+  isCount: true
 }, {
   field: 'international_lounge_usage_quarterly',
   question: 'Plus, what about international airport lounges?',
   emoji: '🌎',
   min: 0,
   max: 50,
-  step: 1
+  step: 1,
+  isCount: true
 }, {
   field: 'mobile_phone_bills',
   question: 'How much do you spend on recharging your mobile or Wi-Fi monthly?',
@@ -523,11 +528,18 @@ const BeatMyCard = () => {
 
   // Render card selection
   if (step === 'select') {
-    return <div className="min-h-screen bg-background">
+    return (
+      <>
+        <Navigation />
+        <div className="min-h-screen bg-background pt-24 pb-16">
         <div className="container mx-auto px-4 py-8">
           {/* Header with Home Button */}
           <div className="flex items-center justify-between mb-8">
-            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/')} 
+              className="gap-2 hover:bg-primary/10"
+            >
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Button>
@@ -538,7 +550,7 @@ const BeatMyCard = () => {
               <h1 className="text-5xl md:text-6xl font-bold mb-5 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
                 Beat My Card
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto px-0">
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Select your current card and see if Card Genius can find a better match
               </p>
               
@@ -562,18 +574,27 @@ const BeatMyCard = () => {
             <CardSearchDropdown cards={filteredCards} selectedCard={selectedCard} onCardSelect={handleCardSelect} onClearSelection={() => setSelectedCard(null)} isLoading={isLoading} />
           </div>
         </div>
-      </div>;
+        <Footer />
+      </>
+    );
   }
 
   // Render questionnaire
   if (step === 'questions') {
     const question = questions[currentStep];
     const progress = (currentStep + 1) / questions.length * 100;
-    return <div className="min-h-screen bg-background">
+    return (
+      <>
+        <Navigation />
+        <div className="min-h-screen bg-background pt-24 pb-16">
         <div className="container mx-auto px-4 py-8">
           {/* Header with Navigation */}
           <div className="flex items-center justify-between mb-8">
-            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/')} 
+              className="gap-2 hover:bg-primary/10"
+            >
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
             </Button>
@@ -600,14 +621,23 @@ const BeatMyCard = () => {
 
             {/* Question card */}
             <div className="bg-card border border-border rounded-2xl p-8 shadow-lg mb-6">
-              <SpendingInput question={question.question} emoji={question.emoji} value={responses[question.field] || 0} onChange={value => setResponses({
-              ...responses,
-              [question.field]: value
-            })} min={question.min} max={question.max} step={question.step} />
+              <SpendingInput 
+                question={question.question} 
+                emoji={question.emoji} 
+                value={responses[question.field] || 0} 
+                onChange={value => setResponses({
+                  ...responses,
+                  [question.field]: value
+                })} 
+                min={question.min} 
+                max={question.max} 
+                step={question.step}
+                showRupee={!question.isCount}
+              />
             </div>
 
             {/* Navigation buttons */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0} className="flex-1">
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -627,29 +657,38 @@ const BeatMyCard = () => {
                 </Button>
               </div>
 
-              {/* Skip buttons */}
-              <div className="flex gap-3">
-                <Button variant="ghost" onClick={handleSkip} className="flex-1 text-muted-foreground">
-                  Skip Question
+              {/* Skip buttons - centered layout */}
+              <div className="flex flex-col items-center gap-2">
+                <Button variant="ghost" onClick={handleSkipAll} disabled={isCalculating} className="text-muted-foreground">
+                  {isCalculating ? "Calculating..." : "Skip All"}
                 </Button>
-                <Button variant="ghost" onClick={handleSkipAll} disabled={isCalculating} className="flex-1 text-muted-foreground">
-                  {isCalculating ? "Calculating..." : "Skip All & See Results"}
+                <Button variant="link" onClick={handleSkip} className="text-sm text-muted-foreground hover:text-foreground">
+                  Skip this question →
                 </Button>
               </div>
             </div>
           </div>
         </div>
-      </div>;
+        <Footer />
+      </>
+    );
   }
 
   // Render results
   if (step === 'results' && userCardData && geniusCardData) {
     const savingsDifference = Math.abs(geniusCardData.annual_saving - userCardData.annual_saving);
-    return <div className="min-h-screen bg-background">
+    return (
+      <>
+        <Navigation />
+        <div className="min-h-screen bg-background pt-24 pb-16">
         <div className="container mx-auto px-4 py-8">
           {/* Header with Home Button */}
           <div className="flex items-center justify-between mb-8">
-            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/')} 
+              className="gap-2 hover:bg-primary/10"
+            >
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Button>
@@ -691,50 +730,64 @@ const BeatMyCard = () => {
                 </div>}
             </div>
 
-            {/* Savings Comparison Bar */}
-            {!isUserWinner && <div className="mb-12 animate-fade-in bg-card border border-border rounded-2xl p-6">
-                <h3 className="text-center text-lg font-semibold mb-4 text-foreground">Annual Savings Comparison</h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-muted-foreground">Your Card</span>
-                      <span className="text-sm font-bold text-foreground">₹{userCardData.annual_saving.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="h-8 bg-muted rounded-lg overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-primary/60 to-primary flex items-center justify-end pr-3 text-white text-sm font-semibold transition-all duration-1000" style={{
-                    width: `${userCardData.annual_saving / geniusCardData.annual_saving * 100}%`
-                  }}>
-                        {(userCardData.annual_saving / geniusCardData.annual_saving * 100).toFixed(0)}%
-                      </div>
-                    </div>
+            {/* Annual Savings Comparison */}
+            <div className="mb-12 animate-fade-in bg-card border border-border rounded-2xl p-8">
+              <h2 className="text-3xl font-bold text-center mb-8 text-foreground">Annual Savings Comparison</h2>
+              
+              <div className="space-y-6 mb-8">
+                {/* User Card Savings */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-foreground">Your Card</span>
+                    <span className="text-2xl font-bold text-primary">₹{userCardData.annual_saving?.toLocaleString('en-IN')}</span>
                   </div>
-                  
-                  <ArrowRight className="w-6 h-6 text-secondary animate-pulse" />
-                  
-                  <div className="flex-1">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-muted-foreground">Card Genius</span>
-                      <span className="text-sm font-bold text-secondary">₹{geniusCardData.annual_saving.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="h-8 bg-muted rounded-lg overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-secondary to-secondary/70 flex items-center justify-end pr-3 text-white text-sm font-semibold transition-all duration-1000" style={{
-                    width: '100%'
-                  }}>
-                        100%
-                      </div>
+                  <div className="relative h-12 bg-muted/50 rounded-full overflow-hidden border-2 border-primary/20">
+                    <div 
+                      className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 flex items-center justify-end pr-4 transition-all duration-500 shadow-lg" 
+                      style={{
+                        width: `${maxSavings > 0 ? Math.max(userCardData.annual_saving / maxSavings * 100, 5) : 5}%`
+                      }}
+                    >
+                      <span className="text-sm font-bold text-primary-foreground drop-shadow-md">
+                        {maxSavings > 0 ? Math.round(userCardData.annual_saving / maxSavings * 100) : 0}%
+                      </span>
                     </div>
                   </div>
                 </div>
-                
-                <div className="mt-6 text-center">
-                  <div className="inline-flex items-center gap-2 bg-secondary/10 text-secondary px-4 py-2 rounded-full">
+
+                {/* Arrow indicator */}
+                <div className="flex justify-center">
+                  <ArrowRight className="w-6 h-6 text-muted-foreground" />
+                </div>
+
+                {/* Genius Card Savings */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-foreground">Card Genius</span>
+                    <span className="text-2xl font-bold text-secondary">₹{geniusCardData.annual_saving?.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="relative h-12 bg-muted/50 rounded-full overflow-hidden border-2 border-secondary/20">
+                    <div 
+                      className="h-full bg-gradient-to-r from-secondary via-secondary to-secondary/80 flex items-center justify-end pr-4 transition-all duration-500 shadow-lg" 
+                      style={{
+                        width: `${maxSavings > 0 ? geniusCardData.annual_saving / maxSavings * 100 : 100}%`
+                      }}
+                    >
+                      <span className="text-sm font-bold text-secondary-foreground drop-shadow-md">100%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {!isUserWinner && <div className="text-center">
+                  <div className="inline-flex items-center gap-2 bg-secondary/10 text-secondary px-6 py-3 rounded-full border border-secondary/20">
                     <TrendingUp className="w-5 h-5" />
-                    <span className="font-semibold">
+                    <span className="font-semibold text-lg">
                       {((geniusCardData.annual_saving - userCardData.annual_saving) / userCardData.annual_saving * 100).toFixed(1)}% Higher Savings
                     </span>
                   </div>
-                </div>
-              </div>}
+                </div>}
+            </div>
 
             {/* Card Comparison */}
             <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -997,7 +1050,9 @@ const BeatMyCard = () => {
             </div>
           </div>
         </div>
-      </div>;
+        <Footer />
+      </>
+    );
   }
 
   // Loading state for results
