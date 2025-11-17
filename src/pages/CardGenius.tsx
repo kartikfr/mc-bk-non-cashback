@@ -2,25 +2,18 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
-import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Info, Check, CheckCircle2 } from "lucide-react";
 import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
+import { openRedirectInterstitial } from "@/utils/redirectHandler";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -35,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import logo from "@/assets/moneycontrol-logo.png";
 
 interface SpendingQuestion {
   field: string;
@@ -127,13 +119,11 @@ const CardGenius = () => {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [results, setResults] = useState<CardResult[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'quick' | 'detailed'>('quick');
   const [selectedCard, setSelectedCard] = useState<CardResult | null>(null);
   const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
-  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   
   // Eligibility states
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
@@ -149,10 +139,6 @@ const CardGenius = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftScroll, setShowLeftScroll] = useState(false);
   const [showRightScroll, setShowRightScroll] = useState(true);
-
-  useEffect(() => {
-    setShowWelcomeDialog(true);
-  }, []);
 
   const currentQuestion = questions[currentStep];
   const progress = ((currentStep + 1) / questions.length) * 100;
@@ -197,7 +183,7 @@ const CardGenius = () => {
     }
   }, [showResults, results]);
 
-  // Keyboard navigation for table scrolling
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showResults && scrollContainerRef.current && !selectedCard) {
@@ -215,7 +201,6 @@ const CardGenius = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showResults, selectedCard]);
 
-  // Escape key to close card detail view
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedCard) {
@@ -231,21 +216,28 @@ const CardGenius = () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      // Calculate and show results
       await calculateResults();
     }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleSkip = () => {
+    handleNext();
   };
 
   const calculateResults = async () => {
     setIsCalculating(true);
     
-    // Start rotating fun facts
     const factInterval = setInterval(() => {
       setCurrentFactIndex(prev => (prev + 1) % funFacts.length);
     }, 3000);
 
     try {
-      // Prepare payload
       const payload: SpendingData = {};
       questions.forEach(q => {
         payload[q.field as keyof SpendingData] = responses[q.field] || 0;
@@ -254,7 +246,6 @@ const CardGenius = () => {
       const response = await cardService.calculateCardGenius(payload);
       
       if (response.data && response.data.savings && Array.isArray(response.data.savings)) {
-        // Fetch card details for ALL cards
         const cardsWithDetails = await Promise.all(
           response.data.savings.map(async (saving: any) => {
             try {
@@ -266,7 +257,6 @@ const CardGenius = () => {
               const cardBgImage = saving.card_bg_image 
                 || cardDetails.data?.card_bg_image 
                 || cardDetails.data?.card_image
-                || cardDetails.data?.image
                 || '';
               
               const welcomeBenefits = 
@@ -296,7 +286,7 @@ const CardGenius = () => {
                 spending_breakdown: saving.spending_breakdown || {}
               } as CardResult;
             } catch (error) {
-              console.error(`Error processing card ${saving.card_alias || saving.card_name}:`, error);
+              console.error(`Error processing card:`, error);
               const joiningFees = parseInt(saving.joining_fees) || 0;
               const totalSavingsYearly = saving.total_savings_yearly || 0;
               const totalExtraBenefits = saving.total_extra_benefits || 0;
@@ -343,126 +333,90 @@ const CardGenius = () => {
     }
   };
 
-  const handleApplyNow = (card: CardResult) => {
-    navigate(`/cards/${card.seo_card_alias}`);
-  };
-
-  const handleViewBreakdown = (card: CardResult) => {
-    setSelectedCard(card);
-    setShowBreakdown(true);
-  };
-
-  const renderResults = () => {
-    if (!results || results.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No matching cards found. Try adjusting your spending patterns.</p>
-        </div>
-      );
+  const handleEligibilityCheck = async () => {
+    if (!eligibilityData.pincode || !eligibilityData.inhandIncome || !eligibilityData.empStatus) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
     }
 
-    return (
-      <div className="space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold text-foreground">Your Perfect Card Matches!</h2>
-          <p className="text-muted-foreground">Based on your spending, here are the top 3 cards for you</p>
-        </div>
+    try {
+      const response = await fetch('https://bk-api.bankkaro.com/sp/api/cg-eligiblity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pincode: eligibilityData.pincode,
+          inhandIncome: eligibilityData.inhandIncome,
+          empStatus: eligibilityData.empStatus
+        })
+      });
 
-        <div className="grid gap-6">
-          {results.map((card, index) => (
-            <div key={index} className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative h-48 bg-gradient-to-br from-primary/20 to-primary/5">
-                {card.card_bg_image && (
-                  <img 
-                    src={card.card_bg_image} 
-                    alt={card.card_name}
-                    className="absolute inset-0 w-full h-full object-contain p-8"
-                  />
-                )}
-                {index === 0 && (
-                  <div className="absolute top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    🏆 Best Match
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6 space-y-4">
-                <h3 className="text-xl font-bold text-foreground">{card.card_name}</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Savings</p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      ₹{card.total_savings_yearly?.toLocaleString('en-IN') || '0'}
-                    </p>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Net Benefit</p>
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      ₹{card.net_savings?.toLocaleString('en-IN') || '0'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={() => handleApplyNow(card)}
-                    className="flex-1"
-                  >
-                    View Details
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleViewBreakdown(card)}
-                  >
-                    See Breakdown
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center">
-          <Button 
-            variant="outline"
-            onClick={() => {
-              setCurrentStep(0);
-              setSpendingData({
-                amazon_spends: 0,
-                flipkart_spends: 0,
-                other_online_spends: 0,
-                other_offline_spends: 0,
-                grocery_spends_online: 0,
-                online_food_ordering: 0,
-                fuel: 0,
-                dining_or_going_out: 0,
-                flights_annual: 0,
-                hotels_annual: 0,
-                domestic_lounge_usage_quarterly: 0,
-                international_lounge_usage_quarterly: 0,
-                mobile_phone_bills: 0,
-                electricity_bills: 0,
-                water_bills: 0,
-                insurance_health_annual: 0,
-                insurance_car_or_bike_annual: 0,
-                rent: 0,
-                school_fees: 0,
-              });
-              setResults(null);
-            }}
-          >
-            Start Over
-          </Button>
-        </div>
-      </div>
-    );
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        const eligibleCards = data.data.filter((card: any) => card.eligible === true);
+        const ineligibleCount = data.data.length - eligibleCards.length;
+        
+        const aliases = eligibleCards.map((card: any) => card.seo_card_alias);
+        setEligibleCardAliases(aliases);
+        setEligibilityApplied(true);
+        setEligibilityOpen(false);
+        
+        if (aliases.length > 0) {
+          toast({
+            title: "Eligibility Applied",
+            description: `${ineligibleCount} cards filtered out. Showing ${aliases.length} eligible cards.`,
+          });
+        } else {
+          toast({
+            title: "No Eligible Cards",
+            description: "No cards match your eligibility criteria",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "No Eligible Cards",
+          description: "No cards match your eligibility criteria",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Eligibility check error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check eligibility. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  if (loading) {
+  const handleApplyFromDetail = () => {
+    if (!selectedCard) return;
+    
+    const bankName = selectedCard.card_name?.split(' ')[0] || 'Bank';
+    
+    openRedirectInterstitial({
+      bankName: bankName,
+      bankLogo: selectedCard.card_bg_image,
+      cardName: selectedCard.card_name
+    });
+  };
+
+  const handleCardSelect = (card: CardResult) => {
+    setSelectedCard(card);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Loading state
+  if (isCalculating) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <div className="pt-20 container mx-auto px-4 max-w-2xl">
           <div className="min-h-[600px] flex flex-col items-center justify-center space-y-8">
             <div className="relative">
@@ -481,57 +435,484 @@ const CardGenius = () => {
     );
   }
 
-  if (results) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="pt-20 container mx-auto px-4 max-w-4xl pb-12">
-          {renderResults()}
-        </div>
+  // Results view
+  if (showResults) {
+    const annualFields = ['flights_annual', 'hotels_annual', 'domestic_lounge_usage_quarterly', 
+                          'international_lounge_usage_quarterly', 'insurance_health_annual', 
+                          'insurance_car_or_bike_annual'];
+    
+    let totalMonthlySpend = 0;
+    let totalAnnualFieldsSpend = 0;
+    
+    Object.entries(responses).forEach(([key, value]) => {
+      if (annualFields.includes(key)) {
+        if (!key.includes('lounge_usage')) {
+          totalAnnualFieldsSpend += (value || 0);
+        }
+      } else {
+        totalMonthlySpend += (value || 0);
+      }
+    });
+    
+    const monthlyEquivalentOfAnnual = totalAnnualFieldsSpend / 12;
+    const displayMonthlySpend = totalMonthlySpend + monthlyEquivalentOfAnnual;
+    const totalAnnualSpend = (totalMonthlySpend * 12) + totalAnnualFieldsSpend;
 
-        <Dialog open={showBreakdown} onOpenChange={setShowBreakdown}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedCard?.card_name} - Savings Breakdown</DialogTitle>
-              <DialogDescription>Detailed breakdown of your savings with this card</DialogDescription>
-            </DialogHeader>
+    // Detailed card view
+    if (selectedCard) {
+      return (
+        <div className="min-h-screen bg-background">
+          <header className="sticky top-0 bg-white border-b border-border z-50">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setSelectedCard(null)}
+                  className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span className="font-semibold">Back to Results</span>
+                </button>
+                
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
+                  <span>Press</span>
+                  <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">Esc</kbd>
+                  <span>to close</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="container mx-auto px-4 py-8 max-w-6xl">
+            <h1 className="text-2xl font-bold text-foreground mb-6">{selectedCard.card_name}</h1>
             
-            {selectedCard && (
-              <div className="space-y-4">
-                {Object.entries(selectedCard.spending_breakdown).map(([key, breakdown]) => (
-                  <div key={key} className="border border-border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-foreground">{breakdown.on}</h4>
-                      <span className="text-green-600 dark:text-green-400 font-bold">
-                        ₹{breakdown.savings?.toLocaleString('en-IN') || '0'}
-                      </span>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl p-8 flex items-center justify-center">
+                <img
+                  src={selectedCard.card_bg_image}
+                  alt={selectedCard.card_name}
+                  className="w-full max-w-sm h-64 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+              </div>
+
+              <div className="bg-blue-50 rounded-2xl p-6">
+                <p className="text-sm text-muted-foreground mb-4">On The Spends Of ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</p>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Total Savings</span>
+                    <span className="text-lg font-semibold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Milestone Benefits</span>
+                    <span className="text-lg font-semibold text-foreground">₹{selectedCard.total_extra_benefits.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-foreground">Joining Fees</span>
+                    <span className="text-lg font-semibold text-foreground">-₹{selectedCard.joining_fees.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="h-px bg-border"></div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-foreground">Your Net Savings</span>
+                    <span className="text-2xl font-bold text-green-600">₹{selectedCard.net_savings.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <Button className="w-full" size="lg" onClick={handleApplyFromDetail}>Apply Now</Button>
+              </div>
+            </div>
+
+            {/* Welcome Benefits */}
+            {(() => {
+              const list = Array.isArray(selectedCard.welcome_benefits) ? selectedCard.welcome_benefits : [];
+              const fallbackItem = (selectedCard as any).voucher_of || (selectedCard as any).voucher_bonus
+                ? [{
+                    voucher_of: (selectedCard as any).voucher_of,
+                    voucher_bonus: (selectedCard as any).voucher_bonus,
+                    minimum_spend: (selectedCard as any).minimum_spend
+                  }]
+                : [];
+              const display = list.length > 0 ? list : fallbackItem;
+              if (!display || display.length === 0) return null;
+              return (
+                <div className="bg-white rounded-xl border border-border p-6 mb-8">
+                  <h2 className="text-xl font-bold text-foreground mb-2">Extra Benefits</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Note: These extra benefits are not included in your annual savings. They are for your reference
+                  </p>
+                  
+                  <h3 className="text-lg font-semibold text-primary mb-4">Welcome Benefit</h3>
+                  
+                  <div className="space-y-3">
+                    {display.map((benefit: any, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-foreground">
+                            On card activation you get a {benefit.voucher_of || 'benefit'}
+                            {benefit.voucher_bonus && ` of ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
+                            {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
+                              <span className="text-muted-foreground">{' '} (Minimum spend: ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Savings Breakdown */}
+            <div className="bg-white rounded-xl border border-border p-6">
+              <h2 className="text-xl font-bold text-foreground mb-6">Your Total Savings Breakdown</h2>
+              
+              {/* Category Pills */}
+              <div className="relative mb-6">
+                <div className="overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex gap-3 min-w-max">
+                    {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
+                      if (!details || !details.spend || details.spend === 0) return null;
+                      const isActive = selectedCategory === category || (!selectedCategory && Object.keys(selectedCard.spending_breakdown).findIndex(k => selectedCard.spending_breakdown[k]?.spend > 0) === Object.keys(selectedCard.spending_breakdown).indexOf(category));
+                      return (
+                        <button
+                          key={category}
+                          onClick={() => setSelectedCategory(category)}
+                          className={`px-6 py-3 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                            isActive 
+                              ? 'bg-primary text-primary-foreground shadow-md' 
+                              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                          }`}
+                        >
+                          {category.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Savings
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Breakdown Toggle */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Savings Breakdown</h3>
+                <div className="flex gap-2 bg-muted rounded-lg p-1">
+                  <button
+                    onClick={() => setBreakdownView('yearly')}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      breakdownView === 'yearly' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Yearly
+                  </button>
+                  <button
+                    onClick={() => setBreakdownView('monthly')}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      breakdownView === 'monthly' 
+                        ? 'bg-foreground text-background' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Details */}
+              {(() => {
+                const activeCategory = selectedCategory || Object.keys(selectedCard.spending_breakdown).find(k => selectedCard.spending_breakdown[k]?.spend > 0);
+                if (!activeCategory) return null;
+                const details = selectedCard.spending_breakdown[activeCategory];
+                if (!details || !details.spend) return null;
+
+                const isYearly = breakdownView === 'yearly';
+                const multiplier = isYearly ? 12 : 1;
+                const spend = (details.spend || 0) * multiplier;
+                const pointsEarned = (details.points_earned || 0) * multiplier;
+                const convRate = details.conv_rate || 0;
+                const savings = (details.savings || 0) * multiplier;
+
+                return (
+                  <div className="border border-border rounded-xl p-6 bg-muted/30">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center pb-4 border-b border-border">
+                        <span className="text-muted-foreground">Total Spends</span>
+                        <span className="text-lg font-semibold text-foreground">₹{spend.toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center pb-4 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Points Earned</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p>Reward points earned on your spending in this category</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <span className="text-lg font-semibold text-foreground">{pointsEarned.toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center pb-4 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Value of 1 Point</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p>The monetary value of each reward point</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <span className="text-lg font-semibold text-foreground">₹{convRate.toFixed(2)}</span>
+                      </div>
+                      
+                      {pointsEarned > 0 && convRate > 0 && (
+                        <div className="text-center py-2 text-sm text-muted-foreground">
+                          ₹{pointsEarned.toLocaleString()} × {convRate.toFixed(2)}
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center pt-2 bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4 rounded-b-xl">
+                        <span className="font-semibold text-foreground">Total Savings</span>
+                        <span className="text-2xl font-bold text-green-600">₹{savings.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Spend: ₹{breakdown.spend?.toLocaleString('en-IN') || '0'}
-                    </p>
-                    {breakdown.explanation && breakdown.explanation.length > 0 && (
-                      <ul className="space-y-1">
-                        {breakdown.explanation.map((exp, idx) => (
-                          <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(exp) }} />
-                          </li>
-                        ))}
-                      </ul>
+
+                    {details.explanation && details.explanation.length > 0 && (
+                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-xs font-semibold text-primary mb-2">How it&apos;s calculated:</p>
+                        <div className="space-y-1">
+                          {details.explanation.map((exp, idx) => (
+                            <div 
+                              key={idx} 
+                              className="text-xs text-foreground"
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(exp) }}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
-                ))}
+                );
+              })()}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // Filter results
+    let filteredResults = results;
+    
+    if (showLifetimeFreeOnly) {
+      filteredResults = filteredResults.filter(card => card.joining_fees === 0);
+    }
+    
+    if (eligibilityApplied && eligibleCardAliases.length > 0) {
+      filteredResults = filteredResults.filter(card => 
+        eligibleCardAliases.includes(card.seo_card_alias)
+      );
+    }
+
+    // Results table view
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 bg-white border-b border-border z-50">
+          <div className="container mx-auto px-4 py-4">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-semibold">Back to Home</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 max-w-7xl">
+          <h1 className="text-3xl font-bold text-center text-foreground mb-8">
+            The Best Cards Sorted By Annual Savings!
+          </h1>
+
+          <div className="bg-muted/50 rounded-xl p-6 mb-6 text-center">
+            <p className="text-sm font-medium text-foreground mb-2">Your Total Spends:</p>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="text-2xl font-bold text-foreground">
+                ₹{(displayMonthlySpend / 100000).toFixed(2)}L Monthly
+              </span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-2xl font-bold text-primary">
+                ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually
+              </span>
+              <button
+                onClick={() => {
+                  setShowResults(false);
+                  setCurrentStep(0);
+                }}
+                className="ml-2 text-primary hover:text-primary/80 font-medium text-sm flex items-center gap-1"
+              >
+                Edit Spends <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            <Button 
+              variant={showLifetimeFreeOnly ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setShowLifetimeFreeOnly(!showLifetimeFreeOnly)}
+            >
+              Lifetime Free Cards
+            </Button>
+            
+            <Popover open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant={eligibilityApplied ? "default" : "outline"}
+                  className="gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {eligibilityApplied ? "Eligibility Applied" : "Check Eligibility"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-80 p-6 bg-card rounded-xl shadow-2xl border-2 border-primary/20 z-50" 
+                align="start"
+                sideOffset={8}
+              >
+                <h3 className="font-semibold text-lg mb-4">Check Your Eligibility</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="pincode">Pincode</Label>
+                    <Input
+                      id="pincode"
+                      type="text"
+                      placeholder="Enter your pincode"
+                      value={eligibilityData.pincode}
+                      onChange={(e) => setEligibilityData({ ...eligibilityData, pincode: e.target.value })}
+                      maxLength={6}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="income">In-hand Income (Monthly)</Label>
+                    <Input
+                      id="income"
+                      type="text"
+                      placeholder="e.g., 50000"
+                      value={eligibilityData.inhandIncome}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        setEligibilityData({ ...eligibilityData, inhandIncome: value });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="empStatus">Employment Status</Label>
+                    <Select
+                      value={eligibilityData.empStatus}
+                      onValueChange={(value) => setEligibilityData({ ...eligibilityData, empStatus: value })}
+                    >
+                      <SelectTrigger id="empStatus">
+                        <SelectValue placeholder="Select employment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="salaried">Salaried</SelectItem>
+                        <SelectItem value="self_employed">Self Employed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    onClick={handleEligibilityCheck} 
+                    className="w-full"
+                  >
+                    Apply Eligibility
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
+              <span>Scroll table:</span>
+              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">←</kbd>
+              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">→</kbd>
+            </div>
+          </div>
+
+          {/* Results Cards */}
+          <div className="space-y-4">
+            {filteredResults.map((card, index) => (
+              <div 
+                key={index}
+                onClick={() => handleCardSelect(card)}
+                className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow cursor-pointer"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <img 
+                    src={card.card_bg_image} 
+                    alt={card.card_name}
+                    className="w-24 h-16 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.svg";
+                    }}
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-bold text-foreground">{card.card_name}</h3>
+                    {index === 0 && (
+                      <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-1">
+                        🏆 Best Match
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Net Savings</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      ₹{card.net_savings.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Total Savings</p>
+                    <p className="font-semibold">₹{card.total_savings_yearly.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Milestones</p>
+                    <p className="font-semibold">₹{card.total_extra_benefits.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Joining Fee</p>
+                    <p className="font-semibold">₹{card.joining_fees.toLocaleString()}</p>
+                  </div>
+                </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
 
+  // Question flow
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <div className="pt-20 container mx-auto px-4 max-w-2xl pb-12">
         <div className="mb-8 text-center space-y-4">
           <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full">
@@ -567,8 +948,8 @@ const CardGenius = () => {
             <SpendingInput
               question={currentQuestion.question}
               emoji={currentQuestion.emoji}
-              value={spendingData[currentQuestion.field as keyof SpendingData] as number}
-              onChange={(value) => setSpendingData({ ...spendingData, [currentQuestion.field]: value })}
+              value={responses[currentQuestion.field] || 0}
+              onChange={handleValueChange}
               min={currentQuestion.min}
               max={currentQuestion.max}
               step={currentQuestion.step}
