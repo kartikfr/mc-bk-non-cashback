@@ -121,7 +121,27 @@ interface CardResult {
 
 const CardGenius = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [spendingData, setSpendingData] = useState<Partial<SpendingData>>({});
+  const [spendingData, setSpendingData] = useState<SpendingData>({
+    amazon_spends: 0,
+    flipkart_spends: 0,
+    other_online_spends: 0,
+    other_offline_spends: 0,
+    grocery_spends_online: 0,
+    online_food_ordering: 0,
+    fuel: 0,
+    dining_or_going_out: 0,
+    flights_annual: 0,
+    hotels_annual: 0,
+    domestic_lounge_usage_quarterly: 0,
+    international_lounge_usage_quarterly: 0,
+    mobile_phone_bills: 0,
+    electricity_bills: 0,
+    water_bills: 0,
+    insurance_health_annual: 0,
+    insurance_car_or_bike_annual: 0,
+    rent: 0,
+    school_fees: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CardResult[] | null>(null);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
@@ -273,7 +293,27 @@ const CardGenius = () => {
             variant="outline"
             onClick={() => {
               setCurrentStep(0);
-              setSpendingData({});
+              setSpendingData({
+                amazon_spends: 0,
+                flipkart_spends: 0,
+                other_online_spends: 0,
+                other_offline_spends: 0,
+                grocery_spends_online: 0,
+                online_food_ordering: 0,
+                fuel: 0,
+                dining_or_going_out: 0,
+                flights_annual: 0,
+                hotels_annual: 0,
+                domestic_lounge_usage_quarterly: 0,
+                international_lounge_usage_quarterly: 0,
+                mobile_phone_bills: 0,
+                electricity_bills: 0,
+                water_bills: 0,
+                insurance_health_annual: 0,
+                insurance_car_or_bike_annual: 0,
+                rent: 0,
+                school_fees: 0,
+              });
               setResults(null);
             }}
           >
@@ -392,12 +432,12 @@ const CardGenius = () => {
             <SpendingInput
               question={currentQuestion.question}
               emoji={currentQuestion.emoji}
-              value={spendingData[currentQuestion.field as keyof SpendingData] || 0}
+              value={spendingData[currentQuestion.field as keyof SpendingData] as number}
               onChange={(value) => setSpendingData({ ...spendingData, [currentQuestion.field]: value })}
               min={currentQuestion.min}
               max={currentQuestion.max}
               step={currentQuestion.step}
-              showCurrency={currentQuestion.showCurrency}
+              showCurrency={currentQuestion.showCurrency !== false}
               suffix={currentQuestion.suffix}
             />
 
