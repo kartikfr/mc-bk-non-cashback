@@ -2,18 +2,25 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
-import { ArrowLeft, ArrowRight, Sparkles, Info, Check, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp, CheckCircle2 } from "lucide-react";
 import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { openRedirectInterstitial } from "@/utils/redirectHandler";
+import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -28,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import logo from "@/assets/moneycontrol-logo.png";
 
 interface SpendingQuestion {
   field: string;
@@ -110,6 +118,7 @@ interface CardResult {
   };
 }
 
+
 const CardGenius = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -119,11 +128,13 @@ const CardGenius = () => {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [results, setResults] = useState<CardResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'quick' | 'detailed'>('quick');
   const [selectedCard, setSelectedCard] = useState<CardResult | null>(null);
   const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   
   // Eligibility states
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
@@ -139,6 +150,10 @@ const CardGenius = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftScroll, setShowLeftScroll] = useState(false);
   const [showRightScroll, setShowRightScroll] = useState(true);
+
+  useEffect(() => {
+    setShowWelcomeDialog(true);
+  }, []);
 
   const currentQuestion = questions[currentStep];
   const progress = ((currentStep + 1) / questions.length) * 100;
@@ -183,7 +198,7 @@ const CardGenius = () => {
     }
   }, [showResults, results]);
 
-  // Keyboard navigation
+  // Keyboard navigation for table scrolling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showResults && scrollContainerRef.current && !selectedCard) {
@@ -201,6 +216,7 @@ const CardGenius = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showResults, selectedCard]);
 
+  // Escape key to close card detail view
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && selectedCard) {
@@ -216,28 +232,21 @@ const CardGenius = () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
+      // Calculate and show results
       await calculateResults();
     }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
-    }
-  };
-
-  const handleSkip = () => {
-    handleNext();
   };
 
   const calculateResults = async () => {
     setIsCalculating(true);
     
+    // Start rotating fun facts
     const factInterval = setInterval(() => {
       setCurrentFactIndex(prev => (prev + 1) % funFacts.length);
     }, 3000);
 
     try {
+      // Prepare payload
       const payload: SpendingData = {};
       questions.forEach(q => {
         payload[q.field as keyof SpendingData] = responses[q.field] || 0;
@@ -246,19 +255,28 @@ const CardGenius = () => {
       const response = await cardService.calculateCardGenius(payload);
       
       if (response.data && response.data.savings && Array.isArray(response.data.savings)) {
+        // Sort by total_savings_yearly
+        const sortedSavings = response.data.savings
+        // Fetch card details for ALL cards
         const cardsWithDetails = await Promise.all(
           response.data.savings.map(async (saving: any) => {
             try {
               let cardDetails: any = { data: {} };
               if (saving.card_alias) {
                 cardDetails = await cardService.getCardDetails(saving.card_alias);
+                console.log('Card details for', saving.card_alias, ':', cardDetails);
+              } else {
+                console.warn('Missing card_alias for saving item:', saving);
               }
               
+              // Prefer image coming in savings payload
               const cardBgImage = saving.card_bg_image 
                 || cardDetails.data?.card_bg_image 
                 || cardDetails.data?.card_image
+                || cardDetails.data?.image
                 || '';
               
+              // Map welcome benefits from either response shape
               const welcomeBenefits = 
                 saving.welcomeBenefits 
                 || cardDetails.data?.welcomeBenefits 
@@ -286,7 +304,7 @@ const CardGenius = () => {
                 spending_breakdown: saving.spending_breakdown || {}
               } as CardResult;
             } catch (error) {
-              console.error(`Error processing card:`, error);
+              console.error(`Error processing card ${saving.card_alias || saving.card_name}:`, error);
               const joiningFees = parseInt(saving.joining_fees) || 0;
               const totalSavingsYearly = saving.total_savings_yearly || 0;
               const totalExtraBenefits = saving.total_extra_benefits || 0;
@@ -310,7 +328,9 @@ const CardGenius = () => {
           })
         );
 
+        // Sort by net savings in descending order
         const sortedCards = cardsWithDetails.sort((a, b) => b.net_savings - a.net_savings);
+
         setResults(sortedCards);
         setShowResults(true);
       } else {
@@ -330,6 +350,40 @@ const CardGenius = () => {
     } finally {
       clearInterval(factInterval);
       setIsCalculating(false);
+    }
+  };
+
+  const toggleCardExpansion = (index: number) => {
+    setExpandedCards(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const handleApplyFromDetail = () => {
+    if (!selectedCard) return;
+    
+    // Extract bank name from the card name (first word is usually the bank)
+    const bankName = selectedCard.card_name?.split(' ')[0] || 'Bank';
+    
+    // Use hard-coded bank URLs - no need to fetch network_url
+    openRedirectInterstitial({
+      bankName: bankName,
+      bankLogo: selectedCard.card_bg_image, // Use card image as fallback for bank logo
+      cardName: selectedCard.card_name
+    });
+  };
+
+  const handleCardSelect = (card: any) => {
+    setSelectedCard(card);
+    // Smooth scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
     }
   };
 
@@ -359,9 +413,11 @@ const CardGenius = () => {
       const data = await response.json();
       
       if (data.status && data.data) {
+        // Filter only eligible cards (where eligible === true)
         const eligibleCards = data.data.filter((card: any) => card.eligible === true);
         const ineligibleCount = data.data.length - eligibleCards.length;
         
+        // Extract seo_card_alias from eligible cards only
         const aliases = eligibleCards.map((card: any) => card.seo_card_alias);
         setEligibleCardAliases(aliases);
         setEligibilityApplied(true);
@@ -396,47 +452,9 @@ const CardGenius = () => {
     }
   };
 
-  const handleApplyFromDetail = () => {
-    if (!selectedCard) return;
-    
-    const bankName = selectedCard.card_name?.split(' ')[0] || 'Bank';
-    
-    openRedirectInterstitial({
-      bankName: bankName,
-      bankLogo: selectedCard.card_bg_image,
-      cardName: selectedCard.card_name
-    });
-  };
 
-  const handleCardSelect = (card: CardResult) => {
-    setSelectedCard(card);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Loading state
-  if (isCalculating) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="pt-20 container mx-auto px-4 max-w-2xl">
-          <div className="min-h-[600px] flex flex-col items-center justify-center space-y-8">
-            <div className="relative">
-              <div className="w-24 h-24 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-              <Sparkles className="w-8 h-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-            </div>
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold text-foreground">Finding Your Perfect Cards...</h2>
-              <p className="text-lg text-primary font-medium animate-pulse">
-                {funFacts[currentFactIndex]}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Results view
   if (showResults) {
+    // Fields that are already annual and should not be multiplied by 12
     const annualFields = ['flights_annual', 'hotels_annual', 'domestic_lounge_usage_quarterly', 
                           'international_lounge_usage_quarterly', 'insurance_health_annual', 
                           'insurance_car_or_bike_annual'];
@@ -446,6 +464,7 @@ const CardGenius = () => {
     
     Object.entries(responses).forEach(([key, value]) => {
       if (annualFields.includes(key)) {
+        // Lounge usage fields are counts, not money
         if (!key.includes('lounge_usage')) {
           totalAnnualFieldsSpend += (value || 0);
         }
@@ -454,12 +473,13 @@ const CardGenius = () => {
       }
     });
     
+    // Add monthly equivalent of annual spending fields to display in monthly view
     const monthlyEquivalentOfAnnual = totalAnnualFieldsSpend / 12;
     const displayMonthlySpend = totalMonthlySpend + monthlyEquivalentOfAnnual;
     const totalAnnualSpend = (totalMonthlySpend * 12) + totalAnnualFieldsSpend;
 
-    // Detailed card view
     if (selectedCard) {
+      // Detailed card view
       return (
         <div className="min-h-screen bg-background">
           <header className="sticky top-0 bg-white border-b border-border z-50">
@@ -473,6 +493,7 @@ const CardGenius = () => {
                   <span className="font-semibold">Back to Results</span>
                 </button>
                 
+                {/* Escape key hint */}
                 <div className="text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
                   <span>Press</span>
                   <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">Esc</kbd>
@@ -486,6 +507,7 @@ const CardGenius = () => {
             <h1 className="text-2xl font-bold text-foreground mb-6">{selectedCard.card_name}</h1>
             
             <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Card Image */}
               <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl p-8 flex items-center justify-center">
                 <img
                   src={selectedCard.card_bg_image}
@@ -497,6 +519,7 @@ const CardGenius = () => {
                 />
               </div>
 
+              {/* Savings Summary */}
               <div className="bg-blue-50 rounded-2xl p-6">
                 <p className="text-sm text-muted-foreground mb-4">On The Spends Of ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</p>
                 
@@ -528,7 +551,7 @@ const CardGenius = () => {
               </div>
             </div>
 
-            {/* Welcome Benefits */}
+            {/* Welcome Benefits Section */}
             {(() => {
               const list = Array.isArray(selectedCard.welcome_benefits) ? selectedCard.welcome_benefits : [];
               const fallbackItem = (selectedCard as any).voucher_of || (selectedCard as any).voucher_bonus
@@ -569,11 +592,12 @@ const CardGenius = () => {
               );
             })()}
 
+
             {/* Savings Breakdown */}
             <div className="bg-white rounded-xl border border-border p-6">
               <h2 className="text-xl font-bold text-foreground mb-6">Your Total Savings Breakdown</h2>
               
-              {/* Category Pills */}
+              {/* Category Pills - Horizontal Scroll */}
               <div className="relative mb-6">
                 <div className="overflow-x-auto pb-2 scrollbar-hide">
                   <div className="flex gap-3 min-w-max">
@@ -598,7 +622,7 @@ const CardGenius = () => {
                 </div>
               </div>
 
-              {/* Breakdown Toggle */}
+              {/* Savings Breakdown Title and Toggle */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">Savings Breakdown</h3>
                 <div className="flex gap-2 bg-muted rounded-lg p-1">
@@ -625,7 +649,7 @@ const CardGenius = () => {
                 </div>
               </div>
 
-              {/* Category Details */}
+              {/* Category Breakdown Details */}
               {(() => {
                 const activeCategory = selectedCategory || Object.keys(selectedCard.spending_breakdown).find(k => selectedCard.spending_breakdown[k]?.spend > 0);
                 if (!activeCategory) return null;
@@ -693,6 +717,7 @@ const CardGenius = () => {
                       </div>
                     </div>
 
+                    {/* Explanation */}
                     {details.explanation && details.explanation.length > 0 && (
                       <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
                         <p className="text-xs font-semibold text-primary mb-2">How it&apos;s calculated:</p>
@@ -716,7 +741,7 @@ const CardGenius = () => {
       );
     }
 
-    // Filter results
+    // Filter results based on lifetime free and eligibility filters
     let filteredResults = results;
     
     if (showLifetimeFreeOnly) {
@@ -729,7 +754,12 @@ const CardGenius = () => {
       );
     }
 
-    // Results table view
+    // Get categories where user has spending (non-zero responses)
+    const spendingCategories = Object.entries(responses)
+      .filter(([_, value]) => value > 0)
+      .map(([key]) => key);
+
+    // Results list view
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 bg-white border-b border-border z-50">
@@ -745,10 +775,12 @@ const CardGenius = () => {
         </header>
 
         <main className="container mx-auto px-4 py-8 max-w-7xl">
+          {/* Title */}
           <h1 className="text-3xl font-bold text-center text-foreground mb-8">
             The Best Cards Sorted By Annual Savings!
           </h1>
 
+          {/* Total Spends Summary */}
           <div className="bg-muted/50 rounded-xl p-6 mb-6 text-center">
             <p className="text-sm font-medium text-foreground mb-2">Your Total Spends:</p>
             <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -848,6 +880,7 @@ const CardGenius = () => {
               </PopoverContent>
             </Popover>
             
+            {/* Keyboard hint */}
             <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
               <span>Scroll table:</span>
               <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">←</kbd>
@@ -855,96 +888,526 @@ const CardGenius = () => {
             </div>
           </div>
 
-          {/* Results Cards */}
-          <div className="space-y-4">
-            {filteredResults.map((card, index) => (
-              <div 
-                key={index}
-                onClick={() => handleCardSelect(card)}
-                className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-shadow cursor-pointer"
+          {/* Tabs */}
+          <div className="border-b border-border mb-6">
+            <div className="flex gap-8">
+              <button
+                onClick={() => setActiveTab('quick')}
+                className={`pb-3 px-1 font-semibold transition-colors relative ${
+                  activeTab === 'quick' 
+                    ? 'text-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <img 
-                    src={card.card_bg_image} 
-                    alt={card.card_name}
-                    className="w-24 h-16 object-contain"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder.svg";
-                    }}
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-bold text-foreground">{card.card_name}</h3>
-                    {index === 0 && (
-                      <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mt-1">
-                        🏆 Best Match
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Net Savings</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      ₹{card.net_savings.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Total Savings</p>
-                    <p className="font-semibold">₹{card.total_savings_yearly.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Milestones</p>
-                    <p className="font-semibold">₹{card.total_extra_benefits.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Joining Fee</p>
-                    <p className="font-semibold">₹{card.joining_fees.toLocaleString()}</p>
-                  </div>
-                </div>
+                Quick Insights
+                {activeTab === 'quick' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('detailed')}
+                className={`pb-3 px-1 font-semibold transition-colors relative ${
+                  activeTab === 'detailed' 
+                    ? 'text-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Detailed Breakdown
+                {activeTab === 'detailed' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Results Table */}
+          <TooltipProvider>
+            <div className="relative bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+              {/* Scroll hint indicator */}
+              <div className="bg-gradient-to-r from-transparent via-muted/20 to-transparent h-1"></div>
+              
+              {/* Left Scroll Button */}
+              {showLeftScroll && (
+                <button
+                  onClick={() => handleScroll('left')}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110 animate-fade-in"
+                  aria-label="Scroll left"
+                >
+                  <ArrowLeft className="w-5 h-5 text-foreground" />
+                </button>
+              )}
+              
+              {/* Right Scroll Button */}
+              {showRightScroll && (
+                <button
+                  onClick={() => handleScroll('right')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white border border-border rounded-full p-2 shadow-lg transition-all hover:scale-110 animate-fade-in"
+                  aria-label="Scroll right"
+                >
+                  <ArrowRight className="w-5 h-5 text-foreground" />
+                </button>
+              )}
+              
+              <div 
+                ref={scrollContainerRef} 
+                className="overflow-x-auto pb-3 scroll-smooth"
+                onScroll={checkScrollButtons}
+              >
+                <table className="w-full table-fixed min-w-[1200px]">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-sm text-foreground w-64">Credit Cards</th>
+                      
+                      {/* Quick Insights Tab - Show summary columns */}
+                      {activeTab === 'quick' && (
+                        <>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                            <div className="flex items-center justify-center gap-1">
+                              Total Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Total savings earned across all spending categories combined</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">+</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
+                            <div className="flex items-center justify-center gap-1">
+                              Milestones
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Additional benefits like vouchers, reward points, or perks earned by achieving spending milestones</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">-</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                            <div className="flex items-center justify-center gap-1">
+                              Joining Fee
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Annual or one-time fees charged by the bank for this credit card</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">=</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                            <div className="flex items-center justify-center gap-1">
+                              Net Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Your actual profit calculated as: Total Savings + Milestone Benefits - Joining Fees</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                        </>
+                      )}
+                      
+                      {/* Detailed Breakdown Tab - Show category columns + summary */}
+                      {activeTab === 'detailed' && (
+                         <>
+                          {spendingCategories.map((category, idx) => {
+                            // Simplified category names with tooltips
+                            const categoryInfo: Record<string, { name: string; tooltip: string }> = {
+                              'flights_annual': { name: 'Flights', tooltip: 'Total yearly savings on flight bookings' },
+                              'hotels_annual': { name: 'Hotels', tooltip: 'Total yearly savings on hotel stays' },
+                              'fuel': { name: 'Fuel', tooltip: 'Total yearly savings on fuel purchases' },
+                              'dining_or_going_out': { name: 'Dining', tooltip: 'Total yearly savings on dining out' },
+                              'amazon_spends': { name: 'Amazon', tooltip: 'Total yearly savings on Amazon purchases' },
+                              'flipkart_spends': { name: 'Flipkart', tooltip: 'Total yearly savings on Flipkart purchases' },
+                              'other_online_spends': { name: 'Online Shopping', tooltip: 'Total yearly savings on other online shopping' },
+                              'other_offline_spends': { name: 'Offline Shopping', tooltip: 'Total yearly savings on offline store purchases' },
+                              'grocery_spends_online': { name: 'Groceries', tooltip: 'Total yearly savings on grocery shopping' },
+                              'online_food_ordering': { name: 'Food Delivery', tooltip: 'Total yearly savings on food delivery orders' },
+                              'mobile_phone_bills': { name: 'Mobile Bills', tooltip: 'Total yearly savings on mobile and WiFi bills' },
+                              'electricity_bills': { name: 'Electricity', tooltip: 'Total yearly savings on electricity bills' },
+                              'water_bills': { name: 'Water', tooltip: 'Total yearly savings on water bills' },
+                              'insurance_health_annual': { name: 'Health Insurance', tooltip: 'Total yearly savings on health insurance premiums' },
+                              'insurance_car_or_bike_annual': { name: 'Vehicle Insurance', tooltip: 'Total yearly savings on vehicle insurance' },
+                              'rent': { name: 'Rent', tooltip: 'Total yearly savings on rent payments' },
+                              'school_fees': { name: 'School Fees', tooltip: 'Total yearly savings on school fee payments' },
+                              'domestic_lounge_usage_quarterly': { name: 'Domestic Lounge', tooltip: 'Savings from domestic airport lounge access' },
+                              'international_lounge_usage_quarterly': { name: 'Intl Lounge', tooltip: 'Savings from international airport lounge access' }
+                            };
+                            
+                            const info = categoryInfo[category] || { name: category.replace(/_/g, ' '), tooltip: 'Total yearly savings in this category' };
+                            
+                            return (
+                              <React.Fragment key={category}>
+                                <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
+                                  <div className="flex items-center justify-center gap-1">
+                                    {info.name}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <p>{info.tooltip}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                </th>
+                                {idx < spendingCategories.length - 1 && (
+                                  <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                                    <span className="text-2xl">+</span>
+                                  </th>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">=</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                            <div className="flex items-center justify-center gap-1">
+                              Total Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Total savings earned across all spending categories combined</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">+</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
+                            <div className="flex items-center justify-center gap-1">
+                              Milestones
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Additional benefits like vouchers, reward points, or perks earned by achieving spending milestones</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">-</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                            <div className="flex items-center justify-center gap-1">
+                              Joining Fee
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Annual or one-time fees charged by the bank for this credit card</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                            <span className="text-2xl">=</span>
+                          </th>
+                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                            <div className="flex items-center justify-center gap-1">
+                              Net Savings
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>Your actual profit calculated as: Total Savings + Milestone Benefits - Joining Fees</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredResults.map((card, index) => {
+                      return (
+                        <tr 
+                          key={index} 
+                          className={`border-t border-border hover:bg-muted/30 transition-colors cursor-pointer ${
+                            index === 0 ? 'bg-green-50/50' : ''
+                          }`}
+                          onClick={() => handleCardSelect(card)}
+                        >
+                          <td className="p-4">
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={card.card_bg_image}
+                                alt={card.card_name}
+                                className="w-20 h-12 object-contain flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.src = "/placeholder.svg";
+                                }}
+                              />
+                              <div className="min-w-0">
+                                <p className="font-semibold text-foreground break-words">{card.card_name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Quick Insights Tab - Show summary data */}
+                          {activeTab === 'quick' && (
+                            <>
+                              <td className="p-4 text-center font-semibold text-green-600">
+                                ₹{card.total_savings_yearly.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-blue-600">
+                                ₹{card.total_extra_benefits.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-red-600">
+                                ₹{card.joining_fees.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center">
+                                <span className="font-bold text-lg text-green-700">
+                                  ₹{card.net_savings.toLocaleString()}
+                                </span>
+                              </td>
+                            </>
+                          )}
+                          
+                          {/* Detailed Breakdown Tab - Show category data + summary */}
+                          {activeTab === 'detailed' && (
+                            <>
+                              {spendingCategories.map((category, idx) => {
+                                const breakdown = card.spending_breakdown[category];
+                                const yearlySavings = breakdown?.savings ? breakdown.savings * 12 : 0;
+                                return (
+                                  <React.Fragment key={category}>
+                                    <td className="p-4 text-center font-semibold text-green-600">
+                                      ₹{yearlySavings.toLocaleString()}
+                                    </td>
+                                    {idx < spendingCategories.length - 1 && (
+                                      <td className="p-4"></td>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-green-600">
+                                ₹{card.total_savings_yearly.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-blue-600">
+                                ₹{card.total_extra_benefits.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-red-600">
+                                ₹{card.joining_fees.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center">
+                                <span className="font-bold text-lg text-green-700">
+                                  ₹{card.net_savings.toLocaleString()}
+                                </span>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            </div>
+          </TooltipProvider>
+
+          {/* Start Over Button */}
+          <div className="mt-8 text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setShowResults(false);
+                setCurrentStep(0);
+                setResponses({});
+                setResults([]);
+              }}
+            >
+              Start Over
+            </Button>
           </div>
         </main>
       </div>
     );
   }
 
-  // Question flow
   return (
-    <div className="min-h-screen bg-background">
-      <div className="pt-20 container mx-auto px-4 max-w-2xl pb-12">
-        <div className="mb-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 bg-primary/10 px-4 py-2 rounded-full">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-primary">AI Card Genius</span>
-          </div>
-          <h1 className="text-4xl font-bold text-foreground">Find Your Perfect Card</h1>
-          <p className="text-muted-foreground">Answer a few questions about your spending to get personalized card recommendations</p>
-        </div>
+    <div className="min-h-screen bg-gradient-primary">
+      {/* Welcome Dialog */}
+      <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <button
+            onClick={() => setShowWelcomeDialog(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
+          
+          <div className="flex flex-col items-center text-center space-y-4 pt-6">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-2">
+              <img src={logo} alt="Card Genius 360" className="w-24 h-24 object-contain" />
+            </div>
+            
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">
+                Welcome to Card Genius 360
+              </DialogTitle>
+              <DialogDescription className="text-base text-charcoal-700 leading-relaxed">
+                We help you find the <span className="font-semibold text-primary">best credit card</span> tailored to your unique spending habits.
+              </DialogDescription>
+            </DialogHeader>
 
-        <div className="mb-8">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Question {currentStep + 1} of {questions.length}</span>
-            <span>{Math.round(progress)}%</span>
+            <div className="w-full bg-primary/5 rounded-xl p-6 space-y-3 text-left">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-charcoal-900">Personalized Recommendations</h4>
+                  <p className="text-sm text-charcoal-600">Answer a few quick questions about your spending</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-charcoal-900">Smart Analysis</h4>
+                  <p className="text-sm text-charcoal-600">Get cards ranked by maximum savings and benefits</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-charcoal-900">Maximize Your Savings</h4>
+                  <p className="text-sm text-charcoal-600">Discover how much you can save annually</p>
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              size="lg" 
+              onClick={() => setShowWelcomeDialog(false)}
+              className="w-full shadow-lg"
+            >
+              Let's Get Started
+              <ArrowRight className="ml-2" />
+            </Button>
           </div>
-          <div className="h-2 bg-secondary rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-300"
+        </DialogContent>
+      </Dialog>
+
+      {/* Loading State */}
+      {isCalculating && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+            <h3 className="text-xl font-bold text-charcoal-900 mb-2">
+              Finding Your Perfect Cards...
+            </h3>
+            <p className="text-charcoal-600 mb-4">
+              This will just take a moment
+            </p>
+            <div className="bg-primary/10 p-4 rounded-lg">
+              <p className="text-sm text-charcoal-700 italic">
+                💡 {funFacts[currentFactIndex]}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <header className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-charcoal-100 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-charcoal-700 hover:text-primary transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-semibold">Back to Home</span>
+            </button>
+            
+            <div className="flex items-center gap-2 text-charcoal-600">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <span className="font-semibold">Card Genius</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Bar */}
+      <div className="sticky top-[73px] bg-white border-b border-charcoal-100 z-40">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-charcoal-700">
+              Question {currentStep + 1} of {questions.length}
+            </span>
+            <span className="text-sm font-medium text-primary">
+              {Math.round(progress)}% Complete
+            </span>
+          </div>
+          <div className="w-full h-2 bg-charcoal-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-accent transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
+      </div>
 
-        <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <div className="text-5xl mb-4">{currentQuestion.emoji}</div>
-              <h2 className="text-2xl font-semibold text-foreground">
-                {currentQuestion.question}
-              </h2>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto">
+          {/* Welcome Message */}
+          {currentStep === 0 && (
+            <div className="mb-8 text-center animate-fade-in">
+              <h1 className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-4">
+                Let's Find Your Perfect Card
+              </h1>
+              <p className="text-xl text-charcoal-700">
+                Answer {questions.length} quick questions about your spending habits, and we'll recommend the best cards for you.
+              </p>
             </div>
+          )}
 
+          {/* Question Card */}
+          <div className="animate-fade-in">
             <SpendingInput
               question={currentQuestion.question}
               emoji={currentQuestion.emoji}
@@ -953,44 +1416,65 @@ const CardGenius = () => {
               min={currentQuestion.min}
               max={currentQuestion.max}
               step={currentQuestion.step}
-              showCurrency={currentQuestion.showCurrency !== false}
+              showCurrency={currentQuestion.showCurrency}
               suffix={currentQuestion.suffix}
             />
+          </div>
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handlePrev}
-                disabled={currentStep === 0}
-                className="flex-1"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Previous
-              </Button>
+          {/* Navigation Buttons */}
+          <div className="flex gap-4 mt-8">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="flex-1"
+            >
+              <ArrowLeft className="mr-2" />
+              Previous
+            </Button>
+            
+            {currentStep !== questions.length - 1 && (
               <Button
                 variant="ghost"
-                onClick={handleSkip}
+                size="lg"
+                onClick={() => setCurrentStep(questions.length - 1)}
                 className="flex-1"
               >
-                Skip
+                Skip All
               </Button>
-              <Button
-                onClick={handleNext}
-                className="flex-1"
-              >
-                {currentStep === questions.length - 1 ? 'Calculate' : 'Next'}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
+            )}
+            
+            <Button
+              size="lg"
+              onClick={handleNext}
+              className="flex-1"
+            >
+              {currentStep === questions.length - 1 ? (
+                <>
+                  Show My Results
+                  <Sparkles className="ml-2" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Skip Option */}
+          <div className="text-center mt-6">
+            <button
+              onClick={handleNext}
+              className="text-charcoal-500 hover:text-primary font-medium transition-colors"
+            >
+              Skip this question →
+            </button>
           </div>
         </div>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            All your data is processed securely and never stored
-          </p>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };
