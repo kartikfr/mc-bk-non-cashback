@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
 import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp, CheckCircle2 } from "lucide-react";
@@ -120,91 +119,227 @@ interface CardResult {
 }
 
 const CardGenius = () => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [spendingData, setSpendingData] = useState<SpendingData>({
-    amazon_spends: 0,
-    flipkart_spends: 0,
-    other_online_spends: 0,
-    other_offline_spends: 0,
-    grocery_spends_online: 0,
-    online_food_ordering: 0,
-    fuel: 0,
-    dining_or_going_out: 0,
-    flights_annual: 0,
-    hotels_annual: 0,
-    domestic_lounge_usage_quarterly: 0,
-    international_lounge_usage_quarterly: 0,
-    mobile_phone_bills: 0,
-    electricity_bills: 0,
-    water_bills: 0,
-    insurance_health_annual: 0,
-    insurance_car_or_bike_annual: 0,
-    rent: 0,
-    school_fees: 0,
-  });
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<CardResult[] | null>(null);
-  const [currentFactIndex, setCurrentFactIndex] = useState(0);
-  const [selectedCard, setSelectedCard] = useState<CardResult | null>(null);
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [responses, setResponses] = useState<Record<string, number>>({});
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [currentFactIndex, setCurrentFactIndex] = useState(0);
+  const [results, setResults] = useState<CardResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState<'quick' | 'detailed'>('quick');
+  const [selectedCard, setSelectedCard] = useState<CardResult | null>(null);
+  const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  
+  // Eligibility states
+  const [eligibilityOpen, setEligibilityOpen] = useState(false);
+  const [eligibilityData, setEligibilityData] = useState({
+    pincode: "",
+    inhandIncome: "",
+    empStatus: ""
+  });
+  const [eligibilityApplied, setEligibilityApplied] = useState(false);
+  const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>([]);
+  
+  // Scroll states
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true);
+
+  useEffect(() => {
+    setShowWelcomeDialog(true);
+  }, []);
 
   const currentQuestion = questions[currentStep];
   const progress = ((currentStep + 1) / questions.length) * 100;
 
+  const handleValueChange = (value: number) => {
+    setResponses(prev => ({ ...prev, [currentQuestion.field]: value }));
+  };
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 400;
+      const newScrollLeft = direction === 'left' 
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const checkScrollButtons = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setShowLeftScroll(scrollLeft > 10);
+      setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (loading) {
-      interval = setInterval(() => {
-        setCurrentFactIndex((prev) => (prev + 1) % funFacts.length);
-      }, 4000);
+    const container = scrollContainerRef.current;
+    if (container) {
+      checkScrollButtons();
+      container.addEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      
+      return () => {
+        container.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
     }
-    return () => clearInterval(interval);
-  }, [loading]);
+  }, [showResults, results]);
 
-  const handleNext = () => {
+  // Keyboard navigation for table scrolling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showResults && scrollContainerRef.current && !selectedCard) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handleScroll('left');
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleScroll('right');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showResults, selectedCard]);
+
+  // Escape key to close card detail view
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedCard) {
+        setSelectedCard(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [selectedCard]);
+
+  const handleNext = async () => {
     if (currentStep < questions.length - 1) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(prev => prev + 1);
     } else {
-      calculateResults();
+      // Calculate and show results
+      await calculateResults();
     }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSkip = () => {
-    const field = currentQuestion.field;
-    setSpendingData({ ...spendingData, [field]: 0 });
-    handleNext();
   };
 
   const calculateResults = async () => {
-    setLoading(true);
+    setIsCalculating(true);
+    
+    // Start rotating fun facts
+    const factInterval = setInterval(() => {
+      setCurrentFactIndex(prev => (prev + 1) % funFacts.length);
+    }, 3000);
+
     try {
-      const response = await cardService.calculateCardGenius(spendingData as SpendingData);
-      if (response.status === "success" && response.data) {
-        setResults(Object.values(response.data).slice(0, 3) as CardResult[]);
+      // Prepare payload
+      const payload: SpendingData = {};
+      questions.forEach(q => {
+        payload[q.field as keyof SpendingData] = responses[q.field] || 0;
+      });
+
+      const response = await cardService.calculateCardGenius(payload);
+      
+      if (response.data && response.data.savings && Array.isArray(response.data.savings)) {
+        // Fetch card details for ALL cards
+        const cardsWithDetails = await Promise.all(
+          response.data.savings.map(async (saving: any) => {
+            try {
+              let cardDetails: any = { data: {} };
+              if (saving.card_alias) {
+                cardDetails = await cardService.getCardDetails(saving.card_alias);
+              }
+              
+              const cardBgImage = saving.card_bg_image 
+                || cardDetails.data?.card_bg_image 
+                || cardDetails.data?.card_image
+                || cardDetails.data?.image
+                || '';
+              
+              const welcomeBenefits = 
+                saving.welcomeBenefits 
+                || cardDetails.data?.welcomeBenefits 
+                || saving.welcome_benefits 
+                || cardDetails.data?.welcome_benefits 
+                || [];
+              
+              const joiningFees = parseInt(saving.joining_fees) || 0;
+              const totalSavingsYearly = saving.total_savings_yearly || 0;
+              const totalExtraBenefits = saving.total_extra_benefits || 0;
+              const netSavings = totalSavingsYearly + totalExtraBenefits - joiningFees;
+              
+              return {
+                card_name: cardDetails.data?.card_name || saving.card_name || saving.card_alias,
+                card_bg_image: cardBgImage,
+                seo_card_alias: cardDetails.data?.seo_card_alias || saving.seo_card_alias || saving.card_alias,
+                joining_fees: joiningFees,
+                total_savings: saving.total_savings || 0,
+                total_savings_yearly: totalSavingsYearly,
+                total_extra_benefits: totalExtraBenefits,
+                net_savings: netSavings,
+                voucher_of: saving.voucher_of || 0,
+                voucher_bonus: saving.voucher_bonus || 0,
+                welcome_benefits: welcomeBenefits,
+                spending_breakdown: saving.spending_breakdown || {}
+              } as CardResult;
+            } catch (error) {
+              console.error(`Error processing card ${saving.card_alias || saving.card_name}:`, error);
+              const joiningFees = parseInt(saving.joining_fees) || 0;
+              const totalSavingsYearly = saving.total_savings_yearly || 0;
+              const totalExtraBenefits = saving.total_extra_benefits || 0;
+              const netSavings = totalSavingsYearly + totalExtraBenefits - joiningFees;
+              
+              return {
+                card_name: saving.card_name || saving.card_alias,
+                card_bg_image: saving.card_bg_image || '',
+                seo_card_alias: saving.seo_card_alias || saving.card_alias,
+                joining_fees: joiningFees,
+                total_savings: saving.total_savings || 0,
+                total_savings_yearly: totalSavingsYearly,
+                total_extra_benefits: totalExtraBenefits,
+                net_savings: netSavings,
+                voucher_of: saving.voucher_of || 0,
+                voucher_bonus: saving.voucher_bonus || 0,
+                welcome_benefits: saving.welcomeBenefits || saving.welcome_benefits || [],
+                spending_breakdown: saving.spending_breakdown || {}
+              } as CardResult;
+            }
+          })
+        );
+
+        const sortedCards = cardsWithDetails.sort((a, b) => b.net_savings - a.net_savings);
+        setResults(sortedCards);
+        setShowResults(true);
       } else {
         toast({
-          title: "Error",
-          description: "Unable to calculate card recommendations",
-          variant: "destructive",
+          title: "No results found",
+          description: "Please try adjusting your spending amounts.",
+          variant: "destructive"
         });
       }
     } catch (error) {
-      console.error("Error calculating card genius:", error);
+      console.error('Error calculating results:', error);
       toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
+        title: "Calculation failed",
+        description: "Please try again later.",
+        variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      clearInterval(factInterval);
+      setIsCalculating(false);
     }
   };
 
