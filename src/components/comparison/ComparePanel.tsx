@@ -211,6 +211,9 @@ export function ComparePanel({
     }, {
       key: 'annual_fee_waiver',
       label: 'Annual Fee Waiver'
+    }, {
+      key: 'annual_saving',
+      label: 'Annual Saving'
     }]
   }, {
     id: 'rewards',
@@ -226,6 +229,40 @@ export function ComparePanel({
       key: 'redemption_catalogue',
       label: 'Redemption Catalogue',
       isLink: true
+    }]
+  }, {
+    id: 'fee-structure',
+    title: 'Fee Structure',
+    fields: [{
+      key: 'bank_fee_structure.forex_markup',
+      label: 'Forex Markup Fee'
+    }, {
+      key: 'bank_fee_structure.forex_markup_comment',
+      label: 'Forex Details',
+      html: true
+    }, {
+      key: 'bank_fee_structure.apr_fees',
+      label: 'APR Fees'
+    }, {
+      key: 'bank_fee_structure.apr_fees_comment',
+      label: 'APR Details',
+      html: true
+    }, {
+      key: 'bank_fee_structure.atm_withdrawal',
+      label: 'ATM Withdrawal Fee'
+    }, {
+      key: 'bank_fee_structure.atm_withdrawal_comment',
+      label: 'ATM Details',
+      html: true
+    }, {
+      key: 'bank_fee_structure.reward_redemption_fees',
+      label: 'Reward Redemption Fees'
+    }, {
+      key: 'bank_fee_structure.late_payment_annual',
+      label: 'Late Payment (Annual)'
+    }, {
+      key: 'bank_fee_structure.late_payment_fine',
+      label: 'Late Payment Fine'
     }]
   }, {
     id: 'eligibility',
@@ -436,38 +473,103 @@ export function ComparePanel({
                                 <div className="font-semibold text-sm flex items-center">
                                   {field.label}
                                 </div>
-                                {selectedCards.map((card, idx) => {
-                        const value = card[field.key];
-                        const isBest = bestValues[idx];
-                        return <div key={idx} className={cn("p-3 rounded-lg border text-sm", isBest ? "border-primary bg-primary/5" : "border-border")}>
-                                      {isBest && <Trophy className="w-4 h-4 text-primary inline mr-1" />}
-                                      
+                                {slots.map((card, slotIndex) => {
+                        if (!card) {
+                          return <div key={slotIndex} className="p-3 rounded-lg border border-dashed border-border bg-muted/20">
+                                      <span className="text-muted-foreground text-xs">No card selected</span>
+                                    </div>;
+                        }
+                        const highlight = field.highlight === 'higher' ? 'higher' : field.highlight === 'lower' ? 'lower' : undefined;
+                        return <div key={slotIndex} className="p-3 rounded-lg border border-border">
                                       {/* Handle different field types */}
-                                      {field.isArray && Array.isArray(value) ? <div className="space-y-2">
-                                          {value.slice(0, 3).map((item: any, i: number) => <div key={i} className="text-xs">
-                                              <div className="font-semibold">{item.header}</div>
-                                              <div className="text-muted-foreground">{item.description}</div>
-                                            </div>)}
-                                          {value.length > 3 && <p className="text-xs text-muted-foreground">+{value.length - 3} more</p>}
-                                        </div> : field.isDetailedArray && Array.isArray(value) ? <div className="space-y-1">
-                                          <p className="font-medium">{value.length} benefits</p>
-                                          <div className="text-xs text-muted-foreground space-y-1">
-                                            {value.slice(0, 2).map((item: any, i: number) => <div key={i}>• {item.benefit_name}</div>)}
-                                            {value.length > 2 && <div>+{value.length - 2} more</div>}
-                                          </div>
-                                        </div> : field.isList && typeof value === 'string' ? <ul className="list-disc list-inside space-y-1 text-xs">
-                                          {value.split(',').slice(0, 3).map((item: string, i: number) => <li key={i} className="text-muted-foreground">{item.trim()}</li>)}
-                                          {value.split(',').length > 3 && <li className="text-muted-foreground">+{value.split(',').length - 3} more</li>}
-                                        </ul> : field.isTags && Array.isArray(value) ? <div className="flex flex-wrap gap-1">
-                                          {value.map((tag: any) => <Badge key={tag.id} variant="secondary" className="text-xs">
-                                              {tag.name}
-                                            </Badge>)}
-                                        </div> : field.isLink && value ? <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
-                                          View Catalogue
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a> : field.html ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{
-                            __html: sanitizeHtml(value || 'N/A')
-                          }} /> : <span>{value || 'N/A'}</span>}
+                                      {field.isArray ? (() => {
+                          // Handle nested properties
+                          const keys = field.key.split('.');
+                          let value: any = card;
+                          for (const key of keys) {
+                            value = value?.[key];
+                          }
+                          if (!Array.isArray(value)) return <span className="text-muted-foreground text-sm">Not specified</span>;
+                          return <div className="space-y-2">
+                                            {value.slice(0, 3).map((item: any, i: number) => <div key={i} className="text-xs">
+                                                <div className="font-semibold text-foreground">{item.header}</div>
+                                                <div className="text-muted-foreground">{item.description}</div>
+                                              </div>)}
+                                            {value.length > 3 && <p className="text-xs text-muted-foreground">+{value.length - 3} more</p>}
+                                          </div>;
+                        })() : field.isList ? (() => {
+                          // Handle nested properties like 'bank_fee_structure.forex_markup'
+                          const keys = field.key.split('.');
+                          let value: any = card;
+                          for (const key of keys) {
+                            value = value?.[key];
+                          }
+                          if (!value) return <span className="text-muted-foreground text-sm">Not specified</span>;
+                          const items = typeof value === 'string' ? value.split(',').map(item => item.trim()).filter(Boolean) : Array.isArray(value) ? value : [];
+                          if (items.length === 0) return <span className="text-muted-foreground text-sm">Not specified</span>;
+                          const visibleItems = items.slice(0, 3);
+                          const remainingCount = items.length - 3;
+                          return <ul className="list-disc list-inside space-y-1 text-sm">
+                                            {visibleItems.map((item, i) => <li key={i} className="text-foreground">{item}</li>)}
+                                            {remainingCount > 0 && <li className="text-muted-foreground italic">+{remainingCount} more</li>}
+                                          </ul>;
+                        })() : field.isDetailedArray ? (() => {
+                          const value = card[field.key as keyof typeof card];
+                          if (!value || !Array.isArray(value)) return <span className="text-muted-foreground text-sm">N/A</span>;
+                          const validItems = value.filter(item => item && (item.header || item.benefit_name || item.html_text));
+                          if (validItems.length === 0) return <span className="text-muted-foreground text-sm">No benefits listed</span>;
+                          const visibleItems = validItems.slice(0, 3);
+                          const remainingCount = validItems.length - 3;
+                          return <div className="space-y-2 text-sm">
+                                            <div className="font-semibold text-foreground">{validItems.length} benefit{validItems.length !== 1 ? 's' : ''}</div>
+                                            <ul className="list-disc list-inside space-y-1.5">
+                                              {visibleItems.map((item: any, i) => <li key={i} className="text-foreground leading-relaxed">
+                                                  {item.header || item.benefit_name || 'Benefit'}
+                                                </li>)}
+                                            </ul>
+                                            {remainingCount > 0 && <div className="text-muted-foreground italic mt-2">+{remainingCount} more benefit{remainingCount !== 1 ? 's' : ''}</div>}
+                                          </div>;
+                        })() : field.isTags ? (() => {
+                          const value = card[field.key as keyof typeof card];
+                          if (!Array.isArray(value)) return <span className="text-muted-foreground text-sm">Not specified</span>;
+                          return <div className="flex flex-wrap gap-1">
+                                            {value.map((tag: any) => <Badge key={tag.id} variant="secondary" className="text-xs">
+                                                {tag.name}
+                                              </Badge>)}
+                                          </div>;
+                        })() : field.html ? (() => {
+                          // Handle nested properties
+                          const keys = field.key.split('.');
+                          let value: any = card;
+                          for (const key of keys) {
+                            value = value?.[key];
+                          }
+                          return <div className="text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{
+                              __html: sanitizeHtml(String(value || 'Not specified'))
+                            }} />;
+                        })() : field.isLink ? (() => {
+                          // Handle nested properties
+                          const keys = field.key.split('.');
+                          let value: any = card;
+                          for (const key of keys) {
+                            value = value?.[key];
+                          }
+                          return value ? <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm inline-flex items-center gap-1">
+                                            View Catalogue <ExternalLink className="w-3 h-3" />
+                                          </a> : <span className="text-muted-foreground text-sm">Not available</span>;
+                        })() : (() => {
+                          // Handle nested properties
+                          const keys = field.key.split('.');
+                          let value: any = card;
+                          for (const key of keys) {
+                            value = value?.[key];
+                          }
+                          const shouldHighlight = highlight === 'higher' || highlight === 'lower';
+                          const isHighlightValue = shouldHighlight && slots.length >= 2 && !allSame(field.key) && value === getBestValue(field.key, highlight === 'lower');
+                          return <span className={`text-sm ${isHighlightValue ? 'text-green-600 font-semibold' : 'text-foreground'}`}>
+                                            {String(value || 'Not specified')}
+                                          </span>;
+                        })()}
                                     </div>;
                       })}
                               </div>;

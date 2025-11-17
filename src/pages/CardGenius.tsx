@@ -514,8 +514,9 @@ const CardGenius = () => {
     const totalAnnualSpend = totalMonthlySpend * 12 + totalAnnualFieldsSpend;
     if (selectedCard) {
       // Detailed card view
-      return <div className="min-h-screen bg-background">
-          <header className="sticky top-0 bg-white border-b border-border z-50">
+      return <div className="min-h-screen bg-background pt-16">
+          <Navigation />
+          <header className="sticky top-16 bg-white border-b border-border z-40">
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <button onClick={() => setSelectedCard(null)} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
@@ -864,14 +865,14 @@ const CardGenius = () => {
                 </button>}
               
               <div ref={scrollContainerRef} className="overflow-x-auto pb-3 scroll-smooth" onScroll={checkScrollButtons}>
-                <table className="w-full table-fixed min-w-[1200px]">
+                <table className="w-full table-auto">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left p-4 font-semibold text-sm text-foreground w-64">Credit Cards</th>
+                      <th className="text-left p-4 font-semibold text-sm text-foreground sticky left-0 bg-muted/50 z-10 min-w-[200px]">Credit Cards</th>
                       
                       {/* Quick Insights Tab - Show summary columns */}
                       {activeTab === 'quick' && <>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[140px]">
                             <div className="flex items-center justify-center gap-1">
                               Total Savings
                               <Tooltip>
@@ -884,10 +885,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
                             <span className="text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[140px]">
                             <div className="flex items-center justify-center gap-1">
                               Milestones
                               <Tooltip>
@@ -900,10 +901,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
                             <span className="text-2xl">-</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[120px]">
                             <div className="flex items-center justify-center gap-1">
                               Joining Fee
                               <Tooltip>
@@ -916,7 +917,7 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
                             <span className="text-2xl">=</span>
                           </th>
                           <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
@@ -1280,22 +1281,22 @@ const CardGenius = () => {
           </div>
         </div>}
 
-      {/* Progress Bar */}
-      <div className="fixed top-0 left-0 w-full h-2 bg-muted/30 z-[60]">
+      {/* Progress Bar - Fixed at top */}
+      <div className="fixed top-16 left-0 w-full h-2 bg-muted/30 z-[60]">
         <div className="h-full bg-primary transition-all duration-300 ease-out" style={{
           width: `${progress}%`
         }} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
       </div>
 
       {/* Header */}
-      <header className="sticky top-16 bg-white/95 backdrop-blur-sm border-b border-charcoal-100 z-50">{/* Changed top-0 to top-16 for nav */}
+      <header className="sticky top-[88px] bg-white/95 backdrop-blur-sm border-b border-charcoal-100 z-50">{/* top-16 (nav) + 2 (progress bar) + 70 spacing */}
         <div className="container mx-auto px-4 py-4">
           
         </div>
       </header>
 
-      {/* Progress Bar */}
-      <div className="sticky top-[73px] bg-white border-b border-charcoal-100 z-40">
+      {/* Progress Indicator */}
+      <div className="sticky top-[136px] bg-white border-b border-charcoal-100 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-charcoal-700">
