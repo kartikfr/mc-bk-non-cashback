@@ -65,7 +65,7 @@ const FinalCTA = () => {
                 setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
               }}
             >
-              Try Card Genius
+              Try AI Card Genius
             </Button>
           </div>
 

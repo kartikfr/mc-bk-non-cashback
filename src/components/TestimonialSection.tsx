@@ -8,7 +8,7 @@ const testimonials = [{
   role: "Software Engineer",
   image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
   rating: 5,
-  text: "Saved ₹45,000 last year just by switching to the right cards. The Card Genius tool is a game-changer!",
+  text: "Saved ₹45,000 last year just by switching to the right cards. The AI Card Genius tool is a game-changer!",
   savings: "₹45,000/year"
 }, {
   name: "Priya Menon",

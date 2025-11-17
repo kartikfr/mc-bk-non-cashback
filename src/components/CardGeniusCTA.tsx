@@ -19,7 +19,7 @@ const CardGeniusCTA = () => {
             
             {/* Heading */}
             <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-green-600 dark:from-emerald-400 dark:to-green-400 bg-clip-text text-transparent">
-              Super Card Genius
+              AI Super Card Genius
             </h2>
             
             {/* Subheading */}
@@ -32,7 +32,7 @@ const CardGeniusCTA = () => {
             e.stopPropagation();
             navigate('/card-genius');
           }} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base group/btn">
-              Try Card Genius
+              Try AI Card Genius
               <ArrowRight className="ml-2 w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
             </Button>
             

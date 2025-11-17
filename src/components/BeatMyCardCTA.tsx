@@ -32,7 +32,7 @@ const BeatMyCardCTA = () => {
             
             {/* Subheading */}
             <p className="text-lg md:text-xl text-foreground/80 mb-8 max-w-2xl mx-auto">
-              Test our Card Genius AI v/s Your Card. See the magic!
+              Test our AI Card Genius v/s Your Card. See the magic!
             </p>
             
             {/* CTA Button */}
@@ -41,7 +41,7 @@ const BeatMyCardCTA = () => {
               onClick={(e) => { e.stopPropagation(); navigate('/beat-my-card'); }}
               className="bg-sky-600 hover:bg-sky-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base group/btn"
             >
-              Challenge Card Genius
+              Challenge AI Card Genius
               <ArrowRight className="ml-2 w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
             </Button>
             
