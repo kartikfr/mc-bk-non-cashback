@@ -22,23 +22,30 @@ export const CreditCard3D = ({
     if (!cardRef.current) return;
 
     // Floating animation
-    gsap.to(cardRef.current, {
+    const floatAnim = gsap.to(cardRef.current, {
       y: -20,
       duration: 3,
       yoyo: true,
       repeat: -1,
       ease: "power1.inOut",
+      force3D: true
     });
 
     // Gentle rotation
-    gsap.to(cardRef.current, {
+    const rotateAnim = gsap.to(cardRef.current, {
       rotateY: 15,
       rotateX: -5,
       duration: 4,
       yoyo: true,
       repeat: -1,
       ease: "sine.inOut",
+      force3D: true
     });
+
+    return () => {
+      floatAnim.kill();
+      rotateAnim.kill();
+    };
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

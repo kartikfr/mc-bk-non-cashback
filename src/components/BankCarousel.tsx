@@ -36,12 +36,18 @@ const BankCarousel = () => {
     if (banks.length > 0) {
       const track = document.querySelector('.bank-track');
       if (track) {
-        gsap.to(track, {
+        const animation = gsap.to(track, {
           xPercent: -50,
           duration: 30,
           repeat: -1,
-          ease: "none"
+          ease: "none",
+          force3D: true,
+          smoothOrigin: true
         });
+
+        return () => {
+          animation.kill();
+        };
       }
     }
   }, [banks]);
