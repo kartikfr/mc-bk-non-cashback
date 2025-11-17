@@ -12,7 +12,8 @@ const HeroSection = () => {
   useEffect(() => {
     const timeline = gsap.timeline({
       defaults: {
-        ease: "power3.out"
+        ease: "power3.out",
+        force3D: true
       }
     });
     timeline.from(headlineRef.current, {
@@ -24,6 +25,10 @@ const HeroSection = () => {
       opacity: 0,
       duration: 0.8
     }, "-=0.6");
+
+    return () => {
+      timeline.kill();
+    };
   }, []);
   return <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero pt-20">
       {/* Animated Background Elements */}
