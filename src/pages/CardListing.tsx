@@ -17,7 +17,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronDown } from "lucide-react";
 import confetti from 'canvas-confetti';
 import { toast } from "sonner";
-import { OnboardingOverlay } from "@/components/OnboardingOverlay";
 const CardListing = () => {
   const [searchParams] = useSearchParams();
   const [cards, setCards] = useState<any[]>([]);
@@ -30,7 +29,6 @@ const CardListing = () => {
   const [showGeniusDialog, setShowGeniusDialog] = useState(false);
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Get category from URL params, default to "all"
   const initialCategory = searchParams.get('category') || 'all';
@@ -65,15 +63,6 @@ const CardListing = () => {
     inhandIncome: "",
     empStatus: "salaried"
   });
-  
-  // Check if user has seen onboarding for Pro Tip
-  useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('hasSeenProTipOnboarding');
-    if (!hasSeenOnboarding && filters.category !== 'all') {
-      setShowOnboarding(true);
-    }
-  }, [filters.category]);
-  
   useEffect(() => {
     fetchCards();
   }, [filters]);
@@ -495,19 +484,6 @@ const CardListing = () => {
 
     </div>;
   return <div className="min-h-screen bg-background">
-      {showOnboarding && (
-        <OnboardingOverlay
-          onClose={() => {
-            setShowOnboarding(false);
-            localStorage.setItem('hasSeenProTipOnboarding', 'true');
-          }}
-          onContinue={() => {
-            setShowOnboarding(false);
-            localStorage.setItem('hasSeenProTipOnboarding', 'true');
-            setShowGeniusDialog(true);
-          }}
-        />
-      )}
       <Navigation />
       
       {/* Hero Search */}
