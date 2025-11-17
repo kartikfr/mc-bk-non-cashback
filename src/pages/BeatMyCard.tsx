@@ -229,11 +229,18 @@ const BeatMyCard = () => {
     setSelectedCard(card);
     setStep('questions');
   };
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      calculateResults();
+      await calculateResults();
+      // Scroll to top smoothly after results are shown
+      setTimeout(() => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }, 100);
     }
   };
   const handlePrev = () => {
@@ -617,30 +624,48 @@ const BeatMyCard = () => {
             {/* Navigation buttons */}
             <div className="flex flex-col gap-4">
               <div className="flex gap-3">
-                <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0} className="flex-1">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+                <Button 
+                  variant="outline" 
+                  onClick={handlePrev} 
+                  disabled={currentStep === 0} 
+                  className="flex-1 rounded-full border-2 border-muted-foreground/20 hover:border-muted-foreground/40 hover:bg-muted/50 transition-all duration-200 py-6 text-base font-medium shadow-sm hover:shadow-md"
+                >
+                  <ArrowLeft className="mr-2 h-5 w-5" />
                   Previous
                 </Button>
-                <Button onClick={handleNext} disabled={isCalculating} className="flex-1">
+                <Button 
+                  onClick={handleNext} 
+                  disabled={isCalculating} 
+                  className="flex-1 rounded-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 py-6 text-base font-semibold"
+                >
                   {isCalculating ? <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Calculating...
                     </> : currentStep === questions.length - 1 ? <>
                       See Results
-                      <Sparkles className="ml-2 h-4 w-4" />
+                      <Sparkles className="ml-2 h-5 w-5" />
                     </> : <>
                       Next
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      <ArrowRight className="ml-2 h-5 w-5" />
                     </>}
                 </Button>
               </div>
 
               {/* Skip buttons - centered layout */}
-              <div className="flex flex-col items-center gap-2">
-                <Button variant="ghost" onClick={handleSkipAll} disabled={isCalculating} className="text-muted-foreground">
+              <div className="flex flex-col items-center gap-2 mt-2">
+                <Button 
+                  variant="link" 
+                  onClick={handleSkipAll} 
+                  disabled={isCalculating} 
+                  className="text-muted-foreground hover:text-foreground font-medium text-base transition-colors"
+                >
                   {isCalculating ? "Calculating..." : "Skip All"}
                 </Button>
-                <Button variant="link" onClick={handleSkip} className="text-sm text-muted-foreground hover:text-foreground">
+                <Button 
+                  variant="link" 
+                  onClick={handleSkip} 
+                  className="text-sm text-muted-foreground/70 hover:text-muted-foreground transition-colors font-normal"
+                >
                   Skip this question →
                 </Button>
               </div>
@@ -660,11 +685,25 @@ const BeatMyCard = () => {
         <Navigation />
         <div className="min-h-screen bg-background pt-24 pb-16">
         <div className="container mx-auto px-4 py-8">
-          {/* Header with Home Button */}
+          {/* Header with Navigation Buttons */}
           <div className="flex items-center justify-between mb-8">
             <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
               <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to Home</span>
+              <span className="hidden sm:inline">Home</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setStep('select');
+                setCurrentStep(0);
+                setResponses({});
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} 
+              className="gap-2 hover:bg-secondary/10 border-secondary/30 text-secondary hover:border-secondary"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Change Card Selection
             </Button>
           </div>
 
@@ -708,18 +747,21 @@ const BeatMyCard = () => {
             <div className="mb-12 animate-fade-in bg-card border border-border rounded-2xl p-8">
               <h2 className="text-3xl font-bold text-center mb-8 text-foreground">Annual Savings Comparison</h2>
               
-              <div className="space-y-6 mb-8">
+              <div className="space-y-4 mb-8">
                 {/* User Card Savings */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold text-foreground">Your Card</span>
                     <span className="text-2xl font-bold text-primary">₹{userCardData.annual_saving?.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="relative h-12 bg-muted/50 rounded-full overflow-hidden border-2 border-primary/20">
-                    <div className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 flex items-center justify-end pr-4 transition-all duration-500 shadow-lg" style={{
-                      width: `${maxSavings > 0 ? Math.max(userCardData.annual_saving / maxSavings * 100, 5) : 5}%`
-                    }}>
-                      <span className="text-sm font-bold text-primary-foreground drop-shadow-md">
+                  <div className="relative h-10 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary flex items-center transition-all duration-500" 
+                      style={{
+                        width: `${maxSavings > 0 ? Math.max(userCardData.annual_saving / maxSavings * 100, 8) : 8}%`
+                      }}
+                    >
+                      <span className="text-sm font-bold text-primary-foreground ml-3 whitespace-nowrap">
                         {maxSavings > 0 ? Math.round(userCardData.annual_saving / maxSavings * 100) : 0}%
                       </span>
                     </div>
@@ -727,21 +769,24 @@ const BeatMyCard = () => {
                 </div>
 
                 {/* Arrow indicator */}
-                <div className="flex justify-center">
-                  <ArrowRight className="w-6 h-6 text-muted-foreground" />
+                <div className="flex justify-center py-2">
+                  <ArrowRight className="w-6 h-6 text-primary" />
                 </div>
 
                 {/* Genius Card Savings */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold text-foreground">Card Genius</span>
                     <span className="text-2xl font-bold text-secondary">₹{geniusCardData.annual_saving?.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="relative h-12 bg-muted/50 rounded-full overflow-hidden border-2 border-secondary/20">
-                    <div className="h-full bg-gradient-to-r from-secondary via-secondary to-secondary/80 flex items-center justify-end pr-4 transition-all duration-500 shadow-lg" style={{
-                      width: `${maxSavings > 0 ? geniusCardData.annual_saving / maxSavings * 100 : 100}%`
-                    }}>
-                      <span className="text-sm font-bold text-secondary-foreground drop-shadow-md">100%</span>
+                  <div className="relative h-10 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-secondary flex items-center justify-end transition-all duration-500" 
+                      style={{
+                        width: `${maxSavings > 0 ? geniusCardData.annual_saving / maxSavings * 100 : 100}%`
+                      }}
+                    >
+                      <span className="text-sm font-bold text-secondary-foreground mr-3">100%</span>
                     </div>
                   </div>
                 </div>
