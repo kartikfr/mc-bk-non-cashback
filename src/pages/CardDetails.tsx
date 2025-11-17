@@ -590,23 +590,45 @@ export default function CardDetails() {
               </p>
             </div>
 
-            {/* Redemption Options */}
-            {card.redemption_options && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Redemption Options</h3>
+            {/* Redemption Options & Catalogue - Single Aligned Section */}
+            <div className="bg-background border border-border rounded-xl p-6 space-y-4">
+              {/* Redemption Options */}
+              {card.redemption_options && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">Redemption Options</h3>
+                  </div>
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.redemption_options) }}
+                    className="prose prose-sm max-w-none text-muted-foreground 
+                      [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 
+                      [&>li]:text-muted-foreground [&>li]:leading-relaxed
+                      [&>p]:mb-3 [&>p]:leading-relaxed
+                      [&>strong]:text-foreground [&>strong]:font-semibold"
+                  />
                 </div>
-                <div 
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.redemption_options) }}
-                  className="prose prose-sm max-w-none text-muted-foreground 
-                    [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 
-                    [&>li]:text-muted-foreground [&>li]:leading-relaxed
-                    [&>p]:mb-3 [&>p]:leading-relaxed
-                    [&>strong]:text-foreground [&>strong]:font-semibold"
-                />
-              </div>
-            )}
+              )}
+
+              {/* Redemption Catalogue */}
+              {card.redemption_catalogue && card.redemption_catalogue !== 'N/A' && (
+                <div className={card.redemption_options ? 'pt-4 border-t border-border' : ''}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <ExternalLink className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">Redemption Catalogue</h3>
+                  </div>
+                  <a 
+                    href={card.redemption_catalogue}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
+                  >
+                    View Redemption Catalogue
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
