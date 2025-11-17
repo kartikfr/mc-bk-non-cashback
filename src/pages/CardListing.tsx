@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronDown } from "lucide-react";
 import confetti from 'canvas-confetti';
 import { toast } from "sonner";
+import { OnboardingOverlay } from "@/components/OnboardingOverlay";
 const CardListing = () => {
   const [searchParams] = useSearchParams();
   const [cards, setCards] = useState<any[]>([]);
@@ -29,6 +30,7 @@ const CardListing = () => {
   const [showGeniusDialog, setShowGeniusDialog] = useState(false);
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Get category from URL params, default to "all"
   const initialCategory = searchParams.get('category') || 'all';
@@ -63,6 +65,15 @@ const CardListing = () => {
     inhandIncome: "",
     empStatus: "salaried"
   });
+  
+  // Check if user has seen onboarding for Pro Tip
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenProTipOnboarding');
+    if (!hasSeenOnboarding && filters.category !== 'all') {
+      setShowOnboarding(true);
+    }
+  }, [filters.category]);
+  
   useEffect(() => {
     fetchCards();
   }, [filters]);
@@ -482,11 +493,21 @@ const CardListing = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      <Button variant="outline" className="w-full" onClick={clearFilters}>
-        Clear All Filters
-      </Button>
     </div>;
   return <div className="min-h-screen bg-background">
+      {showOnboarding && (
+        <OnboardingOverlay
+          onClose={() => {
+            setShowOnboarding(false);
+            localStorage.setItem('hasSeenProTipOnboarding', 'true');
+          }}
+          onContinue={() => {
+            setShowOnboarding(false);
+            localStorage.setItem('hasSeenProTipOnboarding', 'true');
+            setShowGeniusDialog(true);
+          }}
+        />
+      )}
       <Navigation />
       
       {/* Hero Search */}
@@ -525,7 +546,12 @@ const CardListing = () => {
             {/* Desktop Filters Sidebar */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="sticky top-28 bg-card rounded-2xl shadow-lg p-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                <h2 className="text-xl font-bold mb-6">Filters</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold">Filters</h2>
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+                    Clear All
+                  </Button>
+                </div>
                 <FilterSidebar />
               </div>
             </aside>

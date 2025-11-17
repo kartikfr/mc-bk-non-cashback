@@ -22,8 +22,9 @@ const CardGeniusCategory = () => {
               <h4 className="font-bold text-xl mb-6">Quick Links</h4>
               <ul className="space-y-3 text-sm opacity-80">
                 <li><a href="/" className="hover:opacity-100 transition-opacity">Home</a></li>
-                <li><a href="/cards" className="hover:opacity-100 transition-opacity">All Cards</a></li>
-                <li><a href="/card-genius" className="hover:opacity-100 transition-opacity">Card Genius</a></li>
+                <li><a href="/cards" className="hover:opacity-100 transition-opacity">Discover Cards</a></li>
+                <li><a href="/card-genius" className="hover:opacity-100 transition-opacity">AI Card Genius</a></li>
+                <li><a href="/card-genius-category" className="hover:opacity-100 transition-opacity">AI Category Card Genius</a></li>
                 <li><a href="/beat-my-card" className="hover:opacity-100 transition-opacity">Beat My Card</a></li>
                 <li><a href="/about" className="hover:opacity-100 transition-opacity">About Us</a></li>
               </ul>

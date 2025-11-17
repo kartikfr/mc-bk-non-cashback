@@ -48,7 +48,7 @@ const FourKeyUSPs = () => {
     {
       icon: CardWithTags,
       iconColor: "bg-blue-500",
-      title: "AI Card Genius by Category",
+      title: "AI Category Card Genius",
       description: "Choose your spending category, answer a few questions, and find the perfect card tailored to your needs",
       cta: "Get Started",
       redirect: "/card-genius-category"

@@ -28,7 +28,7 @@ const Navigation = () => {
                 <ChevronDown className="w-4 h-4" />
               </button>
               
-              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute top-full left-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-lg py-2 z-50">
+              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute top-full right-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-lg py-2 z-50">
                   <Link to="/card-genius" className="block px-4 py-2.5 text-foreground hover:bg-accent transition-colors">
                     <div className="font-medium">AI Card Genius</div>
                     <div className="text-xs text-muted-foreground">Enter spends → best card</div>

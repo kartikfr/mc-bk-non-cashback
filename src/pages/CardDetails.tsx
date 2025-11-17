@@ -105,8 +105,10 @@ export default function CardDetails() {
   useEffect(() => {
     const handleScroll = () => {
       if (heroRef.current) {
-        const heroBottom = heroRef.current.getBoundingClientRect().bottom;
-        setShowFixedCTA(heroBottom < 0);
+        const heroRect = heroRef.current.getBoundingClientRect();
+        const heroHeight = heroRect.height;
+        const scrolledPastHero = heroRect.top + (heroHeight * 0.8); // Show when 80% of hero is scrolled
+        setShowFixedCTA(scrolledPastHero < 0);
       }
 
       // Update active section for navigation
@@ -134,7 +136,8 @@ export default function CardDetails() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement>, sectionId: string) => {
+    setActiveSection(sectionId);
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -446,7 +449,7 @@ export default function CardDetails() {
               ].map((section) => (
                 <button
                   key={section.id}
-                  onClick={() => scrollToSection(section.ref)}
+                  onClick={() => scrollToSection(section.ref, section.id)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${
                     activeSection === section.id
                       ? 'bg-primary text-primary-foreground'

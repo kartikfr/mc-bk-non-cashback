@@ -35,8 +35,9 @@ const Index = () => {
               <h4 className="font-bold text-xl mb-6">Quick Links</h4>
               <ul className="space-y-3 text-sm opacity-80">
                 <li><Link to="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
-                <li><Link to="/cards" className="hover:opacity-100 transition-opacity">All Cards</Link></li>
-                <li><Link to="/card-genius" className="hover:opacity-100 transition-opacity">Card Genius</Link></li>
+                <li><Link to="/cards" className="hover:opacity-100 transition-opacity">Discover Cards</Link></li>
+                <li><Link to="/card-genius" className="hover:opacity-100 transition-opacity">AI Card Genius</Link></li>
+                <li><Link to="/card-genius-category" className="hover:opacity-100 transition-opacity">AI Category Card Genius</Link></li>
                 <li><Link to="/beat-my-card" className="hover:opacity-100 transition-opacity">Beat My Card</Link></li>
                 <li><Link to="/about" className="hover:opacity-100 transition-opacity">About Us</Link></li>
               </ul>
