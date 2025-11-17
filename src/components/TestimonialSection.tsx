@@ -130,9 +130,7 @@ const TestimonialSection = () => {
             <Star className="w-4 h-4 fill-current" />
             <span className="text-sm font-semibold">Real Stories, Real Savings</span>
           </div>
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent my-px md:text-4xl">
-            Smart Indians Are Already Saving
-          </h2>
+          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mx-0 px-[40px] my-0 md:text-5xl">India’s Smartest Are Saving</h2>
           <p className="text-xl text-muted-foreground">
             See how everyday people like you are earning more rewards and saving thousands with the right credit card
           </p>
