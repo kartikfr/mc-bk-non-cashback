@@ -536,12 +536,9 @@ const CardListing = () => {
       <section className="pt-28 pb-12 bg-gradient-hero">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-10">
-            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-4">
+            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold">
               Discover India's Best Credit Cards
             </h1>
-            <p className="text-lg lg:text-xl text-muted-foreground">
-              100+ Cards • Real Rewards • Plus Cashback
-            </p>
           </div>
           
           <div className="max-w-2xl mx-auto">
@@ -590,77 +587,68 @@ const CardListing = () => {
 
             {/* Card Grid */}
             <div className="flex-1">
-              {/* Eligibility and Try Genius Buttons - Above Cards */}
-              <div className="mb-6 flex flex-wrap items-center gap-3">
-                <Popover open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      size="lg" 
-                      variant={eligibilitySubmitted ? "default" : "outline"}
-                      className="gap-2 shadow-md hover:shadow-lg transition-all"
+              {/* Horizontal Eligibility Bar - Always Visible */}
+              <div className="mb-6 bg-card rounded-2xl shadow-lg border border-border/50 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Pincode</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter 6-digit pincode"
+                      maxLength={6}
+                      value={eligibility.pincode}
+                      onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value }))}
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Monthly Income (₹)</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 50000"
+                      value={eligibility.inhandIncome}
+                      onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value }))}
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Employment Status</label>
+                    <Select
+                      value={eligibility.empStatus}
+                      onValueChange={(value) => setEligibility(prev => ({ ...prev, empStatus: value }))}
                     >
-                      <CheckCircle2 className="w-5 h-5" />
-                      {eligibilitySubmitted ? "Eligibility Applied" : "Check Eligibility"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-80 p-6 bg-card rounded-xl shadow-2xl border-2 border-primary/20 z-50" 
-                    align="start"
-                    sideOffset={8}
+                      <SelectTrigger className="h-12">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card z-50">
+                        <SelectItem value="salaried">Salaried</SelectItem>
+                        <SelectItem value="self-employed">Self-Employed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    onClick={handleEligibilitySubmit} 
+                    size="lg" 
+                    className="h-12 gap-2"
+                    variant={eligibilitySubmitted ? "default" : "default"}
                   >
-                    <h3 className="font-semibold text-lg mb-4">Enter Your Details</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Pincode</label>
-                        <Input
-                          type="text"
-                          placeholder="Enter 6-digit pincode"
-                          maxLength={6}
-                          value={eligibility.pincode}
-                          onChange={(e) => setEligibility(prev => ({ ...prev, pincode: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Monthly In-hand Income (₹)</label>
-                        <Input
-                          type="number"
-                          placeholder="e.g., 50000"
-                          value={eligibility.inhandIncome}
-                          onChange={(e) => setEligibility(prev => ({ ...prev, inhandIncome: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Employment Status</label>
-                        <Select
-                          value={eligibility.empStatus}
-                          onValueChange={(value) => setEligibility(prev => ({ ...prev, empStatus: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="salaried">Salaried</SelectItem>
-                            <SelectItem value="self-employed">Self-Employed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button onClick={handleEligibilitySubmit} className="w-full" size="lg">
-                        Apply Eligibility
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
+                    <CheckCircle2 className="w-5 h-5" />
+                    {eligibilitySubmitted ? "Eligibility Applied" : "Check Eligibility"}
+                  </Button>
+                </div>
+                
                 {/* Try Genius button - show when category is selected */}
                 {filters.category !== 'all' && (
-                  <Button 
-                    size="lg"
-                    onClick={() => setShowGeniusDialog(true)}
-                    className="gap-2 shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Try Genius
-                  </Button>
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <Button 
+                      size="lg"
+                      onClick={() => setShowGeniusDialog(true)}
+                      className="gap-2 shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Try Genius for Personalized Recommendations
+                    </Button>
+                  </div>
                 )}
               </div>
 
