@@ -514,9 +514,9 @@ const CardGenius = () => {
     const totalAnnualSpend = totalMonthlySpend * 12 + totalAnnualFieldsSpend;
     if (selectedCard) {
       // Detailed card view
-      return <div className="min-h-screen bg-background pt-16">
+      return <div className="min-h-screen bg-background pt-24">
           <Navigation />
-          <header className="sticky top-16 bg-white border-b border-border z-40">
+          <header className="sticky top-20 bg-white border-b border-border z-40">
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <button onClick={() => setSelectedCard(null)} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
