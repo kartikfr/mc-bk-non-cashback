@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard } from "lucide-react";
@@ -17,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronDown } from "lucide-react";
 import confetti from 'canvas-confetti';
 import { toast } from "sonner";
+
 const CardListing = () => {
   const [searchParams] = useSearchParams();
   const [cards, setCards] = useState<any[]>([]);
@@ -203,6 +205,15 @@ const CardListing = () => {
     const cardType = (card.card_type || '').toLowerCase();
     const benefits = (card.benefits || '').toLowerCase();
     return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
+  }).sort((a, b) => {
+    // If category genius is applied, sort by maximum savings (descending)
+    if (geniusSpendingData && filters.category !== 'all') {
+      const categorySavings = cardSavings[filters.category] || {};
+      const aSaving = categorySavings[String(a.id)] ?? categorySavings[String(a.seo_card_alias || a.card_alias || '')] ?? 0;
+      const bSaving = categorySavings[String(b.id)] ?? categorySavings[String(b.seo_card_alias || b.card_alias || '')] ?? 0;
+      return Number(bSaving) - Number(aSaving); // Descending order (highest savings first)
+    }
+    return 0; // Keep original order if no genius applied
   });
   const loadMore = () => {
     setIsLoadingMore(true);
@@ -629,7 +640,7 @@ const CardListing = () => {
               </div>
 
               {/* Active Filters */}
-              {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.free_cards || filters.annualFees || filters.credit_score || eligibilitySubmitted || searchQuery) && <div className="mb-4 flex flex-wrap gap-2">
+              {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.free_cards || filters.annualFees || filters.credit_score || eligibilitySubmitted || geniusSpendingData || searchQuery) && <div className="mb-4 flex flex-wrap gap-2">
                   {searchQuery && <Badge variant="secondary" className="gap-2">
                       Search: {searchQuery}
                       <X className="w-3 h-3 cursor-pointer" onClick={() => {
@@ -687,6 +698,15 @@ const CardListing = () => {
                         });
                         await fetchCards();
                         toast.success("Eligibility filter removed");
+                      }} />
+                    </Badge>}
+                  {geniusSpendingData && <Badge variant="secondary" className="gap-2 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border-purple-300 dark:border-purple-700">
+                      <Sparkles className="w-3 h-3" />
+                      Category Genius Applied
+                      <X className="w-3 h-3 cursor-pointer" onClick={() => {
+                        setGeniusSpendingData(null);
+                        setCardSavings({});
+                        toast.success("Category genius filter removed");
                       }} />
                     </Badge>}
                 </div>}
@@ -816,6 +836,8 @@ const CardListing = () => {
 
       {/* Comparison Pill */}
       <ComparePill />
+      
+      <Footer />
     </div>;
 };
 export default CardListing;

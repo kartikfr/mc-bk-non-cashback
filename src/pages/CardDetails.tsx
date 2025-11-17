@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { cardService } from '@/services/cardService';
 import Navigation from '@/components/Navigation';
-import { Star, ChevronDown, ChevronUp, Share2, ExternalLink, Gift, Award, Sparkles, ArrowLeft, Shield, Plus, Check } from 'lucide-react';
+import Footer from '@/components/Footer';
+import { Star, ChevronDown, ChevronUp, ExternalLink, Gift, Award, Sparkles, ArrowLeft, Shield, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -317,15 +318,6 @@ export default function CardDetails() {
 
             {/* Card Info */}
             <div className="text-white space-y-6 animate-fade-in">
-              {/* Share Button - Top Right */}
-              <button
-                onClick={handleShare}
-                className="absolute top-4 right-4 w-10 h-10 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-full flex items-center justify-center transition-all"
-                aria-label="Share card"
-              >
-                <Share2 className="w-5 h-5 text-white" />
-              </button>
-
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-2">{card.name}</h1>
                 <div className="flex items-center gap-4 flex-wrap">
@@ -579,15 +571,15 @@ export default function CardDetails() {
           </section>
         )}
 
-
         {/* Rewards & Redemption - Aligned with Design System */}
-        <section className="bg-card border border-border rounded-xl p-8" ref={rewardsRef} id="rewards">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-sm">
-              <Gift className="w-7 h-7 text-primary-foreground" />
+        <section ref={rewardsRef} id="rewards">
+          <h2 className="text-2xl font-bold text-foreground mb-6">Rewards & Redemption</h2>
+          <div className="bg-card border border-border rounded-xl p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                <Gift className="w-7 h-7 text-primary-foreground" />
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Rewards & Redemption</h2>
-          </div>
           
           <div className="space-y-6">
             {/* Reward Conversion Rate */}
@@ -641,53 +633,56 @@ export default function CardDetails() {
               )}
             </div>
           </div>
+          </div>
         </section>
 
-        {/* Bank Fee Structure */}
+        {/* Fee Structure */}
         {card.bank_fee_structure && (
           <section ref={feeStructureRef} id="fee-structure">
             <h2 className="text-2xl font-bold text-foreground mb-6">Fee Structure</h2>
-            <Accordion type="single" collapsible className="bg-card border border-border rounded-xl">
-              <AccordionItem value="forex">
-                <AccordionTrigger className="px-6">Foreign Currency Markup</AccordionTrigger>
-                <AccordionContent className="px-6">
-                  <p className="font-semibold mb-2">{card.bank_fee_structure.forex_markup}</p>
-                  {card.bank_fee_structure.forex_markup_comment && (
-                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.bank_fee_structure.forex_markup_comment) }} className="prose prose-sm max-w-none text-muted-foreground" />
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-              {card.bank_fee_structure.apr_fees && (
-                <AccordionItem value="apr">
-                  <AccordionTrigger className="px-6">APR Fees</AccordionTrigger>
+            <div className="bg-card border border-border rounded-xl p-8">
+              <Accordion type="single" collapsible>
+                <AccordionItem value="forex">
+                  <AccordionTrigger className="px-6">Foreign Currency Markup</AccordionTrigger>
                   <AccordionContent className="px-6">
-                    <p className="font-semibold mb-2">{card.bank_fee_structure.apr_fees}</p>
-                    {card.bank_fee_structure.apr_fees_comment && (
-                      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.bank_fee_structure.apr_fees_comment) }} className="prose prose-sm max-w-none text-muted-foreground" />
+                    <p className="font-semibold mb-2">{card.bank_fee_structure.forex_markup}</p>
+                    {card.bank_fee_structure.forex_markup_comment && (
+                      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.bank_fee_structure.forex_markup_comment) }} className="prose prose-sm max-w-none text-muted-foreground" />
                     )}
                   </AccordionContent>
                 </AccordionItem>
-              )}
-              <AccordionItem value="late">
-                <AccordionTrigger className="px-6">Late Payment Charges</AccordionTrigger>
-                <AccordionContent className="px-6 space-y-2">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-semibold mb-2">Amount Range</p>
-                      {card.bank_fee_structure.late_payment_annual?.split('|').map((range, i) => (
-                        <p key={i} className="text-muted-foreground">{range.trim()}</p>
-                      ))}
+                {card.bank_fee_structure.apr_fees && (
+                  <AccordionItem value="apr">
+                    <AccordionTrigger className="px-6">APR Fees</AccordionTrigger>
+                    <AccordionContent className="px-6">
+                      <p className="font-semibold mb-2">{card.bank_fee_structure.apr_fees}</p>
+                      {card.bank_fee_structure.apr_fees_comment && (
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.bank_fee_structure.apr_fees_comment) }} className="prose prose-sm max-w-none text-muted-foreground" />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+                <AccordionItem value="late">
+                  <AccordionTrigger className="px-6">Late Payment Charges</AccordionTrigger>
+                  <AccordionContent className="px-6 space-y-2">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="font-semibold mb-2">Amount Range</p>
+                        {card.bank_fee_structure.late_payment_annual?.split('|').map((range, i) => (
+                          <p key={i} className="text-muted-foreground">{range.trim()}</p>
+                        ))}
+                      </div>
+                      <div>
+                        <p className="font-semibold mb-2">Late Fee</p>
+                        {card.bank_fee_structure.late_payment_fine?.split('|').map((fee, i) => (
+                          <p key={i} className="text-muted-foreground">{fee.trim()}</p>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold mb-2">Late Fee</p>
-                      {card.bank_fee_structure.late_payment_fine?.split('|').map((fee, i) => (
-                        <p key={i} className="text-muted-foreground">{fee.trim()}</p>
-                      ))}
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
           </section>
         )}
 
@@ -871,33 +866,6 @@ export default function CardDetails() {
         </section>
       </div>
 
-      {/* Footer Section - Enhanced */}
-      <div className="bg-gradient-to-r from-muted/30 to-muted/50 border-t-2 border-border py-12">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 bg-card border border-border rounded-full px-6 py-3 shadow-sm">
-              <Star className="w-5 h-5 text-primary fill-primary" />
-              <p className="text-sm font-semibold text-foreground">
-                Issued by {card.banks?.name || 'Bank'}
-              </p>
-            </div>
-            <div className="flex justify-center gap-4">
-              <Button variant="outline" size="lg" onClick={handleShare} className="shadow-sm">
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Card
-              </Button>
-              <Button variant="outline" size="lg" onClick={() => window.print()} className="shadow-sm">
-                Print Details
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              All information is subject to change. Please verify with the issuing bank before applying. 
-              Terms and conditions apply.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Eligibility Dialog */}
       <EligibilityDialog
         open={showEligibilityDialog}
@@ -913,6 +881,8 @@ export default function CardDetails() {
         onOpenChange={setIsComparePanelOpen}
         preSelectedCard={card}
       />
+      
+      <Footer />
     </div>
   );
 }
