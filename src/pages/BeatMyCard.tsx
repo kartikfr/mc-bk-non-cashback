@@ -527,11 +527,7 @@ const BeatMyCard = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Header with Home Button */}
           <div className="flex items-center justify-between mb-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/')} 
-              className="gap-2 hover:bg-primary/10"
-            >
+            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Button>
@@ -542,7 +538,7 @@ const BeatMyCard = () => {
               <h1 className="text-5xl md:text-6xl font-bold mb-5 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
                 Beat My Card
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto px-0">
                 Select your current card and see if Card Genius can find a better match
               </p>
               
@@ -577,11 +573,7 @@ const BeatMyCard = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Header with Navigation */}
           <div className="flex items-center justify-between mb-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/')} 
-              className="gap-2 hover:bg-primary/10"
-            >
+            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
             </Button>
@@ -657,11 +649,7 @@ const BeatMyCard = () => {
         <div className="container mx-auto px-4 py-8">
           {/* Header with Home Button */}
           <div className="flex items-center justify-between mb-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/')} 
-              className="gap-2 hover:bg-primary/10"
-            >
+            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
               <Home className="h-4 w-4" />
               <span className="hidden sm:inline">Back to Home</span>
             </Button>
