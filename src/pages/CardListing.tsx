@@ -561,53 +561,28 @@ const CardListing = () => {
                 </div>
               </div>
 
-              {/* AI Card Genius Promo - Show when category is selected */}
-              {filters.category !== 'all' && <div className="mb-6 bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-6">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">
+              {/* AI Card Genius Promo - Show only when category is selected (not "All Cards") */}
+              {filters.category !== 'all' && (
+                <div className="mb-6 bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-xl p-4">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
+                      <div>
+                        <h3 className="text-base font-semibold text-foreground mb-0.5">
                           Pro Tip: Try our AI Card Genius
                         </h3>
+                        <p className="text-sm text-muted-foreground">
+                          See your total yearly savings and find the best card for your spending.
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Find your perfect credit card using real math. Enter your monthly spends and we'll calculate:
-                      </p>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        <li>✓ Actual cashback you'll earn</li>
-                        <li>✓ Reward points → ₹ value</li>
-                        <li>✓ Net savings after fees</li>
-                        <li>✓ Best card for your lifestyle</li>
-                      </ul>
                     </div>
-                    <Button onClick={() => setShowGeniusDialog(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap gap-2">
+                    <Button onClick={() => setShowGeniusDialog(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap gap-2 flex-shrink-0">
                       <Sparkles className="w-4 h-4" />
                       Enter My Spends
                     </Button>
                   </div>
-                </div>}
-
-              {/* AI Card Genius Promo - Show when on "All Cards" */}
-              {filters.category === 'all' && <div className="mb-6 bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-5">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        <h3 className="text-base font-semibold text-foreground">
-                          AI Card Genius
-                        </h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Find your best card in 30 seconds. Enter spends → See real savings.
-                      </p>
-                    </div>
-                    <Button onClick={() => setShowGeniusDialog(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      Start Now
-                    </Button>
-                  </div>
-                </div>}
+                </div>
+              )}
 
               {/* Mobile Filter Button */}
               <div className="lg:hidden mb-4 flex items-center justify-between">
