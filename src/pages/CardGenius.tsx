@@ -8,6 +8,8 @@ import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import {
   Tooltip,
   TooltipContent,
@@ -71,26 +73,16 @@ const questions: SpendingQuestion[] = [
 ];
 
 const funFacts = [
-  "Did you know? The first credit card reward program started in 1981!",
+  "Credit cards were first introduced in India in 1980!",
   "Indians saved over ₹2,000 crores in credit card rewards last year!",
   "Premium cards often pay for themselves through lounge access alone.",
-  "The average credit card user has 3.2 cards but only maximizes 1.",
-  "Cashback is instant gratification, but reward points can be worth 3x more!",
-  "Your credit score can improve by 50+ points in just 6 months with the right habits.",
-  "Travel cards can get you business class flights at economy prices!",
-  "Most people don't know: You can negotiate credit card annual fees.",
-  "The difference between 1% and 5% cashback? ₹40,000 annually on ₹10L spending!",
-  "Airport lounge access isn't just for the rich—many mid-tier cards offer it.",
-  "Co-branded cards often give better value than generic reward cards.",
-  "Banks make money when you carry a balance—always pay in full!",
-  "Welcome bonuses are often worth more than a year's rewards combined.",
-  "The best credit card isn't the fanciest—it's the one matching your spending.",
-  "Fuel surcharge waivers can save you ₹5,000+ annually if you drive daily.",
-  "Credit cards are tools, not free money. Use them wisely!",
-  "The right card for dining out can give you 10x more value than a regular card.",
-  "Your spending pattern changes every year—your cards should too!",
-  "Most premium cards offer complimentary insurance worth lakhs.",
-  "Smart card users earn while they spend. Average users just spend."
+  "The average Indian has 2-3 cards but maximizes only one!",
+  "Reward points can be worth 3x more than instant cashback!",
+  "Your credit score improves by 50+ points in 6 months with smart usage.",
+  "Travel cards can get you business class at economy prices!",
+  "You can negotiate annual fees—most people don't know this!",
+  "5% cashback vs 1%? That's ₹40,000 saved on ₹10L spending!",
+  "Airport lounges aren't just for the rich—many cards offer them free.",
 ];
 
 interface CardResult {
@@ -1261,7 +1253,9 @@ const CardGenius = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-primary">
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-gradient-primary pt-16">{/* Added pt-16 for nav spacing */}
       {/* Welcome Dialog */}
       <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
         <DialogContent className="sm:max-w-lg">
@@ -1279,8 +1273,8 @@ const CardGenius = () => {
             </div>
             
             <DialogHeader className="space-y-3">
-              <DialogTitle className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">
-                Welcome to Card Genius 360
+              <DialogTitle className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent whitespace-nowrap">
+                Welcome to AI Super Card Genius
               </DialogTitle>
               <DialogDescription className="text-base text-charcoal-700 leading-relaxed">
                 We help you find the <span className="font-semibold text-primary">best credit card</span> tailored to your unique spending habits.
@@ -1351,8 +1345,20 @@ const CardGenius = () => {
         </div>
       )}
 
+      {/* Progress Bar */}
+      <div className="fixed top-0 left-0 w-full h-2 bg-muted/30 z-[60]">
+        <div 
+          className="h-full bg-primary transition-all duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-charcoal-100 z-50">
+      <header className="sticky top-16 bg-white/95 backdrop-blur-sm border-b border-charcoal-100 z-50">{/* Changed top-0 to top-16 for nav */}
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -1475,7 +1481,9 @@ const CardGenius = () => {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+      <Footer />
+    </>
   );
 };
 
