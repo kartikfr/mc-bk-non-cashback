@@ -1,5 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Target, ArrowRight, Wand2, Layers } from "lucide-react";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useRef } from "react";
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 // Custom SVG Icons for better visual representation
 const CardWithTags = ({ className = "w-12 h-12" }: { className?: string }) => (
@@ -43,13 +49,41 @@ const StackedCards = ({ className = "w-12 h-12" }: { className?: string }) => (
 
 const FourKeyUSPs = () => {
   const navigate = useNavigate();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!sectionRef.current || !cardsRef.current) return;
+
+    const cards = cardsRef.current.querySelectorAll('.feature-card');
+    
+    gsap.fromTo(cards, {
+      y: 60,
+      opacity: 0,
+      scale: 0.9
+    }, {
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: "power3.out",
+      force3D: true,
+      scrollTrigger: {
+        trigger: cardsRef.current,
+        start: "top 85%",
+        end: "top 50%",
+        toggleActions: "play none none reverse"
+      }
+    });
+  }, { scope: sectionRef });
 
   const features = [
     {
       icon: CardWithTags,
       iconColor: "bg-blue-500",
       title: "AI Category Card Genius",
-      description: "Choose your spending category, answer a few questions, and find the perfect card tailored to your needs",
+      description: "Pick your favorite spending category, answer just a few quick questions, and let our AI find the perfect card that matches exactly what you need",
       cta: "Get Started",
       redirect: "/card-genius-category"
     },
@@ -57,7 +91,7 @@ const FourKeyUSPs = () => {
       icon: MagicWandSparkles,
       iconColor: "bg-purple-500",
       title: "AI Super Card Genius",
-      description: "Complete our 19-question assessment and get personalized card recommendations ranked by Net Annual Savings",
+      description: "Take our comprehensive 19-question quiz and discover personalized card recommendations ranked by how much you'll actually save each year",
       cta: "Get Started",
       redirect: "/card-genius"
     },
@@ -65,7 +99,7 @@ const FourKeyUSPs = () => {
       icon: Target,
       iconColor: "bg-green-500",
       title: "Beat My Card",
-      description: "Compare your existing card with better alternatives based on your actual spending patterns and save more",
+      description: "Already have a credit card? Let's compare it with better options based on how you actually spend your money and help you save even more",
       cta: "Get Started",
       redirect: "/beat-my-card"
     },
@@ -73,14 +107,14 @@ const FourKeyUSPs = () => {
       icon: StackedCards,
       iconColor: "bg-orange-500",
       title: "Browse All Cards",
-      description: "Explore our comprehensive database of credit cards with detailed comparisons and real user reviews",
+      description: "Dive into our complete collection of credit cards with side-by-side comparisons, detailed breakdowns, and honest reviews from real users",
       cta: "Get Started",
       redirect: "/cards"
     }
   ];
 
   return (
-    <section className="py-20 bg-background">
+    <section ref={sectionRef} className="py-20 bg-background">
       <div className="container mx-auto px-4">
         {/* Section Heading */}
         <div className="text-center mb-16">
@@ -93,7 +127,7 @@ const FourKeyUSPs = () => {
         </div>
 
         {/* 4 Circular Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
@@ -103,7 +137,7 @@ const FourKeyUSPs = () => {
                   navigate(feature.redirect);
                   setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
                 }}
-                className="bg-card rounded-2xl shadow-card p-8 flex flex-col items-center text-center cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:-translate-y-2 group h-full"
+                className="feature-card bg-card rounded-2xl shadow-card p-8 flex flex-col items-center text-center cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:-translate-y-2 group h-full"
               >
                 {/* Circular Icon */}
                 <div className={`w-24 h-24 rounded-full ${feature.iconColor} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>

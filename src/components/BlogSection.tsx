@@ -425,7 +425,7 @@ const BlogSection = () => {
           <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
             Real Stories, Real Strategies
           </h2>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
             Learn from people who've mastered the art of maximizing credit card rewards and savings
           </p>
         </div>

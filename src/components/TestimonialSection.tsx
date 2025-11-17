@@ -165,7 +165,7 @@ const TestimonialSection = () => {
           </div>
           <div className="text-center">
             <p className="text-4xl font-bold text-primary mb-2">24/7</p>
-            <p className="text-sm text-muted-foreground">Free Expert Advice</p>
+            <p className="text-sm text-muted-foreground">Real Insight</p>
           </div>
         </div>
       </div>
