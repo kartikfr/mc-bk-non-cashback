@@ -81,13 +81,16 @@ const Navigation = () => {
             <div className="py-2">
               <div className="text-foreground font-medium mb-2">Tools</div>
               <Link to="/card-genius" className="block py-2 pl-4 text-sm text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Super Card Genius
+                <div className="font-medium">Super Card Genius</div>
+                <div className="text-xs text-muted-foreground mt-0.5">AI Powered tool to find the best card for YOU!</div>
               </Link>
               <Link to="/card-genius-category" className="block py-2 pl-4 text-sm text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Category Card Genius
+                <div className="font-medium">Category Card Genius</div>
+                <div className="text-xs text-muted-foreground mt-0.5">AI Powered tool to find the best card by category for your spends</div>
               </Link>
               <Link to="/beat-my-card" className="block py-2 pl-4 text-sm text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Beat My Card
+                <div className="font-medium">Beat My Card</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Test our Card Genius AI v/s Your Card. See the magic!</div>
               </Link>
             </div>
             <button 
