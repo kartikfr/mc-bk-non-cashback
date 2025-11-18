@@ -38,9 +38,12 @@ export const CardGeniusProgressBar = ({
   }, [lastScrollY]);
 
   useEffect(() => {
+    // Keep progress in sync with controlled step changes
+    setActiveQuestion(currentStep);
+
     const observers: IntersectionObserver[] = [];
     
-    if (questionRefs.current) {
+    if (questionRefs.current && questionRefs.current.length > 0) {
       questionRefs.current.forEach((ref, index) => {
         if (!ref) return;
         
@@ -66,13 +69,13 @@ export const CardGeniusProgressBar = ({
     return () => {
       observers.forEach(observer => observer.disconnect());
     };
-  }, [questionRefs]);
+  }, [questionRefs, currentStep]);
 
   const progress = ((activeQuestion + 1) / totalSteps) * 100;
 
   return (
     <div 
-      className={`sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border transition-all duration-300 ${
+      className={`sticky top-16 md:top-20 z-40 bg-background/95 backdrop-blur-md border-b border-border transition-all duration-300 ${
         isCompact ? 'py-2' : 'py-4'
       }`}
       style={{ 
