@@ -22,7 +22,7 @@ const Footer = () => {
               <li><Link to="/card-genius" className="hover:opacity-100 transition-opacity">AI Card Genius</Link></li>
               <li><Link to="/card-genius-category" className="hover:opacity-100 transition-opacity">AI Category Card Genius</Link></li>
               <li><Link to="/beat-my-card" className="hover:opacity-100 transition-opacity">Beat My Card</Link></li>
-              <li><Link to="/about" className="hover:opacity-100 transition-opacity">About Us</Link></li>
+              <li><a href="/#blog" className="hover:opacity-100 transition-opacity">Blogs</a></li>
             </ul>
           </div>
           <div className="space-y-4">
