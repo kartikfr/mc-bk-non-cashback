@@ -27,7 +27,7 @@ const App = () => <QueryClientProvider client={queryClient}>
             <Route path="/" element={<Index />} />
             <Route path="/cards" element={<CardListing />} />
             <Route path="/cards/:alias" element={<CardDetails />} />
-            <Route path="/card-genius" element={<CardGenius />} className="my-0" />
+            <Route path="/card-genius" element={<CardGenius />} />
             <Route path="/card-genius-category" element={<CardGeniusCategory />} />
             <Route path="/beat-my-card" element={<BeatMyCard />} />
             <Route path="/redirect" element={<RedirectInterstitial />} />

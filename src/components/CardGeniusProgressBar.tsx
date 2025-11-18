@@ -76,7 +76,7 @@ export const CardGeniusProgressBar = ({
   return (
     <div 
       className={`sticky top-16 md:top-20 z-40 bg-background/98 backdrop-blur-md border-b border-border transition-all duration-300 ${
-        isCompact ? 'py-2' : 'py-4'
+        isCompact ? 'py-3 px-4' : 'py-4 px-4'
       }`}
       style={{ 
         boxShadow: isCompact ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'

@@ -1220,7 +1220,7 @@ const CardGenius = () => {
             
             <DialogHeader className="space-y-3">
               <DialogTitle className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent whitespace-nowrap">
-                Welcome to AI Super Card Genius
+                Welcome to Super Card Genius
               </DialogTitle>
               <DialogDescription className="text-base text-charcoal-700 leading-relaxed">
                 We help you find the <span className="font-semibold text-primary">best credit card</span> tailored to your unique spending habits.
@@ -1286,7 +1286,7 @@ const CardGenius = () => {
         </div>}
 
       {/* Sticky Progress Bar */}
-      {!showResults && <CardGeniusProgressBar currentStep={currentStep} totalSteps={questions.length} questionRefs={questionRefs} className="py-[25px] my-0" />}
+      {!showResults && <CardGeniusProgressBar currentStep={currentStep} totalSteps={questions.length} questionRefs={questionRefs} />}
 
       {/* Main Content - Add padding for sticky progress bar */}
       <div className="pt-4"></div>

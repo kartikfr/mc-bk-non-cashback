@@ -426,7 +426,7 @@ const BlogSection = () => {
             Real Stories, Real Strategies
           </h2>
           <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
-            Learn from people who've mastered the art of maximizing credit card rewards and savings
+            Learn from people who've mastered maximizing credit card rewards and savings.
           </p>
         </div>
 

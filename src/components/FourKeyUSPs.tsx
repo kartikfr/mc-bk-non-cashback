@@ -82,16 +82,16 @@ const FourKeyUSPs = () => {
     {
       icon: CardWithTags,
       iconColor: "bg-blue-500",
-      title: "AI Category Card Genius",
-      description: "Pick your spending category, answer a few questions, and discover the card that's perfect for you",
+      title: "Category Card Genius",
+      description: "AI Powered tool to find the best card by category for your spends",
       cta: "Get Started",
       redirect: "/card-genius-category"
     },
     {
       icon: MagicWandSparkles,
       iconColor: "bg-purple-500",
-      title: "AI Super Card Genius",
-      description: "Take our 19-question quiz and get recommendations ranked by your actual savings potential",
+      title: "Super Card Genius",
+      description: "AI Powered tool to find the best card for YOU!",
       cta: "Get Started",
       redirect: "/card-genius"
     },
@@ -99,7 +99,7 @@ const FourKeyUSPs = () => {
       icon: Target,
       iconColor: "bg-green-500",
       title: "Beat My Card",
-      description: "Already have a card? Let's find you better options based on how you actually spend",
+      description: "Test our Card Genius AI v/s Your Card. See the magic!",
       cta: "Get Started",
       redirect: "/beat-my-card"
     },

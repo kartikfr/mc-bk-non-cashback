@@ -150,7 +150,7 @@ const TestimonialSection = () => {
 
       {/* Stats section */}
       <div className="container mx-auto px-4 mt-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           <div className="text-center">
             <p className="text-4xl font-bold text-primary mb-2">100+</p>
             <p className="text-sm text-muted-foreground">Credit Cards Reviewed</p>
@@ -162,10 +162,6 @@ const TestimonialSection = () => {
           <div className="text-center">
             <p className="text-4xl font-bold text-primary mb-2">6+</p>
             <p className="text-sm text-muted-foreground">Spending Categories</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-primary mb-2">24/7</p>
-            <p className="text-sm text-muted-foreground">Real Insight</p>
           </div>
         </div>
       </div>
