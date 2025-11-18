@@ -1205,7 +1205,7 @@ const CardGenius = () => {
   return <>
       <Navigation />
       
-      <div className="min-h-screen bg-gradient-primary pt-16">{/* Added padding for nav */}
+      <div className="min-h-screen bg-gradient-primary pt-24 md:pt-28">{/* Added padding for nav */}
       {/* Welcome Dialog */}
       <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
         <DialogContent className="sm:max-w-lg">

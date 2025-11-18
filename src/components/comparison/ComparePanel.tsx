@@ -56,13 +56,76 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
   const isLongText = (text: string) => text ? text.replace(/<[^>]*>/g, '').length > 150 : false;
 
   const comparisonSections = [
-    { id: 'overview', title: 'Card Overview', rows: [{ key: 'name', label: 'Card Name' }, { key: 'card_type', label: 'Card Type' }] },
-    { id: 'key-benefits', title: 'Key Benefits', rows: [{ key: 'product_usps', label: 'Top Features', type: 'usps' }] },
-    { id: 'fees', title: 'Fees & Charges', rows: [{ key: 'joining_fee_text', label: 'Joining Fee' }, { key: 'joining_fee_offset', label: 'Joining Fee Waiver', type: 'html' }, { key: 'annual_fee_text', label: 'Annual Fee' }, { key: 'annual_fee_waiver', label: 'Annual Fee Waiver', type: 'html' }, { key: 'annual_saving', label: 'Annual Savings Potential' }] },
-    { id: 'rewards', title: 'Rewards & Redemption', rows: [{ key: 'reward_conversion_rate', label: 'Reward Conversion Rate', type: 'html' }, { key: 'redemption_options', label: 'Redemption Options', type: 'html' }, { key: 'redemption_catalogue', label: 'Redemption Catalogue', type: 'link' }] },
-    { id: 'eligibility', title: 'Eligibility Requirements', rows: [{ key: 'min_age', label: 'Minimum Age' }, { key: 'max_age', label: 'Maximum Age' }, { key: 'income_salaried', label: 'Income (Salaried)' }, { key: 'income_self_emp', label: 'Income (Self-Employed)' }, { key: 'crif', label: 'Credit Score Required' }, { key: 'employment_type', label: 'Employment Type' }] },
-    { id: 'fee-structure', title: 'Detailed Fee Structure', rows: [{ key: 'bank_fee_structure.forex_markup', label: 'Forex Markup' }, { key: 'bank_fee_structure.forex_markup_comment', label: 'Forex Details', type: 'html' }, { key: 'bank_fee_structure.apr_fees', label: 'APR Fees' }, { key: 'bank_fee_structure.apr_fees_comment', label: 'APR Details', type: 'html' }, { key: 'bank_fee_structure.atm_withdrawal', label: 'ATM Withdrawal Fee' }, { key: 'bank_fee_structure.atm_withdrawal_comment', label: 'ATM Details', type: 'html' }, { key: 'bank_fee_structure.reward_redemption_fees', label: 'Reward Redemption Fees' }, { key: 'bank_fee_structure.late_payment_annual', label: 'Late Payment (Annual)' }, { key: 'bank_fee_structure.late_payment_fine', label: 'Late Payment Fine' }] },
-    { id: 'exclusions', title: 'Exclusions', rows: [{ key: 'exclusion_earnings', label: 'Earning Exclusions', type: 'list' }, { key: 'exclusion_spends', label: 'Spending Exclusions', type: 'list' }] }
+    {
+      id: 'fee-eligibility',
+      title: 'Fee & Eligibility',
+      rows: [
+        { key: 'joining_fee_text', label: 'Joining Fee' },
+        { key: 'joining_fee_offset', label: 'Joining Fee Waiver', type: 'html' },
+        { key: 'annual_fee_text', label: 'Annual Fee' },
+        { key: 'annual_fee_waiver', label: 'Annual Fee Waiver', type: 'html' },
+        { key: 'annual_saving', label: 'Annual Savings Potential' },
+        { key: 'min_age', label: 'Minimum Age' },
+        { key: 'max_age', label: 'Maximum Age' },
+        { key: 'income_salaried', label: 'Income (Salaried)' },
+        { key: 'income_self_emp', label: 'Income (Self-Employed)' },
+        { key: 'crif', label: 'Credit Score Required' },
+        { key: 'employment_type', label: 'Employment Type' },
+      ],
+    },
+    {
+      id: 'key-benefits',
+      title: 'Key Benefits',
+      rows: [
+        { key: 'product_usps', label: 'All Key Benefits', type: 'usps' },
+      ],
+    },
+    {
+      id: 'best-for',
+      title: 'Best For',
+      rows: [
+        { key: 'tags', label: 'Best For', type: 'tags' },
+      ],
+    },
+    {
+      id: 'rewards',
+      title: 'Rewards & Redemption',
+      rows: [
+        { key: 'reward_conversion_rate', label: 'Reward Conversion Rate', type: 'html' },
+        { key: 'redemption_options', label: 'Redemption Options', type: 'html' },
+        { key: 'redemption_catalogue', label: 'Redemption Catalogue', type: 'link' },
+      ],
+    },
+    {
+      id: 'fee-structure',
+      title: 'Fee Structure',
+      rows: [
+        { key: 'bank_fee_structure.forex_markup', label: 'Foreign Currency Markup' },
+        { key: 'bank_fee_structure.apr_fees', label: 'APR Fees' },
+        { key: 'bank_fee_structure.late_payment_fine', label: 'Late Payment Charges' },
+        { key: 'bank_fee_structure.forex_markup_comment', label: 'Forex Details', type: 'html' },
+        { key: 'bank_fee_structure.apr_fees_comment', label: 'APR Details', type: 'html' },
+        { key: 'bank_fee_structure.late_payment_annual', label: 'Late Payment (Annual)' },
+        { key: 'bank_fee_structure.reward_redemption_fees', label: 'Reward Redemption Fees' },
+        { key: 'bank_fee_structure.atm_withdrawal', label: 'ATM Withdrawal Fee' },
+        { key: 'bank_fee_structure.atm_withdrawal_comment', label: 'ATM Fee Details', type: 'html' },
+      ],
+    },
+    {
+      id: 'exclusions',
+      title: 'Exclusions',
+      rows: [
+        { key: 'exclusion_earnings', label: 'Earning Exclusions', type: 'list' },
+        { key: 'exclusion_spends', label: 'Spending Exclusions', type: 'list' },
+      ],
+    },
+    {
+      id: 'terms',
+      title: 'Terms & Conditions',
+      rows: [
+        { key: 'tnc', label: 'Terms & Conditions', type: 'html' },
+      ],
+    },
   ];
 
   const slots = Array.from({ length: maxCompare }, (_, i) => i === 0 && preSelectedCard && !selectedCards.find(c => (c.id?.toString() || c.seo_card_alias) === (preSelectedCard.id?.toString() || preSelectedCard.seo_card_alias)) ? preSelectedCard : selectedCards[i] || null);
@@ -71,7 +134,8 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
     const value = getNestedValue(card, row.key);
     if (!value || value === 'N/A' || value === '') return <span className="text-muted-foreground italic">Not Available</span>;
     if (row.type === 'rating') return <div className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-semibold">{value}</span></div>;
-    if (row.type === 'usps') return <div className="space-y-2">{(Array.isArray(value) ? value : []).sort((a: any, b: any) => a.priority - b.priority).slice(0, 3).map((usp: any, idx: number) => <div key={idx} className="p-2 bg-muted/50 rounded-lg"><div className="font-semibold text-sm mb-1">{usp.header}</div><div className="text-xs text-muted-foreground">{usp.description}</div></div>)}</div>;
+    if (row.type === 'usps') return <div className="space-y-2">{(Array.isArray(value) ? value : []).sort((a: any, b: any) => a.priority - b.priority).map((usp: any, idx: number) => (<div key={idx} className="p-2 bg-muted/50 rounded-lg"><div className="font-semibold text-sm mb-1">{usp.header}</div><div className="text-xs text-muted-foreground">{usp.description}</div></div>))}</div>;
+    if (row.type === 'tags') return <div className="flex flex-wrap gap-2">{(Array.isArray(value) ? value : []).map((t: any) => <span key={t.id || t.name} className="px-2 py-1 rounded-full bg-muted text-foreground text-xs">{t.name}</span>)}</div>;
     if (row.type === 'list') return <ul className="list-disc list-inside space-y-1 text-sm">{value.split(',').map((item: string) => item.trim()).filter(Boolean).map((item: string, idx: number) => <li key={idx}>{item}</li>)}</ul>;
     if (row.type === 'link') return <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">View Catalogue <ExternalLink className="w-3 h-3" /></a>;
     if (row.type === 'html') {
