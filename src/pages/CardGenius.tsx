@@ -177,6 +177,8 @@ interface CardResult {
   total_extra_benefits: number;
   milestone_benefits_only?: number;
   airport_lounge_value?: number;
+  domestic_lounge_value?: number;
+  international_lounge_value?: number;
   net_savings: number;
   voucher_of?: string | number;
   voucher_bonus?: string | number;
@@ -365,10 +367,14 @@ const CardGenius = () => {
             const cardDomesticThreshold = saving.domestic_lounges_unlocked || cardDetails.data?.domestic_lounges_unlocked || 0;
             const cardInternationalThreshold = saving.international_lounges_unlocked || cardDetails.data?.international_lounges_unlocked || 0;
             
+            console.log(`Card: ${saving.card_alias}, Domestic Threshold: ${cardDomesticThreshold}, Intl Threshold: ${cardInternationalThreshold}`);
+            
             // Calculate actual lounge value based on minimum of user's desired visits and card's threshold
             const actualDomesticVisits = Math.min(userDomesticLoungeVisits, cardDomesticThreshold);
             const actualInternationalVisits = Math.min(userInternationalLoungeVisits, cardInternationalThreshold);
-            const cardLoungeValue = (actualDomesticVisits * 750) + (actualInternationalVisits * 1250);
+            const cardDomesticValue = actualDomesticVisits * 750;
+            const cardInternationalValue = actualInternationalVisits * 1250;
+            const cardLoungeValue = cardDomesticValue + cardInternationalValue;
             
             // Calculate net savings with the new formula: Total Savings + Milestones + Airport Lounges - Joining Fee
             const netSavings = totalSavingsYearly + milestoneOnly + cardLoungeValue - joiningFees;
@@ -384,6 +390,8 @@ const CardGenius = () => {
               airport_lounge_value: cardLoungeValue,
               domestic_lounges_unlocked: cardDomesticThreshold,
               international_lounges_unlocked: cardInternationalThreshold,
+              domestic_lounge_value: cardDomesticValue,
+              international_lounge_value: cardInternationalValue,
               net_savings: netSavings,
               voucher_of: saving.voucher_of || 0,
               voucher_bonus: saving.voucher_bonus || 0,
@@ -403,7 +411,9 @@ const CardGenius = () => {
             // Calculate actual lounge value based on minimum of user's desired visits and card's threshold
             const actualDomesticVisits = Math.min(userDomesticLoungeVisits, cardDomesticThreshold);
             const actualInternationalVisits = Math.min(userInternationalLoungeVisits, cardInternationalThreshold);
-            const cardLoungeValue = (actualDomesticVisits * 750) + (actualInternationalVisits * 1250);
+            const cardDomesticValue = actualDomesticVisits * 750;
+            const cardInternationalValue = actualInternationalVisits * 1250;
+            const cardLoungeValue = cardDomesticValue + cardInternationalValue;
             
             const netSavings = totalSavingsYearly + milestoneOnly + cardLoungeValue - joiningFees;
             return {
@@ -418,6 +428,8 @@ const CardGenius = () => {
               airport_lounge_value: cardLoungeValue,
               domestic_lounges_unlocked: cardDomesticThreshold,
               international_lounges_unlocked: cardInternationalThreshold,
+              domestic_lounge_value: cardDomesticValue,
+              international_lounge_value: cardInternationalValue,
               net_savings: netSavings,
               voucher_of: saving.voucher_of || 0,
               voucher_bonus: saving.voucher_bonus || 0,
@@ -1291,28 +1303,18 @@ const CardGenius = () => {
                                   </React.Fragment>;
                         })}
                               
-                              {/* Add Domestic and Intl Lounge values - card-specific based on thresholds */}
+                              {/* Add Domestic and Intl Lounge values - use pre-calculated card-specific values */}
                               {(domesticLoungeValue > 0 || internationalLoungeValue > 0) && <>
                                 {domesticLoungeValue > 0 && <>
                                   <td className="p-4"></td>
                                   <td className="p-4 text-center font-semibold text-purple-600">
-                                    {(() => {
-                                      const cardDomesticThreshold = card.domestic_lounges_unlocked || 0;
-                                      const actualDomesticVisits = Math.min(userDomesticLoungeVisits, cardDomesticThreshold);
-                                      const cardDomesticValue = actualDomesticVisits * 750;
-                                      return `₹${cardDomesticValue.toLocaleString()}`;
-                                    })()}
+                                    ₹{(card.domestic_lounge_value || 0).toLocaleString()}
                                   </td>
                                 </>}
                                 {internationalLoungeValue > 0 && <>
                                   <td className="p-4"></td>
                                   <td className="p-4 text-center font-semibold text-purple-600">
-                                    {(() => {
-                                      const cardInternationalThreshold = card.international_lounges_unlocked || 0;
-                                      const actualInternationalVisits = Math.min(userInternationalLoungeVisits, cardInternationalThreshold);
-                                      const cardInternationalValue = actualInternationalVisits * 1250;
-                                      return `₹${cardInternationalValue.toLocaleString()}`;
-                                    })()}
+                                    ₹{(card.international_lounge_value || 0).toLocaleString()}
                                   </td>
                                 </>}
                               </>}
