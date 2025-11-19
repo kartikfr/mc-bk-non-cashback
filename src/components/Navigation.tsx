@@ -9,14 +9,20 @@ const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Auto-hide navigation on scroll
-  const { style } = useAutoHideNav({
+  const { style, isVisible } = useAutoHideNav({
     threshold: 10,
     duration: 300,
   });
 
+  // Update CSS variable for nav height based on visibility
+  const navHeight = isVisible ? '7rem' : '0rem';
+
   return <nav 
     className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border overflow-visible will-change-transform"
-    style={style}
+    style={{
+      ...style,
+      '--nav-height': navHeight,
+    } as React.CSSProperties}
   >
       <div className="container mx-auto px-4 py-2 overflow-visible">
         <div className="flex items-center justify-between mx-0 px-0 py-0">
