@@ -175,6 +175,8 @@ interface CardResult {
   total_savings: number;
   total_savings_yearly: number;
   total_extra_benefits: number;
+  milestone_benefits_only?: number;
+  airport_lounge_value?: number;
   net_savings: number;
   voucher_of?: string | number;
   voucher_bonus?: string | number;
@@ -232,6 +234,12 @@ const CardGenius = () => {
   }, []);
   const currentQuestion = questions[currentStep];
   const progress = (currentStep + 1) / questions.length * 100;
+  
+  // Calculate airport lounge values
+  const domesticLoungeValue = (responses['domestic_lounge_usage_quarterly'] || 0) * 750;
+  const internationalLoungeValue = (responses['international_lounge_usage_quarterly'] || 0) * 1250;
+  const totalLoungeValue = domesticLoungeValue + internationalLoungeValue;
+  
   const handleValueChange = (value: number) => {
     setResponses(prev => ({
       ...prev,
@@ -345,7 +353,9 @@ const CardGenius = () => {
             const joiningFees = parseInt(saving.joining_fees) || 0;
             const totalSavingsYearly = saving.total_savings_yearly || 0;
             const totalExtraBenefits = saving.total_extra_benefits || 0;
-            const netSavings = totalSavingsYearly + totalExtraBenefits - joiningFees;
+            // Add lounge value to milestone benefits
+            const totalExtraBenefitsWithLounges = totalExtraBenefits + totalLoungeValue;
+            const netSavings = totalSavingsYearly + totalExtraBenefitsWithLounges - joiningFees;
             return {
               card_name: cardDetails.data?.card_name || saving.card_name || saving.card_alias,
               card_bg_image: cardBgImage,
@@ -353,7 +363,9 @@ const CardGenius = () => {
               joining_fees: joiningFees,
               total_savings: saving.total_savings || 0,
               total_savings_yearly: totalSavingsYearly,
-              total_extra_benefits: totalExtraBenefits,
+              total_extra_benefits: totalExtraBenefitsWithLounges,
+              milestone_benefits_only: totalExtraBenefits,
+              airport_lounge_value: totalLoungeValue,
               net_savings: netSavings,
               voucher_of: saving.voucher_of || 0,
               voucher_bonus: saving.voucher_bonus || 0,
@@ -365,7 +377,8 @@ const CardGenius = () => {
             const joiningFees = parseInt(saving.joining_fees) || 0;
             const totalSavingsYearly = saving.total_savings_yearly || 0;
             const totalExtraBenefits = saving.total_extra_benefits || 0;
-            const netSavings = totalSavingsYearly + totalExtraBenefits - joiningFees;
+            const totalExtraBenefitsWithLounges = totalExtraBenefits + totalLoungeValue;
+            const netSavings = totalSavingsYearly + totalExtraBenefitsWithLounges - joiningFees;
             return {
               card_name: saving.card_name || saving.card_alias,
               card_bg_image: saving.card_bg_image || '',
@@ -373,7 +386,9 @@ const CardGenius = () => {
               joining_fees: joiningFees,
               total_savings: saving.total_savings || 0,
               total_savings_yearly: totalSavingsYearly,
-              total_extra_benefits: totalExtraBenefits,
+              total_extra_benefits: totalExtraBenefitsWithLounges,
+              milestone_benefits_only: totalExtraBenefits,
+              airport_lounge_value: totalLoungeValue,
               net_savings: netSavings,
               voucher_of: saving.voucher_of || 0,
               voucher_bonus: saving.voucher_bonus || 0,
@@ -559,10 +574,19 @@ const CardGenius = () => {
                     <span className="text-lg font-semibold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</span>
                   </div>
                   
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Milestone Benefits</span>
-                    <span className="text-lg font-semibold text-foreground">₹{selectedCard.total_extra_benefits.toLocaleString()}</span>
-                  </div>
+                  {selectedCard.milestone_benefits_only !== undefined && selectedCard.milestone_benefits_only > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-foreground">Milestone Benefits</span>
+                      <span className="text-lg font-semibold text-foreground">₹{selectedCard.milestone_benefits_only.toLocaleString()}</span>
+                    </div>
+                  )}
+                  
+                  {selectedCard.airport_lounge_value !== undefined && selectedCard.airport_lounge_value > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-foreground">Airport Lounges</span>
+                      <span className="text-lg font-semibold text-foreground">₹{selectedCard.airport_lounge_value.toLocaleString()}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-foreground">Joining Fees</span>

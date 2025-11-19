@@ -2,10 +2,22 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import logo from "@/assets/moneycontrol-logo.png";
+import { useAutoHideNav } from "@/hooks/useAutoHideNav";
+
 const Navigation = () => {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  return <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border overflow-visible">
+  
+  // Auto-hide navigation on scroll
+  const { style } = useAutoHideNav({
+    threshold: 10,
+    duration: 300,
+  });
+
+  return <nav 
+    className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border overflow-visible will-change-transform"
+    style={style}
+  >
       <div className="container mx-auto px-4 py-2 overflow-visible">
         <div className="flex items-center justify-between mx-0 px-0 py-0">
           <Link to="/" className="flex items-center">
