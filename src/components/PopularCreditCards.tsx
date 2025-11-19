@@ -19,17 +19,17 @@ const categories = {
   },
   shopping: {
     title: "Online Shopping",
-    aliases: ['idfc-power-plus-credit-card', 'sbi-cashback-credit-card', 'hdfc-swiggy-credit-card'],
+    aliases: ['amex-platinum-travel-credit-card', 'sbi-cashback-credit-card', 'hdfc-swiggy-credit-card'],
     filterValue: 'shopping'
   },
   dining: {
     title: "Dining",
-    aliases: ['hdfc-swiggy-credit-card', 'hdfc-millenia-credit-card', 'au-zenith-plus-credit-card'],
+    aliases: ['hdfc-swiggy-credit-card', 'hdfc-millenia-credit-card', 'hsbc-live-plus-credit-card'],
     filterValue: 'dining'
   },
   travel: {
     title: "Travel",
-    aliases: ['hdfc-indigo-credit-card', 'indusind-legend-credit-card', 'amex-gold-credit-card'],
+    aliases: ['icici-mmt-platinum-credit-card', 'hdfc-infinia-credit-card', 'axis-bank-magnus-credit-card'],
     filterValue: 'travel'
   }
 };
@@ -38,13 +38,13 @@ const categories = {
 const customUSPs: Record<string, Array<{ header: string; description: string; priority: number }>> = {
   'axis-bank-magnus-credit-card': [
     {
-      header: "Welcome Voucher Worth ₹12,500",
-      description: "Receive a welcome voucher worth ₹12,500 from Luxe gift cards, The Postcard Hotels, or Yatra upon card activation.",
-      priority: 1
-    },
-    {
       header: "Unlimited Airport Lounge Access",
       description: "Complimentary unlimited international lounge visits with Priority Pass, plus 8 guest visits annually. also unlimited domestic lounge visits",
+      priority: 2
+    },
+    {
+      header: "Dining Delights Program",
+      description: "Save up to 30% upto ₹1000 at over 4,000 restaurants in India with Axis Bank's Dining Delights program.",
       priority: 2
     }
   ],
@@ -69,6 +69,54 @@ const customUSPs: Record<string, Array<{ header: string; description: string; pr
     {
       header: "Exclusive Dining Privileges",
       description: "Enjoy up to 20% savings at premium restaurants across top cities through the Good Food Trail Dining program",
+      priority: 2
+    }
+  ],
+  'amex-platinum-travel-credit-card': [
+    {
+      header: "Membership Rewards on every spend",
+      description: "Earn Membership Rewards points for every transaction, redeemable for travel, gift cards, or shopping.",
+      priority: 1
+    },
+    {
+      header: "Exclusive Annual Spend Milestone Reward",
+      description: "Spend ₹1.90 Lacs in a Cardmembership year and receive Flipkart vouchers or travel benefits worth ₹4,500.",
+      priority: 3
+    }
+  ],
+  'hsbc-live-plus-credit-card': [
+    {
+      header: "10% Cashback on Dining and Food Delivery",
+      description: "Earn 10% cashback on dining and food delivery spends, capped at ₹1,000 per billing cycle.",
+      priority: 1
+    },
+    {
+      header: "10% Cashback on Food Delivery",
+      description: "Earn 10% cashback on food delivery spends, capped at ₹1,000 per billing cycle.",
+      priority: 1
+    }
+  ],
+  'icici-mmt-platinum-credit-card': [
+    {
+      header: "Unlimited Rewards and Redemption",
+      description: " Earn up to ₹3 My Cash per ₹200 spent on MakeMyTrip and redeem without restrictions on flights, hotels, and holidays",
+      priority: 1
+    },
+    {
+      header: "Complimentary Airport Lounges ",
+      description: "Enjoy 4 complimentary visits annually to domestic airport lounges",
+      priority: 1
+    }
+  ],
+  'hdfc-infinia-credit-card': [
+    {
+      header: "Reward Points for Travel ",
+      description: "at ₹1 per point for flights and hotels via SmartBuy, or convert them into Air Miles at a 1:1 ratio for global travel flexibility",
+      priority: 1
+    },
+    {
+      header: "Minimal Forex Markup Fee ",
+      description: "Benefit from a low 2% forex markup fee, ensuring cost-effective international transactions",
       priority: 2
     }
   ]
