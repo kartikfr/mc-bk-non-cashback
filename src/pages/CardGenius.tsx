@@ -1243,7 +1243,7 @@ const CardGenius = () => {
                               </td>
                               <td className="p-4"></td>
                               <td className="p-4 text-center">
-                                <span className="font-bold text-lg text-green-700">
+                                <span className="font-bold text-lg text-green-600">
                                   ₹{card.net_savings.toLocaleString()}
                                 </span>
                               </td>

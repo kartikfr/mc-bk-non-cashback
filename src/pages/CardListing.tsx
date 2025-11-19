@@ -527,12 +527,12 @@ const CardListing = () => {
       </section>
 
       {/* Main Content */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex gap-8">
+      <section className="flex-1 overflow-hidden">
+        <div className="container mx-auto px-4 h-full flex flex-col">
+          <div className="flex gap-8 h-full overflow-hidden py-6">
             {/* Desktop Filters Sidebar */}
-            <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="sticky top-28 bg-card rounded-2xl shadow-lg p-6 max-h-[calc(100vh-8rem)] overflow-y-auto transition-all duration-300 z-20" style={{top: 'calc(var(--nav-height, 7rem) + 0.5rem)'}}>
+            <aside className="hidden lg:block w-64 flex-shrink-0 overflow-y-auto">
+              <div className="bg-card rounded-2xl shadow-lg p-6 sticky top-0">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold">Filters</h2>
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
@@ -544,10 +544,9 @@ const CardListing = () => {
             </aside>
 
             {/* Card Grid */}
-            <div className="flex-1">
-              {/* Horizontal Eligibility Bar - Sticky on scroll */}
-              <div className="sticky bg-card rounded-2xl shadow-lg border border-border/50 p-6 mb-6 z-30 transition-all duration-300" style={{top: 'calc(var(--nav-height, 7rem) + 0.5rem)'}}>
-
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Horizontal Eligibility Bar - Sticky at top */}
+              <div className="bg-card rounded-2xl shadow-lg border border-border/50 p-6 mb-6 flex-shrink-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pincode</label>
@@ -712,6 +711,8 @@ const CardListing = () => {
                     </Badge>}
                 </div>}
 
+              {/* Cards Grid - Scrollable */}
+              <div className="flex-1 overflow-y-auto">
               {loading ? <div className="text-center py-12">
                   <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <p className="mt-4 text-muted-foreground">Loading cards...</p>
@@ -721,7 +722,7 @@ const CardListing = () => {
                     Clear Filters
                   </Button>
                 </div> : <>
-                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 pb-6">
                     {filteredCards.slice(0, displayCount).map((card, index) => <div key={card.id || index} className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2 flex flex-col h-full">
                         <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 flex-shrink-0">
                           {/* Compare Toggle Icon - Top Right */}
@@ -827,6 +828,7 @@ const CardListing = () => {
                       </Button>
                     </div>}
                 </>}
+              </div>
             </div>
           </div>
         </div>
