@@ -532,7 +532,7 @@ const CardListing = () => {
           <div className="flex gap-8">
             {/* Desktop Filters Sidebar */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="sticky top-28 bg-card rounded-2xl shadow-lg p-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
+              <div className="sticky top-28 bg-card rounded-2xl shadow-lg p-6 max-h-[calc(100vh-8rem)] overflow-y-auto transition-all duration-300" style={{top: 'calc(var(--nav-height, 7rem) + 1rem)'}}>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold">Filters</h2>
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
@@ -545,8 +545,8 @@ const CardListing = () => {
 
             {/* Card Grid */}
             <div className="flex-1">
-              {/* Horizontal Eligibility Bar - Always Visible */}
-              <div className="mb-6 bg-card rounded-2xl shadow-lg border border-border/50 p-6">
+              {/* Horizontal Eligibility Bar - Sticky on scroll */}
+              <div className="sticky bg-card rounded-2xl shadow-lg border border-border/50 p-6 mb-6 z-40 transition-all duration-300" style={{top: 'calc(var(--nav-height, 7rem) + 1rem)'}}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pincode</label>
