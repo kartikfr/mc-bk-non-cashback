@@ -363,10 +363,12 @@ const CardGenius = () => {
             const totalSavingsYearly = saving.total_savings_yearly || 0;
             const milestoneOnly = saving.total_extra_benefits || 0;
             
-            // Get card's lounge thresholds
-            const cardDomesticThreshold = saving.domestic_lounges_unlocked || cardDetails.data?.domestic_lounges_unlocked || 0;
-            const cardInternationalThreshold = saving.international_lounges_unlocked || cardDetails.data?.international_lounges_unlocked || 0;
+            // Get card's lounge thresholds from travel_benefits section
+            const travelBenefits = saving.travel_benefits || cardDetails.data?.travel_benefits || {};
+            const cardDomesticThreshold = travelBenefits.domestic_lounge_value || 0;
+            const cardInternationalThreshold = travelBenefits.international_lounge_value || 0;
             
+            console.log(`Card: ${saving.card_alias}, Travel Benefits:`, travelBenefits);
             console.log(`Card: ${saving.card_alias}, Domestic Threshold: ${cardDomesticThreshold}, Intl Threshold: ${cardInternationalThreshold}`);
             
             // Calculate actual lounge value based on minimum of user's desired visits and card's threshold
