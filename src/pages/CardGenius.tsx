@@ -617,10 +617,14 @@ const CardGenius = () => {
                     </div>
                   )}
                   
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Joining Fees</span>
-                    <span className="text-lg font-semibold text-foreground">-₹{selectedCard.joining_fees.toLocaleString()}</span>
-                  </div>
+                  {selectedCard.joining_fees !== undefined && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-foreground">Joining Fees</span>
+                      <span className={`text-lg font-semibold ${selectedCard.joining_fees > 0 ? 'text-red-500' : 'text-foreground'}`}>
+                        {selectedCard.joining_fees > 0 ? `-₹${selectedCard.joining_fees.toLocaleString()}` : '₹0'}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="h-px bg-border"></div>
                   
