@@ -1205,7 +1205,7 @@ const CardGenius = () => {
                   <tbody>
                     {filteredResults.map((card, index) => {
                     return <tr key={index} className={`border-t border-border hover:bg-muted/30 transition-colors cursor-pointer ${index === 0 ? 'bg-green-50/50' : ''}`} onClick={() => handleCardSelect(card)}>
-                          <td className="p-4">
+                          <td className="p-4 sticky left-0 bg-white z-10">
                             <div className="flex items-center gap-4">
                               <img src={card.card_bg_image} alt={card.card_name} className="w-20 h-12 object-contain flex-shrink-0" onError={e => {
                             e.currentTarget.src = "/placeholder.svg";
@@ -1224,6 +1224,12 @@ const CardGenius = () => {
                               <td className="p-4"></td>
                               <td className="p-4 text-center font-semibold text-blue-600">
                                 ₹{card.total_extra_benefits.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-purple-600">
+                                {card.airport_lounge_value && card.airport_lounge_value > 0 
+                                  ? `₹${card.airport_lounge_value.toLocaleString()}`
+                                  : '—'}
                               </td>
                               <td className="p-4"></td>
                               <td className="p-4 text-center font-semibold text-red-600">
@@ -1279,6 +1285,12 @@ const CardGenius = () => {
                               <td className="p-4"></td>
                               <td className="p-4 text-center font-semibold text-blue-600">
                                 ₹{card.total_extra_benefits.toLocaleString()}
+                              </td>
+                              <td className="p-4"></td>
+                              <td className="p-4 text-center font-semibold text-purple-600">
+                                {card.airport_lounge_value && card.airport_lounge_value > 0 
+                                  ? `₹${card.airport_lounge_value.toLocaleString()}`
+                                  : '—'}
                               </td>
                               <td className="p-4"></td>
                               <td className="p-4 text-center font-semibold text-red-600">
