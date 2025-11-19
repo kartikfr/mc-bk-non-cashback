@@ -758,8 +758,10 @@ const CardGenius = () => {
       filteredResults = filteredResults.filter(card => eligibleCardAliases.includes(card.seo_card_alias));
     }
 
-    // Get categories where user has spending (non-zero responses)
-    const spendingCategories = Object.entries(responses).filter(([_, value]) => value > 0).map(([key]) => key);
+    // Get categories where user has spending (non-zero responses), excluding lounge usage
+    const spendingCategories = Object.entries(responses)
+      .filter(([key, value]) => value > 0 && !key.includes('lounge_usage'))
+      .map(([key]) => key);
 
     // Results list view
     return <div className="min-h-screen bg-background pt-16">
@@ -1051,14 +1053,6 @@ const CardGenius = () => {
                           'school_fees': {
                             name: 'School Fees',
                             tooltip: 'Total yearly savings on school fee payments'
-                          },
-                          'domestic_lounge_usage_quarterly': {
-                            name: 'Domestic Lounge',
-                            tooltip: 'Savings from domestic airport lounge access'
-                          },
-                          'international_lounge_usage_quarterly': {
-                            name: 'Intl Lounge',
-                            tooltip: 'Savings from international airport lounge access'
                           }
                         };
                         const info = categoryInfo[category] || {
@@ -1084,6 +1078,47 @@ const CardGenius = () => {
                                   </th>}
                               </React.Fragment>;
                       })}
+                          
+                          {/* Add Domestic and Intl Lounge columns if user entered lounge usage */}
+                          {(domesticLoungeValue > 0 || internationalLoungeValue > 0) && <>
+                            {domesticLoungeValue > 0 && <>
+                              <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                                <span className="text-2xl">+</span>
+                              </th>
+                              <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
+                                <div className="flex items-center justify-center gap-1">
+                                  Domestic Lounge
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p>Value from domestic airport lounge access (₹750 per visit)</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </th>
+                            </>}
+                            {internationalLoungeValue > 0 && <>
+                              <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
+                                <span className="text-2xl">+</span>
+                              </th>
+                              <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
+                                <div className="flex items-center justify-center gap-1">
+                                  Intl Lounge
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p>Value from international airport lounge access (₹1250 per visit)</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </th>
+                            </>}
+                          </>}
+                          
                           <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
                             <span className="text-2xl">=</span>
                           </th>
@@ -1220,6 +1255,23 @@ const CardGenius = () => {
                                     {idx < spendingCategories.length - 1 && <td className="p-4"></td>}
                                   </React.Fragment>;
                         })}
+                              
+                              {/* Add Domestic and Intl Lounge values */}
+                              {(domesticLoungeValue > 0 || internationalLoungeValue > 0) && <>
+                                {domesticLoungeValue > 0 && <>
+                                  <td className="p-4"></td>
+                                  <td className="p-4 text-center font-semibold text-purple-600">
+                                    ₹{domesticLoungeValue.toLocaleString()}
+                                  </td>
+                                </>}
+                                {internationalLoungeValue > 0 && <>
+                                  <td className="p-4"></td>
+                                  <td className="p-4 text-center font-semibold text-purple-600">
+                                    ₹{internationalLoungeValue.toLocaleString()}
+                                  </td>
+                                </>}
+                              </>}
+                              
                               <td className="p-4"></td>
                               <td className="p-4 text-center font-semibold text-green-600">
                                 ₹{card.total_savings_yearly.toLocaleString()}
