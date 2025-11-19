@@ -365,8 +365,8 @@ const CardGenius = () => {
             
             // Get card's lounge thresholds from travel_benefits section
             const travelBenefits = saving.travel_benefits || cardDetails.data?.travel_benefits || {};
-            const cardDomesticThreshold = travelBenefits.domestic_lounge_value || 0;
-            const cardInternationalThreshold = travelBenefits.international_lounge_value || 0;
+            const cardDomesticThreshold = travelBenefits.domestic_lounges_unlocked || 0;
+            const cardInternationalThreshold = travelBenefits.international_lounges_unlocked || 0;
             
             console.log(`Card: ${saving.card_alias}, Travel Benefits:`, travelBenefits);
             console.log(`Card: ${saving.card_alias}, Domestic Threshold: ${cardDomesticThreshold}, Intl Threshold: ${cardInternationalThreshold}`);
