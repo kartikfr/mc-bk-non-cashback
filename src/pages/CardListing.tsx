@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import GeniusDialog from "@/components/GeniusDialog";
 import { CompareToggleIcon } from "@/components/comparison/CompareToggleIcon";
 import { ComparePill } from "@/components/comparison/ComparePill";
-import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
+import { redirectToCardApplication } from "@/utils/redirectHandler";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -18,9 +18,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ChevronDown } from "lucide-react";
 import confetti from 'canvas-confetti';
 import { toast } from "sonner";
+import { getCardAlias, getCardKey } from "@/utils/cardAlias";
+
+const VALID_CATEGORIES = ['all', 'fuel', 'shopping', 'online-food', 'dining', 'grocery', 'travel', 'utility'];
+const normalizeCategory = (value: string | null) => {
+  if (!value) return 'all';
+  return VALID_CATEGORIES.includes(value) ? value : 'all';
+};
 
 const CardListing = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +40,7 @@ const CardListing = () => {
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
 
   // Get category from URL params, default to "all"
-  const initialCategory = searchParams.get('category') || 'all';
+  const initialCategory = normalizeCategory(searchParams.get('category'));
 
   // Filters - sort_by will be sent to API
   const [filters, setFilters] = useState({
@@ -41,7 +48,7 @@ const CardListing = () => {
     card_networks: [] as string[],
     annualFees: "",
     credit_score: "",
-    sort_by: "",
+    sort_by: "priority",
     // Empty string by default, can be "recommended", "annual_savings", or "annual_fees"
     free_cards: false,
     category: initialCategory // all, fuel, shopping, online-food, dining, grocery, travel, utility
@@ -65,10 +72,22 @@ const CardListing = () => {
     inhandIncome: "",
     empStatus: "salaried"
   });
+  const abortControllerRef = useRef<AbortController | null>(null);
   useEffect(() => {
     fetchCards();
   }, [filters]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const fetchCards = async () => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       setLoading(true);
 
@@ -79,7 +98,7 @@ const CardListing = () => {
         card_networks: filters.card_networks || [],
         annualFees: filters.annualFees === "free" ? "" : filters.annualFees || "",
         credit_score: filters.credit_score || "",
-        sort_by: filters.sort_by || "",
+        sort_by: filters.sort_by || "priority",
         free_cards: filters.annualFees === "free" ? "true" : "",
         cardGeniusPayload: []
       };
@@ -96,9 +115,7 @@ const CardListing = () => {
         // First load or no eligibility - send empty object
         baseParams.eligiblityPayload = {};
       }
-      console.log('Fetching cards with params:', baseParams);
-      const response = await cardService.getCardListing(baseParams);
-      console.log('API Response:', response);
+      const response = await cardService.getCardListing(baseParams, controller.signal);
       let incomingCards: any[] = [];
       if (response.status === 'success' && response.data && Array.isArray(response.data.cards)) {
         incomingCards = response.data.cards;
@@ -173,22 +190,23 @@ const CardListing = () => {
         }
       }
 
-      // 4) Sort by priority when a category is selected
-      if (filters.category && filters.category !== 'all') {
-        incomingCards.sort((a: any, b: any) => {
-          const categorySlug = categoryToSlug[filters.category];
-          const aPriority = a.category_priority?.[categorySlug] ?? a.priority ?? 999999;
-          const bPriority = b.category_priority?.[categorySlug] ?? b.priority ?? 999999;
-          return Number(aPriority) - Number(bPriority);
-        });
+      // 4) Sort by priority (always, regardless of category)
+      // Lower priority number = higher priority (priority 1 comes before priority 66)
+      if (Array.isArray(incomingCards)) {
+        incomingCards.sort(compareCardsByPriority);
       }
-      setCards(Array.isArray(incomingCards) ? incomingCards : []);
-    } catch (error) {
+      setCards(Array.isArray(incomingCards) ? [...incomingCards] : []);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return;
+      }
       console.error('Failed to fetch cards:', error);
       toast.error("Failed to load cards. Please try again.");
       setCards([]);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
   const handleSearch = () => {
@@ -196,8 +214,49 @@ const CardListing = () => {
     setDisplayCount(12);
   };
 
+  const parsePriorityValue = (value: any): number => {
+    if (value === null || value === undefined) return Number.POSITIVE_INFINITY;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const parsed = parseInt(String(value).replace(/[^0-9-]/g, ''), 10);
+    return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+  };
+
+  const getPriorityValue = (card: any, category: string): number => {
+    if (category && category !== 'all') {
+      const categorySlug = categoryToSlug[category];
+      const categoryPriority = card?.category_priority?.[categorySlug];
+      if (categoryPriority !== undefined && categoryPriority !== null) {
+        return parsePriorityValue(categoryPriority);
+      }
+    }
+    return parsePriorityValue(card?.priority);
+  };
+
   // Frontend search filter
-  const filteredCards = cards.filter(card => {
+  const compareCardsByPriority = (a: any, b: any) => {
+    const aPriorityValue = getPriorityValue(a, filters.category);
+    const bPriorityValue = getPriorityValue(b, filters.category);
+    if (aPriorityValue !== bPriorityValue) {
+      return aPriorityValue - bPriorityValue;
+    }
+
+    // Tie-breaker 1: Higher ratings first
+    const aRating = parseFloat(a.rating) || 0;
+    const bRating = parseFloat(b.rating) || 0;
+    if (aRating !== bRating) {
+      return bRating - aRating;
+    }
+
+    // Tie-breaker 2: alphabetical order
+    return (a.name || '').localeCompare(b.name || '');
+  };
+
+  const sortedCards = useMemo(() => {
+    if (!Array.isArray(cards)) return [];
+    return [...cards].sort(compareCardsByPriority);
+  }, [cards, filters.category]);
+
+  const filteredCards = sortedCards.filter(card => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     const cardName = (card.name || '').toLowerCase();
@@ -205,15 +264,6 @@ const CardListing = () => {
     const cardType = (card.card_type || '').toLowerCase();
     const benefits = (card.benefits || '').toLowerCase();
     return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
-  }).sort((a, b) => {
-    // If category genius is applied, sort by maximum savings (descending)
-    if (geniusSpendingData && filters.category !== 'all') {
-      const categorySavings = cardSavings[filters.category] || {};
-      const aSaving = categorySavings[String(a.id)] ?? categorySavings[String(a.seo_card_alias || a.card_alias || '')] ?? 0;
-      const bSaving = categorySavings[String(b.id)] ?? categorySavings[String(b.seo_card_alias || b.card_alias || '')] ?? 0;
-      return Number(bSaving) - Number(aSaving); // Descending order (highest savings first)
-    }
-    return 0; // Keep original order if no genius applied
   });
   const loadMore = () => {
     setIsLoadingMore(true);
@@ -222,19 +272,52 @@ const CardListing = () => {
       setIsLoadingMore(false);
     }, 500);
   };
+  const syncCategoryParam = (categoryValue: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (categoryValue === 'all') {
+      params.delete('category');
+    } else {
+      params.set('category', categoryValue);
+    }
+    setSearchParams(params, { replace: true });
+  };
+
   const handleFilterChange = (filterType: string, value: string | boolean) => {
+    if (filterType === 'category' && typeof value === 'string') {
+      const normalized = normalizeCategory(value);
+      setFilters((prev: any) => ({
+        ...prev,
+        category: normalized
+      }));
+      syncCategoryParam(normalized);
+      setDisplayCount(12);
+      return;
+    }
+
     setFilters((prev: any) => ({
       ...prev,
       [filterType]: value
     }));
   };
+
+  useEffect(() => {
+    const categoryParam = normalizeCategory(searchParams.get('category'));
+    if (categoryParam !== filters.category) {
+      setFilters((prev: any) => ({
+        ...prev,
+        category: categoryParam
+      }));
+      setDisplayCount(12);
+    }
+  }, [searchParams, filters.category]);
   const clearFilters = () => {
+    syncCategoryParam('all');
     setFilters({
       banks_ids: [],
       card_networks: [],
       annualFees: "",
       credit_score: "",
-      sort_by: "recommended",
+      sort_by: "priority",
       free_cards: false,
       category: "all"
     });
@@ -310,7 +393,6 @@ const CardListing = () => {
         description: "Finding the best cards for your spending pattern"
       });
       const response = await cardService.calculateCardGenius(freshPayload);
-      console.log('Genius API Response:', response);
       if (response.status === 'success' && response.data) {
         const savings: Record<string, number> = {};
 
@@ -326,15 +408,13 @@ const CardListing = () => {
           // Some APIs return shape objects; flatten arrays only
           items = Object.values(response.data).flat().filter((v: any) => Array.isArray(v)).flat();
         }
-        console.log('Cards array:', items);
         items.forEach((item: any) => {
           const valueRaw = item.total_savings_yearly ?? item.total_savings ?? item.net_savings ?? item.annual_savings ?? item.savings ?? 0;
           const value = Number(valueRaw);
           // Allow 0 savings - only skip if NaN or not a finite number
           if (Number.isNaN(value) || !Number.isFinite(value)) return;
           const id = item.card_id ?? item.cardId ?? item.id ?? item.card?.id;
-          const aliasCandidates = [item.seo_card_alias, item.card_alias, item.alias, item.card?.seo_card_alias, item.card?.alias];
-          const alias = aliasCandidates.find((a: any) => typeof a === 'string' && a.trim().length > 0);
+          const alias = getCardAlias(item);
           if (id != null) {
             const prev = savings[String(id)];
             savings[String(id)] = typeof prev === 'number' ? Math.max(prev, value) : value;
@@ -345,7 +425,6 @@ const CardListing = () => {
             savings[key] = typeof prev === 'number' ? Math.max(prev, value) : value;
           }
         });
-        console.log('Calculated savings for category:', currentCategory, savings);
 
         // Store savings under current category, overwriting previous values
         setCardSavings(prev => ({
@@ -366,6 +445,12 @@ const CardListing = () => {
     } catch (error) {
       console.error('Failed to calculate genius:', error);
       toast.error("Failed to calculate savings. Please try again.");
+    }
+  };
+  const handleApplyClick = (card: any) => {
+    const success = redirectToCardApplication(card);
+    if (!success) {
+      toast.error("Unable to open the bank site. Please allow pop-ups or try again later.");
     }
   };
 
@@ -733,7 +818,8 @@ const CardListing = () => {
                           {/* Savings Badge - Top Left */}
                           {filters.category !== 'all' && (() => {
                       const categorySavings = cardSavings[filters.category] || {};
-                      const saving = categorySavings[String(card.id)] ?? categorySavings[String(card.seo_card_alias || card.card_alias || '')];
+                      const cardKey = getCardKey(card);
+                      const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
                       if (saving !== undefined && saving !== null) {
                         if (saving === 0) {
                           return <div className="absolute top-3 left-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 text-sm font-bold z-10">
@@ -752,7 +838,8 @@ const CardListing = () => {
                           {/* Eligibility Badge - Only show if not showing LTF */}
                           {eligibilitySubmitted && !(() => {
                       const categorySavings = cardSavings[filters.category] || {};
-                      const saving = categorySavings[String(card.id)] ?? categorySavings[String(card.seo_card_alias || card.card_alias || '')];
+                      const cardKey = getCardKey(card);
+                      const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
                       return !saving && (card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free");
                     })() && <Badge className="absolute bottom-3 right-3 bg-green-500 gap-1 z-10">
                               <CheckCircle2 className="w-3 h-3" />
@@ -762,7 +849,8 @@ const CardListing = () => {
                           {/* LTF Badge */}
                           {(() => {
                       const categorySavings = cardSavings[filters.category] || {};
-                      const saving = categorySavings[String(card.id)] ?? categorySavings[String(card.seo_card_alias || card.card_alias || '')];
+                      const cardKey = getCardKey(card);
+                      const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
                       return !saving && (card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free") && <Badge className="absolute bottom-3 right-3 bg-primary z-10">LTF</Badge>;
                     })()}
 
@@ -797,20 +885,10 @@ const CardListing = () => {
                           </div>
 
                           <div className="flex gap-2 mt-auto">
-                            <Link to={`/cards/${card.seo_card_alias || card.card_alias}`} className="flex-1">
+                            <Link to={`/cards/${getCardAlias(card) || card.id}`} className="flex-1">
                               <Button variant="outline" className="w-full">Details</Button>
                             </Link>
-                            <Button className="flex-1" onClick={() => {
-                        if (card.network_url) {
-                          openRedirectInterstitial({
-                            networkUrl: card.network_url,
-                            bankName: extractBankName(card),
-                            bankLogo: extractBankLogo(card),
-                            cardName: card.name,
-                            cardId: card.id
-                          });
-                        }
-                      }}>
+                            <Button className="flex-1" onClick={() => handleApplyClick(card)}>
                               Apply
                             </Button>
                           </div>

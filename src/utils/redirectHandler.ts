@@ -18,6 +18,8 @@ const BANK_URLS: Record<string, string> = {
   ICICI: "https://www.icici.bank.in/personal-banking/cards"
 };
 
+const REDIRECT_ANALYTICS_ENABLED = (import.meta.env.VITE_ENABLE_REDIRECT_ANALYTICS || '').toString().toLowerCase() === 'true';
+
 export interface RedirectParams {
   networkUrl?: string; // Optional now, will use hard-coded URLs
   bankName: string;
@@ -81,18 +83,35 @@ const getBankUrl = (bankName: string): string | null => {
  */
 export const openRedirectInterstitial = (params: RedirectParams): Window | null => {
   const { bankName, bankLogo, cardName, cardId } = params;
+  const normalizedNetworkUrl = (() => {
+    if (!params.networkUrl) return '';
+    const trimmed = params.networkUrl.trim();
+    if (!trimmed) return '';
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'https:' && !parsed.hostname.includes('localhost')) {
+        console.warn('Redirect handler: Network URL must be HTTPS or localhost', trimmed);
+        return '';
+      }
+      return parsed.toString();
+    } catch {
+      console.warn('Redirect handler: Invalid network URL provided', trimmed);
+      return '';
+    }
+  })();
 
   // Get hard-coded bank URL
   const bankUrl = getBankUrl(bankName);
   
-  if (!bankUrl) {
-    console.error('Redirect handler: Bank not found in whitelist:', bankName);
-    // Still proceed to interstitial to show user-friendly error
+  if (!bankUrl && !normalizedNetworkUrl) {
+    console.error('Redirect handler: Bank not found in whitelist and no fallback URL provided:', bankName);
   }
+
+  const destinationUrl = normalizedNetworkUrl || bankUrl || '';
 
   // Build query parameters for the interstitial page
   const queryParams = new URLSearchParams({
-    url: bankUrl || '',
+    url: destinationUrl,
     bank: bankName,
     card: cardName,
   });
@@ -145,6 +164,10 @@ const trackRedirectClick = (data: {
   bankName: string;
   targetUrl: string;
 }) => {
+  if (!REDIRECT_ANALYTICS_ENABLED) {
+    return;
+  }
+
   try {
     // Use sendBeacon for reliable tracking even if page unloads
     if (navigator.sendBeacon) {
@@ -209,4 +232,19 @@ export const isAllowedDomain = (url: string, allowedDomains?: string[]): boolean
   } catch {
     return false;
   }
+};
+
+/**
+ * Convenience helper to open card application flows from raw card objects
+ */
+export const redirectToCardApplication = (card: any, overrides: Partial<RedirectParams> = {}): boolean => {
+  const windowRef = openRedirectInterstitial({
+    networkUrl: overrides.networkUrl ?? card?.network_url,
+    bankName: overrides.bankName ?? extractBankName(card),
+    bankLogo: overrides.bankLogo ?? extractBankLogo(card),
+    cardName: overrides.cardName ?? card?.name ?? 'Credit Card',
+    cardId: overrides.cardId ?? card?.id
+  });
+
+  return Boolean(windowRef);
 };

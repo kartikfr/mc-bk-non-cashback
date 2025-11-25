@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { toast } from 'sonner';
 import EligibilityDialog from '@/components/EligibilityDialog';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { openRedirectInterstitial, extractBankName, extractBankLogo } from '@/utils/redirectHandler';
+import { redirectToCardApplication } from '@/utils/redirectHandler';
 import { CompareToggleIcon } from '@/components/comparison/CompareToggleIcon';
 import { ComparePanel } from '@/components/comparison/ComparePanel';
 import { useComparison } from '@/contexts/ComparisonContext';
@@ -204,14 +204,10 @@ export default function CardDetails() {
   };
 
   const handleApply = () => {
-    if (card?.network_url) {
-      openRedirectInterstitial({
-        networkUrl: card.network_url,
-        bankName: extractBankName(card),
-        bankLogo: extractBankLogo(card),
-        cardName: card.name,
-        cardId: card.id
-      });
+    if (!card) return;
+    const success = redirectToCardApplication(card);
+    if (!success) {
+      toast.error('Unable to open the bank application page. Please allow pop-ups or try again later.');
     }
   };
 

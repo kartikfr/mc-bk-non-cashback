@@ -10,7 +10,9 @@ const BankCarousel = () => {
     const fetchBanks = async () => {
       try {
         const response = await cardService.getInitBundle();
-        console.log('BankCarousel API Response:', response);
+        if (import.meta.env.DEV) {
+          console.debug('BankCarousel API Response:', response);
+        }
         
         if (response.status === 'error') {
           console.error('API returned error:', response.error);

@@ -5,7 +5,9 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Star } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
+import { redirectToCardApplication } from "@/utils/redirectHandler";
+import { toast } from "sonner";
+import { getCardAlias } from "@/utils/cardAlias";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -128,6 +130,13 @@ const PopularCreditCards = () => {
   const [activeTab, setActiveTab] = useState('editor');
   const sectionRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
+
+  const handleApply = (card: any) => {
+    const success = redirectToCardApplication(card);
+    if (!success) {
+      toast.error("Unable to open the bank site. Please allow pop-ups or try again later.");
+    }
+  };
   useEffect(() => {
     const fetchCards = async () => {
       const allCards: any = {};
@@ -255,16 +264,17 @@ const PopularCreditCards = () => {
 
                         {/* CTA Buttons */}
                         <div className="space-y-2 mt-auto">
-                          <Button className="w-full" size="lg" onClick={() => openRedirectInterstitial({
-                      networkUrl: card.network_url,
-                      bankName: extractBankName(card),
-                      bankLogo: extractBankLogo(card),
-                      cardName: card.name,
-                      cardId: card.id
-                    })}>
+                          <Button className="w-full" size="lg" onClick={() => handleApply(card)}>
                             Apply Now
                           </Button>
-                          <Button variant="outline" className="w-full" size="sm" onClick={() => navigate(`/cards/${card.seo_card_alias}`)}>
+                          <Button variant="outline" className="w-full" size="sm" onClick={() => {
+                            const alias = getCardAlias(card);
+                            if (alias) {
+                              navigate(`/cards/${alias}`);
+                            } else {
+                              toast.error('Unable to view card details');
+                            }
+                          }}>
                             View Details
                           </Button>
                         </div>

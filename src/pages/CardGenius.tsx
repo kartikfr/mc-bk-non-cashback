@@ -7,7 +7,8 @@ import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { openRedirectInterstitial, extractBankName, extractBankLogo } from "@/utils/redirectHandler";
+import { redirectToCardApplication } from "@/utils/redirectHandler";
+import { enrichCardGeniusResults, CardGeniusResult } from "@/lib/cardGenius";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -167,36 +168,6 @@ const questions: SpendingQuestion[] = [{
   step: 1000
 }];
 const funFacts = ["Credit cards were first introduced in India in 1980!", "Indians saved over ₹2,000 crores in credit card rewards last year!", "Premium cards often pay for themselves through lounge access alone.", "The average Indian has 2-3 cards but maximizes only one!", "Reward points can be worth 3x more than instant cashback!", "Your credit score improves by 50+ points in 6 months with smart usage.", "Travel cards can get you business class at economy prices!", "You can negotiate annual fees—most people don't know this!", "5% cashback vs 1%? That's ₹40,000 saved on ₹10L spending!", "Airport lounges aren't just for the rich—many cards offer them free."];
-interface CardResult {
-  card_name: string;
-  card_bg_image?: string;
-  seo_card_alias: string;
-  joining_fees: number;
-  total_savings: number;
-  total_savings_yearly: number;
-  total_extra_benefits: number;
-  milestone_benefits_only?: number;
-  airport_lounge_value?: number;
-  domestic_lounge_value?: number;
-  international_lounge_value?: number;
-  net_savings: number;
-  voucher_of?: string | number;
-  voucher_bonus?: string | number;
-  welcome_benefits: any[];
-  domestic_lounges_unlocked?: number;
-  international_lounges_unlocked?: number;
-  spending_breakdown: {
-    [key: string]: {
-      on: string;
-      spend: number;
-      points_earned: number;
-      savings: number;
-      explanation: string[];
-      conv_rate: number;
-      maxCap?: number;
-    };
-  };
-}
 const CardGenius = () => {
   const navigate = useNavigate();
   const {
@@ -206,11 +177,11 @@ const CardGenius = () => {
   const [responses, setResponses] = useState<Record<string, number>>({});
   const [isCalculating, setIsCalculating] = useState(false);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
-  const [results, setResults] = useState<CardResult[]>([]);
+  const [results, setResults] = useState<CardGeniusResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'quick' | 'detailed'>('quick');
-  const [selectedCard, setSelectedCard] = useState<CardResult | null>(null);
+  const [selectedCard, setSelectedCard] = useState<CardGeniusResult | null>(null);
   const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
@@ -338,120 +309,39 @@ const CardGenius = () => {
         payload[q.field as keyof SpendingData] = responses[q.field] || 0;
       });
       const response = await cardService.calculateCardGenius(payload);
-      if (response.data && response.data.savings && Array.isArray(response.data.savings)) {
-        // Sort by total_savings_yearly
-        const sortedSavings = response.data.savings;
-        // Fetch card details for ALL cards
-        const cardsWithDetails = await Promise.all(response.data.savings.map(async (saving: any) => {
-          try {
-            let cardDetails: any = {
-              data: {}
-            };
-            if (saving.card_alias) {
-              cardDetails = await cardService.getCardDetails(saving.card_alias);
-              console.log('Card details for', saving.card_alias, ':', cardDetails);
-            } else {
-              console.warn('Missing card_alias for saving item:', saving);
-            }
+      const savingsArray = Array.isArray(response?.data?.savings)
+        ? response.data.savings
+        : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.cards)
+            ? response.data.cards
+            : [];
 
-            // Prefer image coming in savings payload
-            const cardBgImage = saving.card_bg_image || cardDetails.data?.card_bg_image || cardDetails.data?.card_image || cardDetails.data?.image || '';
-
-            // Map welcome benefits from either response shape
-            const welcomeBenefits = saving.welcomeBenefits || cardDetails.data?.welcomeBenefits || saving.welcome_benefits || cardDetails.data?.welcome_benefits || [];
-            const joiningFees = parseInt(saving.joining_fees) || 0;
-            const totalSavingsYearly = saving.total_savings_yearly || 0;
-            const milestoneOnly = saving.total_extra_benefits || 0;
-            
-            // Get card's lounge thresholds from travel_benefits section
-            const travelBenefits = saving.travel_benefits || cardDetails.data?.travel_benefits || {};
-            const cardDomesticThreshold = travelBenefits.domestic_lounges_unlocked || 0;
-            const cardInternationalThreshold = travelBenefits.international_lounges_unlocked || 0;
-            
-            console.log(`Card: ${saving.card_alias}, Travel Benefits:`, travelBenefits);
-            console.log(`Card: ${saving.card_alias}, Domestic Threshold: ${cardDomesticThreshold}, Intl Threshold: ${cardInternationalThreshold}`);
-            
-            // Calculate actual lounge value based on minimum of user's desired visits and card's threshold
-            const actualDomesticVisits = Math.min(userDomesticLoungeVisits, cardDomesticThreshold);
-            const actualInternationalVisits = Math.min(userInternationalLoungeVisits, cardInternationalThreshold);
-            const cardDomesticValue = actualDomesticVisits * 750;
-            const cardInternationalValue = actualInternationalVisits * 1250;
-            const cardLoungeValue = cardDomesticValue + cardInternationalValue;
-            
-            // Calculate net savings with the new formula: Total Savings + Milestones + Airport Lounges - Joining Fee
-            const netSavings = totalSavingsYearly + milestoneOnly + cardLoungeValue - joiningFees;
-            return {
-              card_name: cardDetails.data?.card_name || saving.card_name || saving.card_alias,
-              card_bg_image: cardBgImage,
-              seo_card_alias: cardDetails.data?.seo_card_alias || saving.seo_card_alias || saving.card_alias,
-              joining_fees: joiningFees,
-              total_savings: saving.total_savings || 0,
-              total_savings_yearly: totalSavingsYearly,
-              total_extra_benefits: milestoneOnly,
-              milestone_benefits_only: milestoneOnly,
-              airport_lounge_value: cardLoungeValue,
-              domestic_lounges_unlocked: cardDomesticThreshold,
-              international_lounges_unlocked: cardInternationalThreshold,
-              domestic_lounge_value: cardDomesticValue,
-              international_lounge_value: cardInternationalValue,
-              net_savings: netSavings,
-              voucher_of: saving.voucher_of || 0,
-              voucher_bonus: saving.voucher_bonus || 0,
-              welcome_benefits: welcomeBenefits,
-              spending_breakdown: saving.spending_breakdown || {}
-            } as CardResult;
-          } catch (error) {
-            console.error(`Error processing card ${saving.card_alias || saving.card_name}:`, error);
-            const joiningFees = parseInt(saving.joining_fees) || 0;
-            const totalSavingsYearly = saving.total_savings_yearly || 0;
-            const milestoneOnly = saving.total_extra_benefits || 0;
-            
-            // Get card's lounge thresholds (fallback case)
-            const cardDomesticThreshold = saving.domestic_lounges_unlocked || 0;
-            const cardInternationalThreshold = saving.international_lounges_unlocked || 0;
-            
-            // Calculate actual lounge value based on minimum of user's desired visits and card's threshold
-            const actualDomesticVisits = Math.min(userDomesticLoungeVisits, cardDomesticThreshold);
-            const actualInternationalVisits = Math.min(userInternationalLoungeVisits, cardInternationalThreshold);
-            const cardDomesticValue = actualDomesticVisits * 750;
-            const cardInternationalValue = actualInternationalVisits * 1250;
-            const cardLoungeValue = cardDomesticValue + cardInternationalValue;
-            
-            const netSavings = totalSavingsYearly + milestoneOnly + cardLoungeValue - joiningFees;
-            return {
-              card_name: saving.card_name || saving.card_alias,
-              card_bg_image: saving.card_bg_image || '',
-              seo_card_alias: saving.seo_card_alias || saving.card_alias,
-              joining_fees: joiningFees,
-              total_savings: saving.total_savings || 0,
-              total_savings_yearly: totalSavingsYearly,
-              total_extra_benefits: milestoneOnly,
-              milestone_benefits_only: milestoneOnly,
-              airport_lounge_value: cardLoungeValue,
-              domestic_lounges_unlocked: cardDomesticThreshold,
-              international_lounges_unlocked: cardInternationalThreshold,
-              domestic_lounge_value: cardDomesticValue,
-              international_lounge_value: cardInternationalValue,
-              net_savings: netSavings,
-              voucher_of: saving.voucher_of || 0,
-              voucher_bonus: saving.voucher_bonus || 0,
-              welcome_benefits: saving.welcomeBenefits || saving.welcome_benefits || [],
-              spending_breakdown: saving.spending_breakdown || {}
-            } as CardResult;
-          }
-        }));
-
-        // Sort by net savings in descending order
-        const sortedCards = cardsWithDetails.sort((a, b) => b.net_savings - a.net_savings);
-        setResults(sortedCards);
-        setShowResults(true);
-      } else {
+      if (!savingsArray.length) {
         toast({
           title: "No results found",
           description: "Please try adjusting your spending amounts.",
           variant: "destructive"
         });
+        return;
       }
+
+      const enrichedResults = await enrichCardGeniusResults({
+        savings: savingsArray,
+        responses,
+      });
+
+      if (!enrichedResults.length) {
+        toast({
+          title: "No results found",
+          description: "Please try adjusting your spending amounts.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setResults(enrichedResults);
+      setShowResults(true);
     } catch (error) {
       console.error('Error calculating results:', error);
       toast({
@@ -470,16 +360,19 @@ const CardGenius = () => {
   const handleApplyFromDetail = () => {
     if (!selectedCard) return;
 
-    // Extract bank name from the card name (first word is usually the bank)
-    const bankName = selectedCard.card_name?.split(' ')[0] || 'Bank';
-
-    // Use hard-coded bank URLs - no need to fetch network_url
-    openRedirectInterstitial({
-      bankName: bankName,
+    const success = redirectToCardApplication(selectedCard, {
+      bankName: selectedCard.card_name?.split(' ')[0] || 'Bank',
       bankLogo: selectedCard.card_bg_image,
-      // Use card image as fallback for bank logo
       cardName: selectedCard.card_name
     });
+
+    if (!success) {
+      toast({
+        title: "Unable to open bank site",
+        description: "Please allow pop-ups or try again later.",
+        variant: "destructive"
+      });
+    }
   };
   const handleCardSelect = (card: any) => {
     setSelectedCard(card);
@@ -795,6 +688,35 @@ const CardGenius = () => {
             </div>
           </main>
           <Footer />
+        </div>;
+    }
+
+    if (!results || results.length === 0) {
+      return <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 text-center">
+          <Navigation />
+          <div className="max-w-xl mt-16">
+            <h1 className="text-3xl font-bold mb-4">We couldn't find matching cards</h1>
+            <p className="text-muted-foreground mb-6">
+              Try adjusting your spending amounts or running Card Genius again with different inputs to discover cards that maximize your rewards.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={() => {
+            setShowResults(false);
+            setCurrentStep(0);
+            setResponses({});
+          }} size="lg">
+                Recalculate
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => {
+            setShowResults(false);
+            setSelectedCard(null);
+            setResponses({});
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}>
+                Start Over
+              </Button>
+            </div>
+          </div>
         </div>;
     }
 

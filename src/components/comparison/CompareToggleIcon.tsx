@@ -1,6 +1,7 @@
 import { Plus, Check } from 'lucide-react';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { cn } from '@/lib/utils';
+import { getCardKey } from '@/utils/cardAlias';
 
 interface CompareToggleIconProps {
   card: any;
@@ -9,7 +10,7 @@ interface CompareToggleIconProps {
 
 export function CompareToggleIcon({ card, className }: CompareToggleIconProps) {
   const { toggleCard, isSelected } = useComparison();
-  const cardId = card.id?.toString() || card.seo_card_alias;
+  const cardId = getCardKey(card);
   const selected = isSelected(cardId);
 
   return (

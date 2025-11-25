@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { getCardKey } from '@/utils/cardAlias';
 
 interface ComparisonContextType {
   selectedCards: any[];
@@ -27,12 +28,12 @@ export function ComparisonProvider({ children, maxCompare = 2 }: { children: Rea
   }, [selectedCards]);
 
   const toggleCard = (card: any) => {
-    const cardId = card.id?.toString() || card.seo_card_alias;
+    const cardId = getCardKey(card);
     
     if (isSelected(cardId)) {
       // Remove card
       setSelectedCards(prev => prev.filter(c => {
-        const cId = c.id?.toString() || c.seo_card_alias;
+        const cId = getCardKey(c);
         return cId !== cardId;
       }));
       toast.success('Removed from comparison', {
@@ -66,7 +67,7 @@ export function ComparisonProvider({ children, maxCompare = 2 }: { children: Rea
 
   const removeCard = (cardId: string) => {
     setSelectedCards(prev => prev.filter(c => {
-      const cId = c.id?.toString() || c.seo_card_alias;
+      const cId = getCardKey(c);
       return cId !== cardId;
     }));
   };
@@ -80,7 +81,7 @@ export function ComparisonProvider({ children, maxCompare = 2 }: { children: Rea
 
   const isSelected = (cardId: string) => {
     return selectedCards.some(c => {
-      const cId = c.id?.toString() || c.seo_card_alias;
+      const cId = getCardKey(c);
       return cId === cardId;
     });
   };

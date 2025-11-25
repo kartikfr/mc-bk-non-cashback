@@ -1,6 +1,7 @@
 import { authManager } from './authManager';
 
-const BASE_URL = 'https://uat-platform.bankkaro.com/partner';
+const DEFAULT_BASE_URL = 'https://uat-platform.bankkaro.com/partner';
+const BASE_URL = (import.meta.env.VITE_PARTNER_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
 
 export interface SpendingData {
   amazon_spends?: number;
@@ -65,12 +66,13 @@ export const cardService = {
       empStatus?: string;
     };
     cardGeniusPayload: any[];
-  }) {
+  }, signal?: AbortSignal) {
     const response = await authManager.makeAuthenticatedRequest(
       `${BASE_URL}/cardgenius/cards`,
       {
         method: 'POST',
-        body: JSON.stringify(params)
+        body: JSON.stringify(params),
+        signal
       }
     );
     return response.json();
@@ -83,10 +85,10 @@ export const cardService = {
     return response.json();
   },
 
-  async getPartnerCards() {
+  async getPartnerCards(signal?: AbortSignal) {
     const response = await authManager.makeAuthenticatedRequest(
       `${BASE_URL}/cardgenius/cards`,
-      { method: 'GET' }
+      { method: 'GET', signal }
     );
     return response.json();
   },

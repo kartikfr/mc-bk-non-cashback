@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { X, Star, ExternalLink, ChevronDown, ChevronUp, Search, Plus, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { openRedirectInterstitial, extractBankName, extractBankLogo } from '@/utils/redirectHandler';
+import { redirectToCardApplication } from '@/utils/redirectHandler';
 import { cardService } from '@/services/cardService';
+import { getCardAlias, getCardKey } from '@/utils/cardAlias';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
 
 interface ComparePanelProps {
   open: boolean;
@@ -27,6 +29,8 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
   const [detailViewCard, setDetailViewCard] = useState<any>(null);
   const [detailViewOpen, setDetailViewOpen] = useState(false);
   const [allCards, setAllCards] = useState<any[]>([]);
+  const [hydratedCards, setHydratedCards] = useState<Record<string, any>>({});
+  const hydrationQueueRef = useRef<Record<string, boolean>>({});
 
   const debouncedQuery0 = useDebounce(searchQueries[0], 300);
   const debouncedQuery1 = useDebounce(searchQueries[1], 300);
@@ -138,7 +142,91 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
     },
   ];
 
-  const slots = Array.from({ length: maxCompare }, (_, i) => i === 0 && preSelectedCard && !selectedCards.find(c => (c.id?.toString() || c.seo_card_alias) === (preSelectedCard.id?.toString() || preSelectedCard.seo_card_alias)) ? preSelectedCard : selectedCards[i] || null);
+  // Use the utility function from cardAlias.ts
+
+  const slots = Array.from({ length: maxCompare }, (_, i) =>
+    i === 0 &&
+    preSelectedCard &&
+    !selectedCards.find(
+      (c) => getCardKey(c) === getCardKey(preSelectedCard)
+    )
+      ? preSelectedCard
+      : selectedCards[i] || null
+  );
+
+  const resolvedSlots = slots.map((card) => {
+    if (!card) return null;
+    const key = getCardKey(card);
+    const hydrated = key && hydratedCards[key];
+    if (!hydrated) return card;
+    return {
+      ...card,
+      ...hydrated,
+      banks: hydrated.banks || card.banks,
+      image: hydrated.image || card.image,
+      network_url: hydrated.network_url || card.network_url,
+    };
+  });
+
+  const handleApply = (card: any) => {
+    const success = redirectToCardApplication(card);
+    if (!success) {
+      toast.error('Unable to open the bank site. Please allow pop-ups or try again later.');
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    
+    selectedCards.forEach(card => {
+      const key = getCardKey(card);
+      if (!key || hydratedCards[key] || hydrationQueueRef.current[key]) return;
+
+      hydrationQueueRef.current[key] = true;
+      
+      // Use getCardAlias to ensure we use the correct alias for API call
+      const alias = getCardAlias(card);
+      if (!alias) {
+        console.warn('No alias found for card:', card);
+        delete hydrationQueueRef.current[key];
+        return;
+      }
+      
+      cardService.getCardDetailsByAlias(alias)
+        .then(response => {
+          const detail =
+            Array.isArray(response?.data) ? response.data[0] :
+            response?.data?.data ? response.data.data :
+            response?.data;
+
+          if (detail) {
+            setHydratedCards(prev => ({
+              ...prev,
+              [key]: {
+                ...card,
+                ...detail,
+                // Preserve important fields from original card
+                banks: detail.banks || card.banks,
+                image: detail.image || card.image || card.card_bg_image,
+                card_type: detail.card_type || card.card_type,
+                network_url: detail.network_url || card.network_url,
+                seo_card_alias: detail.seo_card_alias || card.seo_card_alias || alias,
+                card_alias: detail.card_alias || card.card_alias || alias,
+              }
+            }));
+          } else {
+            console.warn('No detail data found for card:', alias);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to hydrate card for comparison:', alias, err);
+          toast.error(`Failed to load details for ${card.name || 'card'}`);
+        })
+        .finally(() => {
+          delete hydrationQueueRef.current[key];
+        });
+    });
+  }, [open, selectedCards]);
 
   const renderCellValue = (card: any, row: any) => {
     const value = getNestedValue(card, row.key);
@@ -173,5 +261,224 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
     return <div><div className={cn(!isExpanded && needsExpansion && "line-clamp-3")}>{strValue}</div>{needsExpansion && <Button variant="link" size="sm" onClick={() => toggleRowExpansion(rowKey)} className="mt-1 p-0 h-auto text-xs">{isExpanded ? <>Show Less <ChevronUp className="w-3 h-3 ml-1" /></> : <>Show More <ChevronDown className="w-3 h-3 ml-1" /></>}</Button>}</div>;
   };
 
-  return (<><Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-[95vw] h-[90vh] p-0"><DialogHeader className="px-6 pt-6 pb-4 border-b"><DialogTitle className="text-2xl font-bold">Compare Credit Cards</DialogTitle></DialogHeader><ScrollArea className="h-full px-6 pb-6"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">{slots.map((card, index) => <div key={index} className="border rounded-lg p-4 bg-card">{card ? <div className="space-y-3"><div className="relative"><img src={card.image || '/placeholder.svg'} alt={card.name} className="w-full h-40 object-contain rounded-lg bg-gradient-to-br from-muted to-muted/50" /><Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-background/80 hover:bg-background" onClick={() => removeCard(card.id?.toString() || card.seo_card_alias)}><X className="w-4 h-4" /></Button></div><div><h3 className="font-semibold line-clamp-2">{card.name}</h3><p className="text-sm text-muted-foreground">{card.banks?.name}</p></div><Button variant="outline" size="sm" className="w-full" onClick={() => { setDetailViewCard(card); setDetailViewOpen(true); }}><Info className="w-4 h-4 mr-2" />View Details</Button></div> : <div className="space-y-3"><div className="relative w-full h-40 flex items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed"><Plus className="w-12 h-12 text-muted-foreground" /></div><div className="space-y-2 relative"><Input placeholder="Search for a card..." value={searchQueries[index]} onChange={(e) => handleSearchChange(index, e.target.value)} className="w-full" />{searchResults[index].length > 0 && <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-60 overflow-auto">{searchResults[index].map((searchCard: any) => <button key={searchCard.id} className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2" onClick={() => handleSelectCard(index, searchCard)}><img src={searchCard.image} alt={searchCard.name} className="w-12 h-8 object-contain" /><div className="flex-1"><div className="font-medium text-sm line-clamp-1">{searchCard.name}</div><div className="text-xs text-muted-foreground">{searchCard.banks?.name}</div></div></button>)}</div>}</div></div>}</div>)}</div>{selectedCards.length === 0 && <div className="text-center py-16"><div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-4"><Search className="w-10 h-10 text-muted-foreground" /></div><h3 className="text-xl font-semibold mb-2">No Cards Selected</h3><p className="text-muted-foreground mb-6 max-w-md mx-auto">Search and select at least 2 cards above to start comparing their features, fees, and benefits side-by-side.</p></div>}{selectedCards.length >= 2 && <div className="space-y-6">{comparisonSections.map(section => <div key={section.id} className="border rounded-lg overflow-hidden"><div className="bg-muted px-4 py-3"><h3 className="font-semibold text-lg">{section.title}</h3></div><Table><TableHeader><TableRow><TableHead className="w-[200px] min-w-[200px] font-semibold sticky left-0 bg-background z-10">Attribute</TableHead>{slots.filter(Boolean).map((card, idx) => <TableHead key={idx} className="font-semibold text-center min-w-[280px] w-[280px]">{card.name}</TableHead>)}</TableRow></TableHeader><TableBody>{section.rows.map(row => <TableRow key={row.key} className="hover:bg-muted/50"><TableCell className="font-medium align-top w-[200px] min-w-[200px] sticky left-0 bg-background z-10">{row.label}</TableCell>{slots.filter(Boolean).map((card, idx) => <TableCell key={idx} className="align-top min-w-[280px] w-[280px]">{renderCellValue(card, row)}</TableCell>)}</TableRow>)}</TableBody></Table></div>)}<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">{slots.filter(Boolean).map((card, idx) => <Button key={idx} className="w-full" onClick={() => card.network_url && openRedirectInterstitial({ networkUrl: card.network_url, bankName: extractBankName(card), bankLogo: extractBankLogo(card), cardName: card.name, cardId: card.id })}>Apply for {card.name}</Button>)}</div></div>}</ScrollArea></DialogContent></Dialog><Sheet open={detailViewOpen} onOpenChange={setDetailViewOpen}><SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">{detailViewCard && <><SheetHeader><SheetTitle>{detailViewCard.name}</SheetTitle></SheetHeader><div className="mt-6 space-y-6"><div className="relative w-full"><img src={detailViewCard.image || '/placeholder.svg'} alt={detailViewCard.name} className="w-full h-56 object-contain rounded-lg bg-gradient-to-br from-muted to-muted/50" /></div><div><h3 className="font-semibold text-lg mb-3">Overview</h3><div className="space-y-2 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Bank:</span><span className="font-medium">{detailViewCard.banks?.name}</span></div><div className="flex justify-between"><span className="text-muted-foreground">Card Type:</span><span className="font-medium">{detailViewCard.card_type}</span></div><div className="flex justify-between items-center"><span className="text-muted-foreground">Rating:</span><div className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-semibold">{detailViewCard.rating}</span></div></div></div></div>{comparisonSections.map(section => { const hasData = section.rows.some(row => { const value = getNestedValue(detailViewCard, row.key); return value && value !== 'N/A' && value !== ''; }); if (!hasData) return null; return <div key={section.id}><h3 className="font-semibold text-lg mb-3">{section.title}</h3><div className="space-y-4">{section.rows.map(row => { const value = getNestedValue(detailViewCard, row.key); if (!value || value === 'N/A' || value === '') return null; return <div key={row.key} className="border-b pb-3 last:border-0"><div className="text-sm font-medium text-muted-foreground mb-1">{row.label}</div><div className="text-sm">{renderCellValue(detailViewCard, row)}</div></div>; })}</div></div>; })}<Button className="w-full" size="lg" onClick={() => detailViewCard.network_url && openRedirectInterstitial({ networkUrl: detailViewCard.network_url, bankName: extractBankName(detailViewCard), bankLogo: extractBankLogo(detailViewCard), cardName: detailViewCard.name, cardId: detailViewCard.id })}>Apply Now</Button></div></>}</SheetContent></Sheet></>);
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[95vw] h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="text-2xl font-bold">Compare Credit Cards</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-full px-6 pb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {resolvedSlots.map((card, index) => (
+                <div key={index} className="border rounded-lg p-4 bg-card">
+                  {card ? (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <img
+                          src={card.image || '/placeholder.svg'}
+                          alt={card.name}
+                          className="w-full h-40 object-contain rounded-lg bg-gradient-to-br from-muted to-muted/50"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 bg-background/80 hover:bg-background"
+                          onClick={() => removeCard(card.id?.toString() || card.seo_card_alias)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold line-clamp-2">{card.name}</h3>
+                        <p className="text-sm text-muted-foreground">{card.banks?.name}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setDetailViewCard(card);
+                          setDetailViewOpen(true);
+                        }}
+                      >
+                        <Info className="w-4 h-4 mr-2" />
+                        View Details
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="relative w-full h-40 flex items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed">
+                        <Plus className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2 relative">
+                        <Input
+                          placeholder="Search for a card..."
+                          value={searchQueries[index]}
+                          onChange={(e) => handleSearchChange(index, e.target.value)}
+                          className="w-full"
+                        />
+                        {searchResults[index].length > 0 && (
+                          <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-60 overflow-auto">
+                            {searchResults[index].map((searchCard: any) => (
+                              <button
+                                key={searchCard.id}
+                                className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2"
+                                onClick={() => handleSelectCard(index, searchCard)}
+                              >
+                                <img
+                                  src={searchCard.image}
+                                  alt={searchCard.name}
+                                  className="w-12 h-8 object-contain"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm line-clamp-1">{searchCard.name}</div>
+                                  <div className="text-xs text-muted-foreground">{searchCard.banks?.name}</div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {selectedCards.length === 0 && (
+              <div className="text-center py-16">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-4">
+                  <Search className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No Cards Selected</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Search and select at least 2 cards above to start comparing their features, fees, and benefits
+                  side-by-side.
+                </p>
+              </div>
+            )}
+
+            {selectedCards.length >= 2 && (
+              <div className="space-y-6">
+                {comparisonSections.map((section) => (
+                  <div key={section.id} className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted px-4 py-3">
+                      <h3 className="font-semibold text-lg">{section.title}</h3>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[200px] min-w-[200px] font-semibold sticky left-0 bg-background z-10">
+                            Attribute
+                          </TableHead>
+                          {resolvedSlots.filter(Boolean).map((card, idx) => (
+                            <TableHead key={idx} className="font-semibold text-center min-w-[280px] w-[280px]">
+                              {card?.name || 'Card'}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {section.rows.map((row) => (
+                          <TableRow key={row.key} className="hover:bg-muted/50">
+                            <TableCell className="font-medium align-top w-[200px] min-w-[200px] sticky left-0 bg-background z-10">
+                              {row.label}
+                            </TableCell>
+                            {resolvedSlots.filter(Boolean).map((card, idx) => (
+                              <TableCell key={idx} className="align-top min-w-[280px] w-[280px]">
+                                {renderCellValue(card, row)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+                  {resolvedSlots.filter(Boolean).map((card, idx) => (
+                    <Button key={idx} className="w-full" onClick={() => handleApply(card)}>
+                      Apply for {card?.name || 'this card'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Sheet open={detailViewOpen} onOpenChange={setDetailViewOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+          {detailViewCard && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{detailViewCard.name}</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-6">
+                <div className="relative w-full">
+                  <img
+                    src={detailViewCard.image || '/placeholder.svg'}
+                    alt={detailViewCard.name}
+                    className="w-full h-56 object-contain rounded-lg bg-gradient-to-br from-muted to-muted/50"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Overview</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank:</span>
+                      <span className="font-medium">{detailViewCard.banks?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Card Type:</span>
+                      <span className="font-medium">{detailViewCard.card_type}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Rating:</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-semibold">{detailViewCard.rating}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {comparisonSections.map((section) => {
+                  const hasData = section.rows.some((row) => {
+                    const value = getNestedValue(detailViewCard, row.key);
+                    return value && value !== 'N/A' && value !== '';
+                  });
+                  if (!hasData) return null;
+                  return (
+                    <div key={section.id}>
+                      <h3 className="font-semibold text-lg mb-3">{section.title}</h3>
+                      <div className="space-y-4">
+                        {section.rows.map((row) => {
+                          const value = getNestedValue(detailViewCard, row.key);
+                          if (!value || value === 'N/A' || value === '') return null;
+                          return (
+                            <div key={row.key} className="border-b pb-3 last:border-0">
+                              <div className="text-sm font-medium text-muted-foreground mb-1">{row.label}</div>
+                              <div className="text-sm">{renderCellValue(detailViewCard, row)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <Button className="w-full" size="lg" onClick={() => handleApply(detailViewCard)}>
+                  Apply Now
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
 }

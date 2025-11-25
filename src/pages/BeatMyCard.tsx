@@ -7,7 +7,7 @@ import { cardService, SpendingData } from "@/services/cardService";
 import { toast } from "sonner";
 import { CardSearchDropdown } from "@/components/CardSearchDropdown";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { openRedirectInterstitial } from "@/utils/redirectHandler";
+import { redirectToCardApplication } from "@/utils/redirectHandler";
 import { Badge } from "@/components/ui/badge";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -286,12 +286,10 @@ const BeatMyCard = () => {
         school_fees: responses.school_fees || 0
       };
       const calculateResponse = await cardService.calculateCardGenius(completePayload);
-      console.log("=== Card Genius API Response ===", calculateResponse);
 
       // API returns: { status: "success", data: { success: true, savings: [...] } }
       if (calculateResponse.status === "success" && calculateResponse.data?.success && calculateResponse.data?.savings && calculateResponse.data.savings.length > 0) {
         const savingsArray = calculateResponse.data.savings;
-        console.log("=== Savings Array ===", savingsArray.length, "cards found");
 
         // Sort by total_savings to get the top card
         const sortedCards = [...savingsArray].sort((a: any, b: any) => {
@@ -299,21 +297,26 @@ const BeatMyCard = () => {
           const bSaving = b.total_savings || 0;
           return bSaving - aSaving;
         });
+        if (sortedCards.length === 0) {
+          toast.error("No savings data returned. Please adjust your spending inputs and try again.");
+          return;
+        }
         const topCard = sortedCards[0];
-        console.log("=== Top Card ===", topCard?.card_name, "with savings:", topCard?.total_savings);
+        if (!topCard) {
+          toast.error("We couldn't find a better card match. Please try again.");
+          return;
+        }
 
         // Find the user's selected card in the results by matching seo_card_alias
         const userCardInResults = savingsArray.find((card: any) => card.seo_card_alias === selectedCard.seo_card_alias);
-        console.log("=== User's Selected Card in Results ===", userCardInResults);
         if (!userCardInResults) {
           console.error("User's card not found in results. Selected:", selectedCard.seo_card_alias);
           toast.error("Your selected card was not found in the results");
+          setStep('select');
+          setCurrentStep(0);
+          setResponses({});
           return;
         }
-        console.log("=== Fetching detailed card data ===");
-        console.log("User card alias:", selectedCard.seo_card_alias);
-        console.log("Top card alias:", topCard.seo_card_alias);
-
         // Try to fetch detailed data for both cards, but use API data as fallback
         let userCardData = null;
         let geniusCardData = null;
@@ -325,8 +328,6 @@ const BeatMyCard = () => {
             console.error("Genius card fetch failed:", err);
             return null;
           })]);
-          console.log("=== User Card Details Response ===", userCard);
-          console.log("=== Genius Card Details Response ===", geniusCard);
 
           // User's card data - prioritize image from API response
           if (userCard?.status === "success" && userCard.data?.[0]) {
@@ -349,7 +350,6 @@ const BeatMyCard = () => {
               total_savings_yearly: userCardInResults.total_savings_yearly || 0,
               spending_breakdown_array: userCardInResults.spending_breakdown_array || []
             };
-            console.log("Using fallback user card data");
           }
 
           // Genius card data - prioritize image from API response
@@ -377,17 +377,13 @@ const BeatMyCard = () => {
                 name: topCard.card_name.split(' ')[0]
               } // Extract bank name from card name
             };
-            console.log("Using fallback genius card data:", geniusCardData);
           }
-          console.log("=== Setting User Card Data ===", userCardData);
-          console.log("=== Setting Genius Card Data ===", geniusCardData);
 
           // Calculate category-wise savings
           const categoryBreakdown = calculateCategorySavings(responses, userCardData, geniusCardData);
           setCategorySavings(categoryBreakdown);
           setUserCardData(userCardData);
           setGeniusCardData(geniusCardData);
-          console.log("=== Setting step to results ===");
           setStep('results');
         } catch (error) {
           console.error("Error processing card data:", error);
@@ -505,8 +501,6 @@ const BeatMyCard = () => {
         }
       });
     }
-    console.log("=== User Card Breakdown Map ===", Object.fromEntries(userBreakdownMap));
-    console.log("=== Genius Card Breakdown Map ===", Object.fromEntries(geniusBreakdownMap));
 
     // Build category comparison list
     const allCategories = new Set([...userBreakdownMap.keys(), ...geniusBreakdownMap.keys()]);
@@ -1024,13 +1018,14 @@ const BeatMyCard = () => {
                 Try Another Card
               </Button>
               {!isUserWinner && <Button size="lg" onClick={() => {
-                const bankName = geniusCardData.banks?.name || geniusCardData.name.split(' ')[0];
-                openRedirectInterstitial({
-                  bankName: bankName,
+                const success = redirectToCardApplication(geniusCardData, {
                   cardName: geniusCardData.name,
-                  cardId: geniusCardData.id,
+                  bankName: geniusCardData.banks?.name || geniusCardData.name.split(' ')[0],
                   bankLogo: geniusCardData.image
                 });
+                if (!success) {
+                  toast.error("Unable to open the bank site. Please allow pop-ups or try again later.");
+                }
               }} className="text-lg px-8 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70">
                   Apply for Better Card
                   <TrendingUp className="ml-2 h-5 w-5" />
@@ -1053,12 +1048,6 @@ const BeatMyCard = () => {
       </div>;
   }
 
-  // Fallback - should not reach here
-  console.log("=== Fallback Render ===", {
-    step,
-    hasUserCard: !!userCardData,
-    hasGeniusCard: !!geniusCardData
-  });
   return <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center max-w-md">
         <p className="text-xl text-muted-foreground mb-4">Something went wrong</p>

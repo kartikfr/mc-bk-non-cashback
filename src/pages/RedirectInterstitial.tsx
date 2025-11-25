@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ExternalLink, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
+const REDIRECT_ANALYTICS_ENABLED = (import.meta.env.VITE_ENABLE_REDIRECT_ANALYTICS || '').toString().toLowerCase() === 'true';
+
 interface RedirectState {
   bankName: string;
   bankLogo: string;
@@ -104,7 +106,7 @@ export default function RedirectInterstitial() {
 
     try {
       // Track event
-      if (typeof window !== 'undefined' && navigator.sendBeacon) {
+      if (REDIRECT_ANALYTICS_ENABLED && typeof window !== 'undefined' && navigator.sendBeacon) {
         navigator.sendBeacon('/api/redirect-event', JSON.stringify({
           event: 'redirect_confirm',
           bank: state.bankName,
