@@ -506,7 +506,7 @@ const CardGenius = () => {
     const displayMonthlySpend = totalMonthlySpend + monthlyEquivalentOfAnnual;
     const totalAnnualSpend = totalMonthlySpend * 12 + totalAnnualFieldsSpend;
     if (selectedCard) {
-      const bankLabel = selectedCard.bank_name || selectedCard.card_name?.split(' ')[0] || 'Top Pick';
+      const bankLabel = selectedCard.bank_name || "";
       const totalLoungeValue = Number(selectedCard.airport_lounge_value || 0);
       const milestoneValue = Number(selectedCard.milestone_benefits_only || 0);
       const joiningFeeValue = Number(selectedCard.joining_fees || 0);
@@ -523,8 +523,14 @@ const CardGenius = () => {
                 <X className="w-5 h-5" />
               </button>
               <div className="space-y-3 max-w-xl">
-                <p className="text-xs uppercase tracking-[0.4em] text-white/70">{bankLabel}</p>
-                <h1 className="text-2xl sm:text-3xl font-bold leading-snug">{selectedCard.card_name}</h1>
+                {bankLabel && (
+                  <p className="text-xs uppercase tracking-[0.4em] text-white/70">
+                    {bankLabel}
+                  </p>
+                )}
+                <h1 className="text-2xl sm:text-3xl font-bold leading-snug">
+                  {selectedCard.card_name}
+                </h1>
                 <p className="text-sm text-white/80">Best card curated using your spends of ₹{(totalAnnualSpend / 100000).toFixed(2)}L annually.</p>
                 </div>
               <div className="flex justify-center sm:justify-end w-full sm:w-auto">
@@ -737,7 +743,6 @@ const CardGenius = () => {
             
         <main className="section-shell max-w-6xl mx-auto pt-24 pb-16 space-y-8">
           <div className="text-center space-y-2">
-            <p className="text-xs uppercase tracking-[0.4em] text-primary">Card Genius</p>
             <h1 className="text-3xl font-bold text-foreground">The Best Cards Sorted By Annual Savings!</h1>
             <p className="text-sm text-muted-foreground">Personalized to your spending profile</p>
           </div>

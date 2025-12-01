@@ -11,6 +11,19 @@ import { toast } from "sonner";
 import { enrichCardGeniusResults, CardGeniusResult } from "@/lib/cardGenius";
 import { sanitizeHtml } from "@/lib/sanitize";
 
+const formatCategoryName = (raw: string | null | undefined): string => {
+  if (!raw) return "";
+  return raw
+    .toString()
+    .trim()
+    .replace(/[_]+/g, " ") // underscores -> spaces
+    .replace(/\s+/g, " ") // collapse multiple spaces
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 interface CategoryQuestion {
   field: keyof SpendingData;
   question: string;
@@ -495,7 +508,9 @@ const CategoryCardGenius = () => {
                         ₹{card.net_savings?.toLocaleString() || "0"}
                       </p>
                       <div className="space-y-1 text-xs text-green-700 dark:text-green-300 font-medium">
-                        <p>Base savings: ₹{card.total_savings_yearly?.toLocaleString() || 0}</p>
+                        {card.total_savings_yearly ? (
+                          <p>Base savings: ₹{card.total_savings_yearly.toLocaleString()}</p>
+                        ) : null}
                         {card.total_extra_benefits ? <p>Milestones: +₹{card.total_extra_benefits.toLocaleString()}</p> : null}
                         {card.airport_lounge_value && card.airport_lounge_value > 0 && (
                           <>
@@ -540,12 +555,14 @@ const CategoryCardGenius = () => {
                           const savingsValue = Number(data?.savings ?? data?.total_savings ?? 0);
                           const spendValue = Number(data?.spend ?? data?.spending ?? 0);
                           if (!savingsValue && !spendValue) return null;
-                          
-                          // Format category name nicely
-                          const categoryName = data?.on || key.replace(/_/g, ' ').split(' ').map((word: string) => 
-                            word.charAt(0).toUpperCase() + word.slice(1)
-                          ).join(' ');
-                          
+
+                          // Always format category name nicely (API may return underscored keys)
+                          const rawName =
+                            typeof data?.on === "string" && data.on.trim().length > 0
+                              ? data.on
+                              : key;
+                          const categoryName = formatCategoryName(rawName);
+
                           return (
                             <div key={key} className="bg-white dark:bg-muted/50 rounded-lg p-4 border border-border shadow-sm hover:shadow-md transition-shadow">
                               <div className="flex justify-between items-start mb-2">
