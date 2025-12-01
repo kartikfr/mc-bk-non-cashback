@@ -1,12 +1,239 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ChevronDown, Menu, X } from "lucide-react";
 import logo from "@/assets/moneycontrol-logo.png";
 import { useAutoHideNav } from "@/hooks/useAutoHideNav";
 
+type MobileNavItem = {
+  label: string;
+  to?: string;
+  description?: string;
+  action?: () => void;
+};
+
+type MobileSection = {
+  title: string;
+  items: MobileNavItem[];
+};
+
+interface MobileMenuOverlayProps {
+  open: boolean;
+  onClose: () => void;
+  sections: MobileSection[];
+  logoSrc: string;
+  onBlogClick: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement>;
+}
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
+const MobileMenuOverlay = ({
+  open,
+  onClose,
+  sections,
+  logoSrc,
+  onBlogClick,
+  triggerRef,
+}: MobileMenuOverlayProps) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const firstFocusRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusedElementRef = useRef<HTMLElement | null>(null);
+
+  // Mount only when open to avoid unnecessary portals
+  if (typeof document === "undefined") return null;
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Save previously focused element to restore later
+    previousFocusedElementRef.current = document.activeElement as HTMLElement | null;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    // Initial focus: first focusable within, else dialog itself
+    const focusable = dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    const first = focusable[0] || dialog;
+    first.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!open) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const focusables = dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        if (focusables.length === 0) {
+          event.preventDefault();
+          dialog.focus();
+          return;
+        }
+
+        const firstEl = focusables[0];
+        const lastEl = focusables[focusables.length - 1];
+        const isShift = event.shiftKey;
+        const current = document.activeElement as HTMLElement | null;
+
+        if (!current) return;
+
+        if (!isShift && current === lastEl) {
+          event.preventDefault();
+          firstEl.focus();
+        } else if (isShift && current === firstEl) {
+          event.preventDefault();
+          lastEl.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  // Restore focus to trigger when closing
+  useEffect(() => {
+    if (!open && previousFocusedElementRef.current) {
+      previousFocusedElementRef.current.focus();
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const handleBackdropClick = () => {
+    onClose();
+  };
+
+  const handleDialogClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    event.stopPropagation();
+  };
+
+  const content = (
+    <>
+      {/* Backdrop */}
+      <div
+        className="menu-backdrop lg:hidden"
+        aria-hidden="true"
+        onClick={handleBackdropClick}
+      />
+
+      {/* Overlay */}
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Main navigation"
+        className="menu-overlay open safe-area-inset-top lg:hidden"
+        onClick={handleBackdropClick}
+      >
+        <div
+          className="relative flex flex-col flex-1 bg-white dark:bg-slate-900 shadow-2xl"
+          onClick={handleDialogClick}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 min-w-0">
+              <img src={logoSrc} alt="MoneyControl" className="h-9 w-auto flex-shrink-0" />
+              <span className="text-sm text-slate-600 dark:text-slate-400 uppercase tracking-wide font-semibold truncate">
+                Menu
+              </span>
+            </div>
+            <button
+              ref={firstFocusRef}
+              className="touch-target flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={onClose}
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5 text-slate-700 dark:text-slate-300" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-white dark:bg-slate-900">
+            {/* Home */}
+            <Link
+              to="/"
+              className="block rounded-2xl border-2 border-slate-200 dark:border-slate-700 px-5 py-4 text-lg font-bold text-slate-900 dark:text-slate-100 hover:border-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              onClick={onClose}
+            >
+              Home
+            </Link>
+
+            {/* Discover */}
+            <Link
+              to="/cards"
+              className="block rounded-2xl border-2 border-slate-200 dark:border-slate-700 px-5 py-4 text-lg font-bold text-slate-900 dark:text-slate-100 hover:border-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              onClick={onClose}
+            >
+              Discover
+            </Link>
+
+            {/* Tools Section */}
+            <div className="space-y-3 pt-2">
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 px-1">
+                🛠️ Tools
+              </p>
+              <div className="space-y-2">
+                {sections
+                  .find((s) => s.title === "Tools")
+                  ?.items.map((tool) =>
+                    tool.to ? (
+                      <Link
+                        key={tool.to}
+                        to={tool.to}
+                        className="block rounded-2xl border-2 border-slate-200 dark:border-slate-700 px-5 py-4 hover:border-primary/80 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                        onClick={onClose}
+                      >
+                        <div className="font-bold text-slate-900 dark:text-slate-100">
+                          {tool.label}
+                        </div>
+                        {tool.description && (
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                            {tool.description}
+                          </p>
+                        )}
+                      </Link>
+                    ) : null
+                  )}
+              </div>
+            </div>
+
+            {/* Blogs */}
+            <button
+              onClick={() => {
+                onClose();
+                onBlogClick();
+              }}
+              className="w-full text-left rounded-2xl border-2 border-slate-200 dark:border-slate-700 px-5 py-4 text-lg font-bold text-slate-900 dark:text-slate-100 hover:border-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            >
+              Blogs
+            </button>
+          </div>
+
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Tap outside or press Esc to close
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  return createPortal(content, document.body);
+};
+
 const Navigation = () => {
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const scrollYRef = useRef(0);
   
   // Auto-hide navigation on scroll
   const { style, isVisible } = useAutoHideNav({
@@ -17,6 +244,87 @@ const Navigation = () => {
   // Update CSS variable for nav height based on visibility
   const navHeight = isVisible ? '7rem' : '0rem';
 
+  // Body scroll lock with scroll position preservation (iOS friendly)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const body = document.body;
+
+    if (isMobileMenuOpen) {
+      scrollYRef.current = window.scrollY || window.pageYOffset || 0;
+      body.classList.add('menu-scroll-lock');
+      body.style.top = `-${scrollYRef.current}px`;
+    } else {
+      const prevTop = body.style.top;
+      body.classList.remove('menu-scroll-lock');
+      body.style.top = '';
+
+      if (prevTop) {
+        const y = Math.abs(parseInt(prevTop, 10)) || scrollYRef.current;
+        window.scrollTo(0, y);
+      }
+    }
+
+    return () => {
+      body.classList.remove('menu-scroll-lock');
+      body.style.top = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  const navLinks: MobileNavItem[] = useMemo(() => ([
+    { label: 'Home', to: '/' },
+    { label: 'Discover', to: '/cards' },
+  ]), []);
+
+  const toolLinks: MobileNavItem[] = useMemo(() => ([
+    { label: 'Super Card Genius', description: 'AI finds the right card for you.', to: '/card-genius' },
+    { label: 'Category Card Genius', description: 'Find the best card for your spend style.', to: '/card-genius-category' },
+    { label: 'Beat My Card', description: 'See if you can upgrade your card.', to: '/beat-my-card' },
+  ]), []);
+
+  const handleBlogNav = useCallback(() => {
+    const scrollToBlog = () => {
+      const blogSection = document.getElementById('blog');
+      if (!blogSection) return;
+
+      const rect = blogSection.getBoundingClientRect();
+      const currentScroll = window.scrollY || window.pageYOffset || 0;
+      const navOffset = 80; // approx nav height
+      const targetY = Math.max(rect.top + currentScroll - navOffset, 0);
+
+      window.scrollTo({
+        top: targetY,
+        behavior: 'smooth',
+      });
+    };
+
+    if (window.location.pathname === '/') {
+      scrollToBlog();
+    } else {
+      // Navigate to home first, then rely on hash + scroll behavior
+      window.location.href = '/#blog';
+    }
+  }, []);
+
+  const mobileSections: MobileSection[] = useMemo(() => ([
+    {
+      title: 'Navigate',
+      items: navLinks
+    },
+    {
+      title: 'Tools',
+      items: toolLinks
+    },
+    {
+      title: 'More',
+      items: [
+        {
+          label: 'Blogs',
+          action: handleBlogNav
+        }
+      ]
+    }
+  ]), [navLinks, toolLinks, handleBlogNav]);
+
   return <nav 
     className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border overflow-visible will-change-transform"
     style={{
@@ -24,20 +332,17 @@ const Navigation = () => {
       '--nav-height': navHeight,
     } as React.CSSProperties}
   >
-      <div className="container mx-auto px-4 py-2 overflow-visible">
-        <div className="flex items-center justify-between mx-0 px-0 py-0">
+      <div className="container mx-auto px-4 py-3 lg:py-4 overflow-visible">
+        <div className="flex items-center justify-between gap-4">
           <Link to="/" className="flex items-center">
-            <img src={logo} alt="MoneyControl Credit Cards" className="h-16 md:h-20 w-auto" />
+            <img src={logo} alt="MoneyControl Credit Cards" className="h-12 xs:h-14 md:h-16 w-auto transition-all duration-200" />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            <Link to="/" className="text-foreground hover:text-primary transition-colors font-medium">
-              Home
-            </Link>
-            <Link to="/cards" className="text-foreground hover:text-primary transition-colors font-medium">
-              Discover
-            </Link>
+          <div className="hidden lg:flex items-center gap-8">
+            {navLinks.map(link => <Link key={link.label} to={link.to} className="text-foreground hover:text-primary transition-colors font-medium">
+                {link.label}
+              </Link>)}
             
             {/* Tools Dropdown */}
             <div className="relative group">
@@ -46,89 +351,51 @@ const Navigation = () => {
                 <ChevronDown className="w-4 h-4" />
               </button>
               
-              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute top-full right-0 mt-2 w-64 bg-background border border-border rounded-lg shadow-lg py-2 z-[100]">
-                  <Link to="/card-genius" className="block px-4 py-2.5 text-foreground hover:bg-accent transition-colors">
-                    <div className="font-medium">Super Card Genius</div>
-                    <div className="text-xs text-muted-foreground">AI finds the right card for you.</div>
-                  </Link>
-                  <Link to="/card-genius-category" className="block px-4 py-2.5 text-foreground hover:bg-accent transition-colors">
-                    <div className="font-medium">Category Card Genius</div>
-                    <div className="text-xs text-muted-foreground">Find the best card for your spend style.</div>
-                  </Link>
-                  <Link to="/beat-my-card" className="block px-4 py-2.5 text-foreground hover:bg-accent transition-colors">
-                    <div className="font-medium">Beat My Card</div>
-                    <div className="text-xs text-muted-foreground">See if you can upgrade your card.</div>
-                  </Link>
+              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute top-full right-0 mt-2 w-72 bg-background border border-border rounded-2xl shadow-xl py-2 z-[100]">
+                  {toolLinks.map(tool => <Link key={tool.to} to={tool.to} className="block px-4 py-2.5 text-foreground hover:bg-accent transition-colors">
+                      <div className="font-medium">{tool.label}</div>
+                      <div className="text-xs text-muted-foreground">{tool.description}</div>
+                    </Link>)}
                 </div>
             </div>
 
             <button 
-              onClick={(e) => {
-                e.preventDefault();
-                if (window.location.pathname === '/') {
-                  const blogSection = document.getElementById('blog');
-                  if (blogSection) {
-                    blogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                } else {
-                  window.location.href = '/#blog';
-                }
-              }}
+              onClick={handleBlogNav}
               className="text-foreground hover:text-primary transition-colors font-medium"
             >
               Blogs
             </button>
+
           </div>
 
-          {/* Mobile Menu Button */}
-          <button className="md:hidden p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && <div className="md:hidden mt-4 pb-4 border-t border-border pt-4">
-            <Link to="/" className="block py-2 text-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMobileMenuOpen(false)}>
-              Home
-            </Link>
-            <Link to="/cards" className="block py-2 text-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMobileMenuOpen(false)}>
-              Discover
-            </Link>
-            <div className="py-2">
-              <div className="text-foreground font-medium mb-2">Tools</div>
-              <Link to="/card-genius" className="block py-2 pl-4 text-sm text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Super Card Genius
-              </Link>
-              <Link to="/card-genius-category" className="block py-2 pl-4 text-sm text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Category Card Genius
-              </Link>
-              <Link to="/beat-my-card" className="block py-2 pl-4 text-sm text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Beat My Card
-              </Link>
-            </div>
+          {/* Mobile Actions */}
+          <div className="flex items-center gap-2 lg:hidden">
             <button 
-              onClick={(e) => {
-                e.preventDefault();
-                setIsMobileMenuOpen(false);
-                if (window.location.pathname === '/') {
-                  setTimeout(() => {
-                    const blogSection = document.getElementById('blog');
-                    if (blogSection) {
-                      blogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                  }, 100);
-                } else {
-                  window.location.href = '/#blog';
-                }
-              }}
-              className="block py-2 text-foreground hover:text-primary transition-colors font-medium text-left w-full"
+              ref={menuTriggerRef}
+              className="p-3 rounded-xl bg-primary hover:bg-primary/90 active:bg-primary/80 transition-all touch-target shadow-lg" 
+              onClick={() => setIsMobileMenuOpen(true)} 
+              aria-label="Open navigation menu"
             >
-              Blogs
+              <div className="relative w-6 h-6 flex flex-col items-center justify-center gap-1.5">
+                <span className="block w-6 h-0.5 bg-white rounded-full"></span>
+                <span className="block w-6 h-0.5 bg-white rounded-full"></span>
+                <span className="block w-6 h-0.5 bg-white rounded-full"></span>
+              </div>
             </button>
-          </div>}
+          </div>
+        </div>
       </div>
+
+      {/* Mobile Menu Drawer (portal overlay) */}
+      <MobileMenuOverlay
+        open={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        sections={mobileSections}
+        logoSrc={logo}
+        onBlogClick={handleBlogNav}
+        triggerRef={menuTriggerRef}
+      />
+
     </nav>;
 };
 export default Navigation;

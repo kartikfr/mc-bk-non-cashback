@@ -140,9 +140,10 @@ export default function CardDetails() {
   const scrollToSection = (ref: React.RefObject<HTMLDivElement>, sectionId: string) => {
     setActiveSection(sectionId);
     if (ref.current) {
-      const navHeight = 80; // Navigation bar height
-      const quickNavHeight = 60; // Quick navigation height
-      const offset = navHeight + quickNavHeight + 20; // Total offset with some padding
+      const navHeight = window.innerWidth < 640 ? 64 : window.innerWidth < 768 ? 72 : 80; // Responsive nav height
+      const quickNavHeight = 60; // Quick navigation height (visible when showFixedCTA is true)
+      const stickyCtaHeight = 70; // Sticky CTA button height
+      const offset = navHeight + quickNavHeight + 20; // Total offset with padding
       const elementPosition = ref.current.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
       
@@ -264,7 +265,7 @@ export default function CardDetails() {
       <Navigation />
       
       {/* Back Button & Breadcrumb */}
-      <div className="container mx-auto px-4 py-4">
+      <div className="section-shell py-4">
         <div className="flex items-center gap-4 mb-2">
           <Button
             variant="outline"
@@ -296,8 +297,8 @@ export default function CardDetails() {
           background: card.card_bg_gradient || 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)'
         }}
       >
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="section-shell">
+          <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-8 items-center">
             {/* Card Image */}
             <div className="relative animate-fade-in">
               <div className="relative w-full max-w-md mx-auto">
@@ -313,13 +314,15 @@ export default function CardDetails() {
             </div>
 
             {/* Card Info */}
-            <div className="text-white space-y-6 animate-fade-in">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{card.name}</h1>
-                <div className="flex items-center gap-4 flex-wrap">
+            <div className="text-white space-y-6 animate-fade-in w-full">
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Card overview</p>
+                <h1 className="text-3xl md:text-4xl font-bold">{card.name}</h1>
+                <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant="secondary" className="text-sm">
                     {card.card_type}
                   </Badge>
+                  {card.banks?.name && <span className="text-sm text-white/80">{card.banks.name}</span>}
                 </div>
               </div>
 
@@ -393,17 +396,18 @@ export default function CardDetails() {
         </div>
       </section>
 
-      {/* Sticky Apply Now Button */}
+      {/* Sticky Apply Now Button - Mobile Optimized */}
       {showFixedCTA && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border p-3 z-50 shadow-lg animate-slide-in-right">
-          <div className="container mx-auto px-4 flex gap-3">
+        <div className="fixed bottom-0 left-0 right-0 bg-background/98 backdrop-blur-md border-t-2 border-border/80 p-3 sm:p-4 z-50 shadow-2xl safe-area-inset-bottom">
+          <div className="container mx-auto px-3 sm:px-4 flex gap-2 sm:gap-3">
             <Button 
-              className="flex-1" 
+              className="flex-1 touch-target h-12 sm:h-14 font-bold text-sm sm:text-base shadow-lg" 
               size="lg"
               onClick={handleApply}
             >
-              Apply Now - Instant Decision
-              <ExternalLink className="ml-2 w-4 h-4" />
+              <span className="hidden xs:inline">Apply Now - Instant Decision</span>
+              <span className="xs:hidden">Apply Now</span>
+              <ExternalLink className="ml-1.5 sm:ml-2 w-4 h-4" />
             </Button>
             <Button
               size="lg"
@@ -412,20 +416,20 @@ export default function CardDetails() {
                 startComparisonWith(card);
                 setIsComparePanelOpen(true);
               }}
-              className={isSelected(card.seo_card_alias)
-                ? "border-2 border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+              className={`touch-target h-12 sm:h-14 px-4 sm:px-6 ${isSelected(card.seo_card_alias)
+                ? "border-2 border-primary bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg"
                 : "border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
-              }
+              }`}
             >
               {isSelected(card.seo_card_alias) ? (
                 <>
-                  <Check className="mr-2 w-5 h-5" />
-                  Added
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Added</span>
                 </>
               ) : (
                 <>
-                  <Plus className="mr-2 w-5 h-5" />
-                  Compare
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Compare</span>
                 </>
               )}
             </Button>
@@ -433,26 +437,26 @@ export default function CardDetails() {
         </div>
       )}
 
-      {/* Quick Navigation */}
+      {/* Quick Navigation - Visible on all devices when scrolled */}
       {showFixedCTA && (
-        <div className="fixed top-24 left-0 right-0 bg-background/95 backdrop-blur-sm border-b border-border z-40 shadow-md">
-          <div className="container mx-auto px-4">
-            <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+        <div className="fixed top-[64px] sm:top-[72px] md:top-20 left-0 right-0 bg-background/98 backdrop-blur-md border-b border-border/80 z-40 shadow-lg">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto py-2.5 sm:py-3 scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
               {[
                 { id: 'fees', label: 'Fees', ref: feesRef },
                 { id: 'benefits', label: 'Benefits', ref: benefitsRef },
                 { id: 'rewards', label: 'Rewards', ref: rewardsRef },
-                { id: 'fee-structure', label: 'Fee Structure', ref: feeStructureRef },
-                { id: 'all-benefits', label: 'All Benefits', ref: allBenefitsRef },
-                { id: 'tnc', label: 'T&Cs', ref: tncRef }
+                ...(card?.bank_fee_structure ? [{ id: 'fee-structure', label: 'Fee Structure', ref: feeStructureRef }] : []),
+                ...(sortedUSPs.length > 2 ? [{ id: 'all-benefits', label: 'All Benefits', ref: allBenefitsRef }] : []),
+                ...(card?.tnc ? [{ id: 'tnc', label: 'T&Cs', ref: tncRef }] : [])
               ].map((section) => (
                 <button
                   key={section.id}
                   onClick={() => scrollToSection(section.ref, section.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${
+                  className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl whitespace-nowrap transition-all duration-200 touch-target ${
                     activeSection === section.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'bg-primary text-primary-foreground shadow-md scale-105'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted'
                   }`}
                 >
                   {section.label}
@@ -463,7 +467,7 @@ export default function CardDetails() {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-12 space-y-12">
+      <div className="section-shell py-8 sm:py-10 md:py-12 space-y-8 sm:space-y-10 md:space-y-12 pb-24 sm:pb-28">
         {/* Fees & Eligibility - Moved to top as users want to see this first */}
         <div className="grid lg:grid-cols-2 gap-6" ref={feesRef}>
           {/* Fees */}
@@ -506,7 +510,7 @@ export default function CardDetails() {
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-4">Eligibility</h2>
             <section className="bg-card border border-border rounded-xl p-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Age</p>
                   <p className="text-lg font-semibold text-foreground">{card.min_age}-{card.max_age} years</p>
@@ -661,7 +665,7 @@ export default function CardDetails() {
                 <AccordionItem value="late">
                   <AccordionTrigger className="px-6">Late Payment Charges</AccordionTrigger>
                   <AccordionContent className="px-6 space-y-2">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="font-semibold mb-2">Amount Range</p>
                         {card.bank_fee_structure.late_payment_annual?.split('|').map((range, i) => (
@@ -794,40 +798,47 @@ export default function CardDetails() {
         )}
 
         {/* How to Apply - Enhanced */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 border-2 border-primary/20 rounded-2xl p-10 shadow-xl">
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 border-2 border-primary/20 rounded-2xl p-6 sm:p-8 lg:p-10 shadow-xl">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl -z-10" />
           
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">Ready to Get Started?</h2>
-            <p className="text-muted-foreground">Apply now and get instant decision in 60 seconds</p>
+          <div className="text-center mb-6 sm:mb-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary mb-2">Fast Approval</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Ready to Get Started?</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">Apply now and get instant decision in 60 seconds</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary text-primary-foreground rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg">
+          <div className="grid gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 max-w-4xl mx-auto md:grid-cols-3">
+            <div className="flex items-center gap-4 md:flex-col md:text-center md:items-center bg-background/70 border border-border rounded-2xl p-4 sm:p-5 shadow-md">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-secondary text-primary-foreground rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-bold shadow-lg">
                 1
               </div>
-              <p className="font-semibold text-foreground mb-1">Click Apply Now</p>
+              <div className="text-left md:text-center">
+                <p className="font-semibold text-foreground mb-1 text-base sm:text-lg">Click Apply Now</p>
               <p className="text-sm text-muted-foreground">Start your application</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary text-primary-foreground rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg">
+            </div>
+            <div className="flex items-center gap-4 md:flex-col md:text-center md:items-center bg-background/70 border border-border rounded-2xl p-4 sm:p-5 shadow-md">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-secondary text-primary-foreground rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-bold shadow-lg">
                 2
               </div>
-              <p className="font-semibold text-foreground mb-1">Complete KYC Details</p>
+              <div className="text-left md:text-center">
+                <p className="font-semibold text-foreground mb-1 text-base sm:text-lg">Complete KYC Details</p>
               <p className="text-sm text-muted-foreground">Submit your documents</p>
             </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary text-primary-foreground rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg">
+            </div>
+            <div className="flex items-center gap-4 md:flex-col md:text-center md:items-center bg-background/70 border border-border rounded-2xl p-4 sm:p-5 shadow-md">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-secondary text-primary-foreground rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-bold shadow-lg">
                 3
               </div>
-              <p className="font-semibold text-foreground mb-1">Get Instant Decision</p>
+              <div className="text-left md:text-center">
+                <p className="font-semibold text-foreground mb-1 text-base sm:text-lg">Get Instant Decision</p>
               <p className="text-sm text-muted-foreground">Approval in 60 seconds</p>
+              </div>
             </div>
           </div>
           <div className="text-center">
-            <Button size="lg" onClick={handleApply} className="px-8 shadow-lg hover:shadow-xl transition-all">
+            <Button size="lg" onClick={handleApply} className="w-full sm:w-auto px-8 shadow-lg hover:shadow-xl transition-all touch-target">
               Apply Now - Get Instant Decision
               <ExternalLink className="ml-2 w-5 h-5" />
             </Button>

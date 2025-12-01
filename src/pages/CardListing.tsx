@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import GeniusDialog from "@/components/GeniusDialog";
 import { CompareToggleIcon } from "@/components/comparison/CompareToggleIcon";
 import { ComparePill } from "@/components/comparison/ComparePill";
+import { useComparison } from "@/contexts/ComparisonContext";
 import { redirectToCardApplication } from "@/utils/redirectHandler";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,9 +36,20 @@ const CardListing = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
   const [eligibilitySubmitted, setEligibilitySubmitted] = useState(false);
+  const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>([]);
   const [showGeniusDialog, setShowGeniusDialog] = useState(false);
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
+  const [showStickyEligibility, setShowStickyEligibility] = useState(false);
+  const [showStickyFilter, setShowStickyFilter] = useState(false);
+  const lastScrollY = useRef(0);
+  const heroRef = useRef<HTMLElement | null>(null);
+  const eligibilityRef = useRef<HTMLDivElement | null>(null);
+  const filtersRef = useRef<HTMLDivElement | null>(null);
+  const cardsRef = useRef<HTMLDivElement | null>(null);
+
+  // Comparison context (for mobile "View Compare" action)
+  const { selectedCards } = useComparison();
 
   // Get category from URL params, default to "all"
   const initialCategory = normalizeCategory(searchParams.get('category'));
@@ -82,6 +94,28 @@ const CardListing = () => {
       abortControllerRef.current?.abort();
     };
   }, []);
+
+  // Scroll listener for sticky elements
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const isScrollingUp = currentY < lastScrollY.current;
+      lastScrollY.current = currentY;
+
+      setShowStickyEligibility(isScrollingUp && currentY > 300 && !eligibilitySubmitted);
+      setShowStickyFilter(currentY > 60);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [eligibilitySubmitted]);
+
+  const scrollToSection = (ref: React.RefObject<HTMLElement | HTMLDivElement>) => {
+    if (!ref.current) return;
+    const offset = window.innerWidth < 1024 ? 70 : 0;
+    const top = ref.current.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: 'smooth' });
+  };
 
   const fetchCards = async () => {
     abortControllerRef.current?.abort();
@@ -205,7 +239,7 @@ const CardListing = () => {
       setCards([]);
     } finally {
       if (!controller.signal.aborted) {
-        setLoading(false);
+      setLoading(false);
       }
     }
   };
@@ -256,15 +290,29 @@ const CardListing = () => {
     return [...cards].sort(compareCardsByPriority);
   }, [cards, filters.category]);
 
-  const filteredCards = sortedCards.filter(card => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const cardName = (card.name || '').toLowerCase();
-    const bankName = (card.banks?.name || '').toLowerCase();
-    const cardType = (card.card_type || '').toLowerCase();
-    const benefits = (card.benefits || '').toLowerCase();
-    return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
-  });
+  const filteredCards = useMemo(() => {
+    // 1) Apply search filter
+    let base = sortedCards.filter(card => {
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.toLowerCase();
+      const cardName = (card.name || '').toLowerCase();
+      const bankName = (card.banks?.name || '').toLowerCase();
+      const cardType = (card.card_type || '').toLowerCase();
+      const benefits = (card.benefits || '').toLowerCase();
+      return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
+    });
+
+    // 2) Apply eligibility filter purely on frontend (seo_card_alias mapping)
+    if (eligibilitySubmitted && eligibleCardAliases.length > 0) {
+      const eligibleSet = new Set(eligibleCardAliases.map(String));
+      base = base.filter(card => {
+        const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias;
+        return alias && eligibleSet.has(String(alias));
+      });
+    }
+
+    return base;
+  }, [sortedCards, searchQuery, eligibilitySubmitted, eligibleCardAliases]);
   const loadMore = () => {
     setIsLoadingMore(true);
     setTimeout(() => {
@@ -326,6 +374,7 @@ const CardListing = () => {
 
     // Reset eligibility data
     setEligibilitySubmitted(false);
+    setEligibleCardAliases([]);
     setEligibility({
       pincode: "",
       inhandIncome: "",
@@ -345,21 +394,61 @@ const CardListing = () => {
       toast.error("Please enter a valid monthly income");
       return;
     }
-    setEligibilitySubmitted(true);
-    setEligibilityOpen(false);
+    try {
+      // Call dedicated eligibility API to determine which cards are eligible
+      const response = await fetch('https://bk-api.bankkaro.com/sp/api/cg-eligiblity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pincode: eligibility.pincode,
+          inhandIncome: eligibility.inhandIncome,
+          empStatus: eligibility.empStatus
+        })
+      });
 
-    // Refetch cards with eligibility criteria
-    await fetchCards();
-    toast.success("Eligibility criteria applied!", {
-      description: "Showing cards matching your profile"
-    });
-    confetti({
-      particleCount: 60,
-      spread: 50,
-      origin: {
-        y: 0.6
+      const data = await response.json();
+
+      if (data?.status && Array.isArray(data.data)) {
+        const eligibleCards = data.data.filter((card: any) => card.eligible === true);
+        const ineligibleCount = data.data.length - eligibleCards.length;
+        const aliases = eligibleCards
+          .map((card: any) => card.seo_card_alias || card.card_alias)
+          .filter(Boolean);
+
+        setEligibleCardAliases(aliases);
+        setEligibilitySubmitted(true);
+        setEligibilityOpen(false);
+
+        // Refetch cards with eligibility criteria and other filters
+        await fetchCards();
+
+        if (aliases.length > 0) {
+          toast.success("Eligibility criteria applied!", {
+            description: `${ineligibleCount} cards filtered out. Showing ${aliases.length} eligible cards.`
+          });
+          confetti({
+            particleCount: 60,
+            spread: 50,
+            origin: {
+              y: 0.6
+            }
+          });
+        } else {
+          toast.error("No Eligible Cards", {
+            description: "No cards match your eligibility criteria"
+          });
+        }
+      } else {
+        toast.error("No Eligible Cards", {
+          description: "No cards match your eligibility criteria"
+        });
       }
-    });
+    } catch (error) {
+      console.error('Eligibility check error:', error);
+      toast.error("We couldn't check eligibility right now. Please try again.");
+    }
   };
   const handleGeniusSubmit = async (spendingData: SpendingData) => {
     try {
@@ -455,14 +544,14 @@ const CardListing = () => {
   };
 
   // Filter sidebar component
-  const FilterSidebar = () => <div className="space-y-4">
+  const FilterSidebar = () => <div className="space-y-3">
       {/* Category Filter - Open by default */}
       <Collapsible defaultOpen={true}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 hover:bg-muted/30 rounded-lg transition-colors text-left font-semibold touch-target">
           <h3 className="font-semibold">Category</h3>
           <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3 space-y-2">
+        <CollapsibleContent className="pt-2 space-y-2 pl-1">
           {[{
           id: 'all',
           label: 'All Cards',
@@ -491,8 +580,8 @@ const CardListing = () => {
           id: 'travel',
           label: 'Travel',
           icon: Plane
-        }].map(cat => <label key={cat.id} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-muted/30 rounded-lg transition-colors">
-              <input type="radio" name="category" className="accent-primary w-4 h-4" checked={filters.category === cat.id} onChange={() => handleFilterChange('category', cat.id)} />
+        }].map(cat => <label key={cat.id} className="filter-option flex items-center gap-3 cursor-pointer px-3 py-3 transition-all touch-target">
+              <input type="radio" name="category" className="accent-primary w-5 h-5" checked={filters.category === cat.id} onChange={() => handleFilterChange('category', cat.id)} />
               <cat.icon className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm flex-1">{cat.label}</span>
             </label>)}
@@ -501,11 +590,11 @@ const CardListing = () => {
 
       {/* Annual Fee Range - Collapsed by default */}
       <Collapsible defaultOpen={false}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 hover:bg-muted/30 rounded-lg transition-colors touch-target">
           <h3 className="font-semibold">Annual Fee Range</h3>
           <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3 space-y-2">
+        <CollapsibleContent className="pt-2 space-y-2 pl-1">
           {[{
           label: 'All Fees',
           value: ''
@@ -524,8 +613,8 @@ const CardListing = () => {
         }, {
           label: '₹5,000+',
           value: '5000+'
-        }].map(fee => <label key={fee.value} className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="annualFee" className="accent-primary" checked={filters.annualFees === fee.value} onChange={() => handleFilterChange('annualFees', fee.value)} />
+        }].map(fee => <label key={fee.value} className="filter-option flex items-center gap-3 cursor-pointer px-3 py-3 transition-all touch-target">
+              <input type="radio" name="annualFee" className="accent-primary w-5 h-5" checked={filters.annualFees === fee.value} onChange={() => handleFilterChange('annualFees', fee.value)} />
               <span className="text-sm">{fee.label}</span>
             </label>)}
         </CollapsibleContent>
@@ -561,13 +650,13 @@ const CardListing = () => {
 
       {/* Card Network - Collapsed by default */}
       <Collapsible defaultOpen={false}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 hover:bg-muted/30 rounded-lg transition-colors text-left font-semibold touch-target">
           <h3 className="font-semibold">Card Network</h3>
           <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3 space-y-2">
-          {['VISA', 'Mastercard', 'RuPay', 'AmericanExpress'].map(network => <label key={network} className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="accent-primary" checked={filters.card_networks.includes(network)} onChange={e => {
+        <CollapsibleContent className="pt-2 space-y-2 pl-1">
+          {['VISA', 'Mastercard', 'RuPay', 'AmericanExpress'].map(network => <label key={network} className="filter-option flex items-center gap-3 cursor-pointer px-3 py-3 transition-all touch-target">
+              <input type="checkbox" className="accent-primary w-5 h-5" checked={filters.card_networks.includes(network)} onChange={e => {
             setFilters((prev: any) => ({
               ...prev,
               card_networks: e.target.checked ? [...prev.card_networks, network] : prev.card_networks.filter((n: string) => n !== network)
@@ -583,41 +672,57 @@ const CardListing = () => {
       <Navigation />
       
       {/* Hero Search */}
-      <section className="pt-28 pb-12 bg-gradient-hero">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight lg:text-[[2.75rem]] xl:text-4xl">
+      <section ref={heroRef} className="hero-card-listing pt-24 sm:pt-28 pb-8 sm:pb-12 bg-gradient-hero">
+        <div className="section-shell">
+          {/* Mobile & Desktop unified layout */}
+          <div className="max-w-3xl mx-auto text-center mb-6 sm:mb-8 space-y-2 sm:space-y-3 px-4 hero-card-listing-header">
+            <h1 className="hero-card-listing-title text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
               Discover India's Best Credit&nbsp;Cards
             </h1>
           </div>
           
-          <div className="max-w-2xl mx-auto">
-            <div className="flex gap-2">
+          <div className="max-w-2xl mx-auto px-4 sm:px-0 hero-card-listing-body">
+            <div className="hero-card-listing-actions flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                <Input type="text" placeholder="Search by card name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="pl-12 h-14 text-lg" />
-                {searchQuery && <button onClick={() => {
+                  <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 sm:w-5 sm:h-5" />
+                  <Input 
+                    type="text" 
+                    placeholder="Search by card name..." 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && handleSearch()} 
+                    className="hero-card-listing-input pl-10 sm:pl-12 pr-10 sm:pr-12 h-12 sm:h-14 text-sm sm:text-base md:text-lg rounded-xl touch-target" 
+                  />
+                  {searchQuery && (
+                    <button onClick={() => {
                 setSearchQuery("");
                 handleSearch();
-              }} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    <X className="w-5 h-5" />
-                  </button>}
-              </div>
-              <Button size="lg" onClick={handleSearch}>
-                Search
-              </Button>
+                    }} className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground touch-target p-1">
+                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  )}
             </div>
-          </div>
+                <Button
+                  size="lg"
+                  className="hero-card-listing-search-btn h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 touch-target"
+                  onClick={handleSearch}
+                >
+                  <span className="hidden xs:inline">Search</span>
+                  <Search className="w-4 h-4 xs:hidden" />
+                </Button>
+              </div>
+            </div>
         </div>
       </section>
 
+
       {/* Main Content */}
       <section className="flex-1 overflow-hidden">
-        <div className="container mx-auto px-4 h-full flex flex-col">
-          <div className="flex gap-8 h-full overflow-hidden py-6">
+        <div className="section-shell h-full flex flex-col">
+          <div className="flex flex-col lg:flex-row gap-8 h-full overflow-visible py-6">
             {/* Desktop Filters Sidebar */}
-            <aside className="hidden lg:block w-64 flex-shrink-0 overflow-y-auto">
-              <div className="bg-card rounded-2xl shadow-lg p-6 sticky top-0">
+            <aside className="hidden lg:block w-72 flex-shrink-0 overflow-y-auto">
+              <div className="bg-card rounded-2xl shadow-lg p-6 sticky top-28">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold">Filters</h2>
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
@@ -629,23 +734,112 @@ const CardListing = () => {
             </aside>
 
             {/* Card Grid */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Horizontal Eligibility Bar - Sticky at top */}
-              <div className="bg-card rounded-2xl shadow-lg border border-border/50 p-6 mb-6 flex-shrink-0">
+            <div className="flex-1 flex flex-col overflow-visible">
+              {/* Eligibility Section - Collapsible on Mobile, Always Visible on Desktop */}
+              <div ref={eligibilityRef} className="mb-4 sm:mb-6">
+                {/* Mobile: Collapsible */}
+                <div className="lg:hidden">
+                  <Collapsible open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200/60 dark:border-emerald-800/30 overflow-hidden">
+                      <CollapsibleTrigger className="w-full p-3 sm:p-4 flex items-center justify-between hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-colors touch-target">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-500 flex-shrink-0" />
+                          <div className="text-left">
+                            <h3 className="font-semibold text-xs sm:text-sm text-foreground">Check Eligibility</h3>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Quick 3-field check</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground transition-transform ui-state-open:rotate-180" />
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent>
+                        <div className="p-3 sm:p-4 pt-0">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 items-end">
+                            <div>
+                              <Input 
+                                type="text" 
+                                inputMode="numeric" 
+                                placeholder="Pincode" 
+                                maxLength={6} 
+                                value={eligibility.pincode} 
+                                onChange={e => setEligibility(prev => ({
+                                  ...prev,
+                                  pincode: e.target.value.replace(/\D/g, '')
+                                }))} 
+                                className="h-11 text-sm rounded-lg bg-white dark:bg-background" 
+                              />
+                            </div>
+                            <div>
+                              <Input 
+                                type="number" 
+                                placeholder="Monthly Income" 
+                                value={eligibility.inhandIncome} 
+                                onChange={e => setEligibility(prev => ({
+                                  ...prev,
+                                  inhandIncome: e.target.value
+                                }))} 
+                                className="h-11 text-sm rounded-lg bg-white dark:bg-background" 
+                              />
+                            </div>
+                            <div>
+                              <Select value={eligibility.empStatus} onValueChange={value => setEligibility(prev => ({
+                                ...prev,
+                                empStatus: value
+                              }))}>
+                                <SelectTrigger className="h-11 text-sm rounded-lg bg-white dark:bg-background">
+                                  <SelectValue placeholder="Employment" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card z-50">
+                                  <SelectItem value="salaried">Salaried</SelectItem>
+                                  <SelectItem value="self-employed">Self-Employed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Button 
+                              onClick={handleEligibilitySubmit} 
+                              size="lg" 
+                              className="h-11 gap-2 w-full bg-emerald-600 hover:bg-emerald-700" 
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span className="text-sm font-semibold">{eligibilitySubmitted ? "Applied" : "Check"}</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                </div>
+
+                {/* Desktop: Always Visible */}
+                <div className="hidden lg:block bg-card rounded-2xl shadow-lg border border-border/50 p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pincode</label>
-                    <Input type="text" inputMode="numeric" placeholder="Enter 6-digit pincode" maxLength={6} value={eligibility.pincode} onChange={e => setEligibility(prev => ({
+                      <Input 
+                        type="text" 
+                        inputMode="numeric" 
+                        placeholder="Enter 6-digit pincode" 
+                        maxLength={6} 
+                        value={eligibility.pincode} 
+                        onChange={e => setEligibility(prev => ({
                     ...prev,
                     pincode: e.target.value.replace(/\D/g, '')
-                  }))} className="h-12" />
+                        }))} 
+                        className="h-12" 
+                      />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Monthly Income (₹)</label>
-                    <Input type="number" placeholder="e.g., 50000" value={eligibility.inhandIncome} onChange={e => setEligibility(prev => ({
+                      <Input 
+                        type="number" 
+                        placeholder="e.g., 50000" 
+                        value={eligibility.inhandIncome} 
+                        onChange={e => setEligibility(prev => ({
                     ...prev,
                     inhandIncome: e.target.value
-                  }))} className="h-12" />
+                        }))} 
+                        className="h-12" 
+                      />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Employment Status</label>
@@ -662,14 +856,21 @@ const CardListing = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleEligibilitySubmit} size="lg" className="h-12 gap-2" variant={eligibilitySubmitted ? "default" : "default"}>
+                    <Button 
+                      onClick={handleEligibilitySubmit} 
+                      size="lg" 
+                      className="h-12 gap-2" 
+                      variant={eligibilitySubmitted ? "default" : "default"}
+                    >
                     <CheckCircle2 className="w-5 h-5" />
                     {eligibilitySubmitted ? "Eligibility Applied" : "Check Eligibility"}
                   </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* AI Card Genius Promo - Show only when category is selected (not "All Cards") */}
+
+              {/* AI Card Genius Promo - Desktop Only */}
               {filters.category !== 'all' && (() => {
               const categoryLabels: Record<string, string> = {
                 'fuel': 'Fuel',
@@ -681,7 +882,7 @@ const CardListing = () => {
                 'utility': 'Utility'
               };
               const categoryName = categoryLabels[filters.category] || 'Category';
-              return <div className="mb-4 bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-200/60 dark:border-emerald-800/30 rounded-xl p-3">
+              return <div className="hidden lg:block mb-4 bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-200/60 dark:border-emerald-800/30 rounded-xl p-3">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                       <div className="flex items-center gap-2.5 flex-1">
                         <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-500 flex-shrink-0" />
@@ -701,24 +902,58 @@ const CardListing = () => {
                   </div>;
             })()}
 
-              {/* Mobile Filter Button */}
-              <div className="lg:hidden mb-4 flex items-center justify-between">
+              {/* Desktop Filter Info */}
+              <div className="hidden lg:flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">
                   Showing {Math.min(displayCount, filteredCards.length)} of {filteredCards.length} cards
                 </p>
+              </div>
+
+              {/* Mobile Filter Info Bar - Just show count */}
+              <div ref={filtersRef} className="lg:hidden mb-3">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{filteredCards.length}</span> cards found
+                  </p>
+                  {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted) && (
+                    <button 
+                      onClick={clearFilters}
+                      className="text-xs text-primary hover:text-primary/80 font-semibold"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                
+                {/* Hidden sheet trigger for programmatic open */}
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filters
-                    </Button>
+                    <button id="mobile-filter-trigger" className="hidden"></button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-80 overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle>Filters</SheetTitle>
+                  <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl px-0">
+                      <div className="drag-handle" />
+                      <SheetHeader className="text-left mb-4 px-4">
+                        <div className="flex items-center justify-between">
+                          <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
+                          <span className="text-xs text-muted-foreground">{filteredCards.length} cards</span>
+                        </div>
                     </SheetHeader>
-                    <div className="mt-6">
+                      <div className="overflow-y-auto h-[calc(70vh-140px)] px-4 space-y-5 pb-24">
                       <FilterSidebar />
+                    </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-background border-t border-border p-4 shadow-lg">
+                        <div className="flex gap-3">
+                          <SheetClose asChild>
+                            <Button variant="outline" className="flex-1 h-11 text-sm font-semibold" onClick={clearFilters}>
+                              Clear
+                            </Button>
+                          </SheetClose>
+                          <SheetClose asChild>
+                            <Button className="flex-1 h-11 text-sm font-bold">
+                              Show {filteredCards.length} Cards
+                            </Button>
+                          </SheetClose>
+                        </div>
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -797,25 +1032,25 @@ const CardListing = () => {
                 </div>}
 
               {/* Cards Grid - Scrollable */}
-              <div className="flex-1 overflow-y-auto">
-              {loading ? <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                  <p className="mt-4 text-muted-foreground">Loading cards...</p>
-                </div> : filteredCards.length === 0 ? <div className="text-center py-12">
-                  <p className="text-xl text-muted-foreground">No cards found matching your criteria</p>
-                  <Button variant="outline" className="mt-4" onClick={clearFilters}>
-                    Clear Filters
+              <div ref={cardsRef} className="flex-1 overflow-y-auto px-1">
+              {loading ? <div className="text-center py-16">
+                  <div className="inline-block w-10 h-10 sm:w-12 sm:h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <p className="mt-4 sm:mt-6 text-sm sm:text-base text-muted-foreground">Loading your perfect cards...</p>
+                </div> : filteredCards.length === 0 ? <div className="text-center py-16 px-4">
+                  <p className="text-lg sm:text-xl text-muted-foreground mb-4">No cards found matching your criteria</p>
+                  <Button variant="outline" className="mt-4 touch-target" onClick={clearFilters}>
+                    Clear All Filters
                   </Button>
                 </div> : <>
-                  <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 pb-6">
-                    {filteredCards.slice(0, displayCount).map((card, index) => <div key={card.id || index} className="bg-card rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-2 flex flex-col h-full">
-                        <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-4 flex-shrink-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 pb-6">
+                    {filteredCards.slice(0, displayCount).map((card, index) => <div key={card.id || index} className="card-item bg-card rounded-xl sm:rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:scale-[1.02] lg:hover:-translate-y-2 flex flex-col h-full active:scale-[0.98]">
+                        <div className="card-image-container relative h-40 sm:h-44 md:h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-3 sm:p-4 flex-shrink-0">
                           {/* Compare Toggle Icon - Top Right */}
                           <div className="absolute top-3 right-3 z-20">
                             <CompareToggleIcon card={card} />
                           </div>
 
-                          {/* Savings Badge - Top Left */}
+                          {/* Savings Badge */}
                           {filters.category !== 'all' && (() => {
                       const categorySavings = cardSavings[filters.category] || {};
                       const cardKey = getCardKey(card);
@@ -835,16 +1070,21 @@ const CardListing = () => {
                       return null;
                     })()}
 
-                          {/* Eligibility Badge - Only show if not showing LTF */}
-                          {eligibilitySubmitted && !(() => {
+                          {/* Eligibility Badge - Only show for cards that are actually eligible (and not already showing savings or LTF) */}
+                          {eligibilitySubmitted && eligibleCardAliases.length > 0 && !(() => {
                       const categorySavings = cardSavings[filters.category] || {};
                       const cardKey = getCardKey(card);
                       const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
-                      return !saving && (card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free");
-                    })() && <Badge className="absolute bottom-3 right-3 bg-green-500 gap-1 z-10">
+                      return saving !== undefined && saving !== null;
+                    })() && !((card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free")) && (() => {
+                      const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias;
+                      return alias && eligibleCardAliases.includes(String(alias));
+                    })() && (
+                            <Badge className="absolute bottom-3 right-3 bg-green-500 gap-1 z-10">
                               <CheckCircle2 className="w-3 h-3" />
                               Eligible
-                            </Badge>}
+                            </Badge>
+                          )}
 
                           {/* LTF Badge */}
                           {(() => {
@@ -859,37 +1099,60 @@ const CardListing = () => {
                     }} />
                         </div>
 
-                        <div className="p-6 flex flex-col flex-grow">
-                          <div className="mb-2 flex items-center gap-2 flex-wrap">
+                        <div className="p-5 sm:p-6 flex flex-col flex-grow gap-4">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs">
-                              {card.card_type}
+                                {card.card_type || 'Credit Card'}
                             </Badge>
                             {card.banks?.name && <span className="text-xs text-muted-foreground">{card.banks.name}</span>}
+                            </div>
+                            {card.card_type && <span className="text-[11px] text-muted-foreground bg-muted/40 rounded-full px-2 py-0.5">
+                                {card.card_type}
+                              </span>}
                           </div>
           
-                          <h3 className="text-xl font-bold mb-4 line-clamp-2 min-h-[3.5rem]">{card.name}</h3>
+                          <div className="space-y-1.5">
+                            <h3 className="text-lg sm:text-xl font-bold leading-snug line-clamp-2">{card.name}</h3>
+                            {(card.reward_rate || card.welcome_bonus) && <p className="text-xs text-muted-foreground line-clamp-2 md:hidden">
+                                {card.reward_rate || card.welcome_bonus}
+                              </p>}
+                          </div>
                           
-                          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg mb-6 min-h-[88px] flex-grow-0">
+                          <div className="grid grid-cols-2 gap-3 md:gap-4 p-3 md:p-4 bg-muted/30 rounded-lg">
                             <div className="flex flex-col">
-                              <p className="text-xs text-muted-foreground mb-1.5">Joining Fee</p>
-                              <p className="text-sm font-semibold mt-auto">
+                              <p className="text-[11px] text-muted-foreground mb-1">Joining</p>
+                              <p className="text-sm font-semibold">
                                 {card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase() === "free" ? "Free" : `₹${card.joining_fee_text}`}
                               </p>
                             </div>
                             <div className="flex flex-col">
-                              <p className="text-xs text-muted-foreground mb-1.5">Annual Fee</p>
-                              <p className="text-sm font-semibold mt-auto">
+                              <p className="text-[11px] text-muted-foreground mb-1">Annual</p>
+                              <p className="text-sm font-semibold">
                                 {card.annual_fee_text === "0" || card.annual_fee_text?.toLowerCase() === "free" ? "Free" : `₹${card.annual_fee_text}`}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex gap-2 mt-auto">
+                          <div className="grid grid-cols-2 gap-2 md:hidden text-center text-[10px] text-muted-foreground">
+                            <div className="bg-muted/20 rounded-lg py-2">
+                              <p className="font-semibold text-foreground text-xs">Apply Time</p>
+                              <p>2 mins</p>
+                            </div>
+                            <div className="bg-muted/20 rounded-lg py-2">
+                              <p className="font-semibold text-foreground text-xs">Approval</p>
+                              <p>High chance</p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row gap-2 mt-auto">
                             <Link to={`/cards/${getCardAlias(card) || card.id}`} className="flex-1">
-                              <Button variant="outline" className="w-full">Details</Button>
+                              <Button variant="outline" className="w-full h-11 md:h-10 text-sm font-semibold">
+                                Details
+                              </Button>
                             </Link>
-                            <Button className="flex-1" onClick={() => handleApplyClick(card)}>
-                              Apply
+                            <Button className="flex-1 h-11 md:h-10 text-sm font-semibold" onClick={() => handleApplyClick(card)}>
+                              Apply&nbsp;Now
                             </Button>
                           </div>
                         </div>
@@ -897,12 +1160,21 @@ const CardListing = () => {
                   </div>
                   
                   {/* Load More Button */}
-                  {displayCount < filteredCards.length && <div className="text-center mt-8">
-                      <Button size="lg" variant="outline" onClick={loadMore} disabled={isLoadingMore}>
+                  {displayCount < filteredCards.length && <div className="text-center mt-6 sm:mt-8 px-4 sm:px-0">
+                      <Button 
+                        size="lg" 
+                        className="w-full sm:w-auto sm:min-w-[280px] touch-target h-12 sm:h-14 font-semibold" 
+                        variant="outline" 
+                        onClick={loadMore} 
+                        disabled={isLoadingMore}
+                      >
                         {isLoadingMore ? <>
                             <div className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Loading...
-                          </> : `Load More Cards (${filteredCards.length - displayCount} remaining)`}
+                            <span className="text-sm sm:text-base">Loading...</span>
+                          </> : <>
+                            <span className="text-sm sm:text-base">Load More Cards</span>
+                            <span className="ml-2 text-xs sm:text-sm opacity-70">({filteredCards.length - displayCount} remaining)</span>
+                          </>}
                       </Button>
                     </div>}
                 </>}
@@ -912,10 +1184,81 @@ const CardListing = () => {
         </div>
       </section>
 
+      {/* Sticky Eligibility Bar (Top) - Shows on scroll */}
+      {showStickyEligibility && !eligibilitySubmitted && (
+        <div className="lg:hidden fixed top-14 left-0 right-0 z-40 bg-white dark:bg-background border-b border-border shadow-md animate-in slide-in-from-top duration-300">
+          <div className="px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-semibold">Check Eligibility</span>
+            </div>
+            <Button 
+              size="sm" 
+              onClick={() => {
+                setEligibilityOpen(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700"
+            >
+              Quick Check
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Try Genius Widget (Bottom-Right) - Shows when category selected */}
+      {filters.category !== 'all' && !showGeniusDialog && (
+        <button
+          onClick={() => setShowGeniusDialog(true)}
+          className="lg:hidden fixed bottom-20 right-4 z-50 bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-700 hover:to-emerald-700 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 p-3 sm:p-4 flex items-center gap-2 animate-in zoom-in duration-300 touch-target group active:scale-95 transition-all"
+          style={{ bottom: showStickyFilter ? '80px' : '20px' }}
+        >
+          <div className="relative">
+            <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+          </div>
+          <span className="font-bold text-sm whitespace-nowrap">Try Genius</span>
+        </button>
+      )}
+
+      {/* Sticky Filter Button (Bottom) - Shows on scroll */}
+      {showStickyFilter && (
+        <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom duration-300 px-4 w-full">
+          <div className="bg-card/95 backdrop-blur-md border border-primary/40 rounded-full shadow-2xl px-4 py-2 flex items-center justify-center gap-3">
+            {/* Filters trigger */}
+            <button
+              onClick={() => document.getElementById('mobile-filter-trigger')?.click()}
+              className="flex items-center gap-2 text-foreground text-xs font-semibold"
+            >
+              <Filter className="w-4 h-4" />
+              <span>Filters</span>
+              {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted) && (
+                <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] rounded-full font-bold">
+                  {[filters.category !== 'all', filters.card_networks.length > 0, filters.annualFees, eligibilitySubmitted].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+
+            {/* Divider */}
+            {selectedCards.length > 0 && (
+              <>
+                <span className="h-5 w-px bg-border" />
+                <button
+                  onClick={() => window.dispatchEvent(new Event('openComparison'))}
+                  className="text-primary font-semibold text-xs"
+                >
+                  View Compare
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Genius Dialog */}
       <GeniusDialog open={showGeniusDialog} onOpenChange={setShowGeniusDialog} category={filters.category} onSubmit={handleGeniusSubmit} />
 
-      {/* Comparison Pill */}
+      {/* Comparison Pill - visible on mobile & desktop */}
       <ComparePill />
       
       <Footer />
