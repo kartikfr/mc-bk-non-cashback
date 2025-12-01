@@ -1100,16 +1100,15 @@ const CardListing = () => {
                         </div>
 
                         <div className="p-5 sm:p-6 flex flex-col flex-grow gap-4">
-                          <div className="flex items-start justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs">
-                                {card.card_type || 'Credit Card'}
+                              {card.card_type || 'Credit Card'}
                             </Badge>
-                            {card.banks?.name && <span className="text-xs text-muted-foreground">{card.banks.name}</span>}
-                            </div>
-                            {card.card_type && <span className="text-[11px] text-muted-foreground bg-muted/40 rounded-full px-2 py-0.5">
-                                {card.card_type}
-                              </span>}
+                            {card.banks?.name && (
+                              <span className="text-xs text-muted-foreground">
+                                {card.banks.name}
+                              </span>
+                            )}
                           </div>
           
                           <div className="space-y-1.5">
@@ -1131,17 +1130,6 @@ const CardListing = () => {
                               <p className="text-sm font-semibold">
                                 {card.annual_fee_text === "0" || card.annual_fee_text?.toLowerCase() === "free" ? "Free" : `₹${card.annual_fee_text}`}
                               </p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 md:hidden text-center text-[10px] text-muted-foreground">
-                            <div className="bg-muted/20 rounded-lg py-2">
-                              <p className="font-semibold text-foreground text-xs">Apply Time</p>
-                              <p>2 mins</p>
-                            </div>
-                            <div className="bg-muted/20 rounded-lg py-2">
-                              <p className="font-semibold text-foreground text-xs">Approval</p>
-                              <p>High chance</p>
                             </div>
                           </div>
 
