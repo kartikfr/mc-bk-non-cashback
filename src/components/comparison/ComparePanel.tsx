@@ -168,6 +168,9 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
     };
   });
 
+  // Active cards used in UI (no empty slots)
+  const activeCards = resolvedSlots.filter(Boolean);
+
   const handleApply = (card: any) => {
     const success = redirectToCardApplication(card);
     if (!success) {
@@ -264,12 +267,12 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] h-[90vh] p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <DialogTitle className="text-2xl font-bold">Compare Credit Cards</DialogTitle>
+        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] h-[92vh] sm:h-[90vh] p-0">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
+            <DialogTitle className="text-xl sm:text-2xl font-bold">Compare Credit Cards</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-full px-6 pb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <ScrollArea className="h-full px-4 sm:px-6 pb-4 sm:pb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
               {resolvedSlots.map((card, index) => (
                 <div key={index} className="border rounded-lg p-4 bg-card">
                   {card ? (
@@ -283,8 +286,8 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="absolute top-2 right-2 bg-background/80 hover:bg-background"
-                          onClick={() => removeCard(card.id?.toString() || card.seo_card_alias)}
+                          className="absolute top-1 sm:top-2 right-1 sm:right-2 bg-background/80 hover:bg-background touch-target h-8 w-8 sm:h-9 sm:w-9"
+                          onClick={() => removeCard(getCardKey(card))}
                         >
                           <X className="w-4 h-4" />
                         </Button>
@@ -308,15 +311,15 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="relative w-full h-40 flex items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed">
-                        <Plus className="w-12 h-12 text-muted-foreground" />
+                      <div className="relative w-full h-32 sm:h-40 flex items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed">
+                        <Plus className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
                       </div>
                       <div className="space-y-2 relative">
                         <Input
                           placeholder="Search for a card..."
                           value={searchQueries[index]}
                           onChange={(e) => handleSearchChange(index, e.target.value)}
-                          className="w-full"
+                          className="w-full text-sm sm:text-base touch-target"
                         />
                         {searchResults[index].length > 0 && (
                           <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-60 overflow-auto">
@@ -361,41 +364,95 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
 
             {selectedCards.length >= 2 && (
               <div className="space-y-6">
-                {comparisonSections.map((section) => (
-                  <div key={section.id} className="border rounded-lg overflow-hidden">
-                    <div className="bg-muted px-4 py-3">
-                      <h3 className="font-semibold text-lg">{section.title}</h3>
-                    </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[200px] min-w-[200px] font-semibold sticky left-0 bg-background z-10">
-                            Attribute
-                          </TableHead>
-                          {resolvedSlots.filter(Boolean).map((card, idx) => (
-                            <TableHead key={idx} className="font-semibold text-center min-w-[280px] w-[280px]">
-                              {card?.name || 'Card'}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                {/* Mobile-friendly stacked comparison */}
+                <div className="space-y-4 sm:hidden">
+                  {comparisonSections.map((section) => (
+                    <div key={section.id} className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted px-4 py-3">
+                        <h3 className="font-semibold text-base">{section.title}</h3>
+                      </div>
+                      <div className="divide-y">
                         {section.rows.map((row) => (
-                          <TableRow key={row.key} className="hover:bg-muted/50">
-                            <TableCell className="font-medium align-top w-[200px] min-w-[200px] sticky left-0 bg-background z-10">
+                          <div key={row.key} className="px-4 py-3">
+                            <div className="text-[11px] font-semibold text-muted-foreground mb-2">
                               {row.label}
-                            </TableCell>
-                            {resolvedSlots.filter(Boolean).map((card, idx) => (
-                              <TableCell key={idx} className="align-top min-w-[280px] w-[280px]">
-                                {renderCellValue(card, row)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
+                            </div>
+                            <div
+                              className={cn(
+                                "grid gap-2",
+                                activeCards.length === 1 && "grid-cols-1",
+                                activeCards.length === 2 && "grid-cols-2",
+                                activeCards.length >= 3 && "grid-cols-3"
+                              )}
+                            >
+                              {activeCards.map((card, idx) => (
+                                <div
+                                  key={idx}
+                                  className="border rounded-md bg-background/70 px-2.5 py-2 space-y-1"
+                                >
+                                  <div className="text-[10px] font-semibold line-clamp-2 min-h-[1.5rem]">
+                                    {card?.name || 'Card'}
+                                  </div>
+                                  <div className="text-[10px] leading-snug">
+                                    {renderCellValue(card, row)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tablet / Desktop table view */}
+                <div className="hidden sm:block space-y-6">
+                  {comparisonSections.map((section) => (
+                    <div key={section.id} className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted px-4 py-3">
+                        <h3 className="font-semibold text-lg">{section.title}</h3>
+                      </div>
+                      {/* Make the comparison table horizontally scrollable on small tablet widths */}
+                      <div className="w-full overflow-x-auto">
+                        <Table className="min-w-[680px] sm:min-w-full">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] font-semibold sticky left-0 bg-background z-10 text-sm sm:text-base">
+                                Attribute
+                              </TableHead>
+                              {activeCards.map((card, idx) => (
+                                <TableHead
+                                  key={idx}
+                                  className="font-semibold text-center min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-sm sm:text-base"
+                                >
+                                  {card?.name || 'Card'}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {section.rows.map((row) => (
+                              <TableRow key={row.key} className="hover:bg-muted/50">
+                                <TableCell className="font-medium align-top w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] sticky left-0 bg-background z-10 text-xs sm:text-sm">
+                                  {row.label}
+                                </TableCell>
+                                {activeCards.map((card, idx) => (
+                                  <TableCell
+                                    key={idx}
+                                    className="align-top min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-xs sm:text-sm"
+                                  >
+                                    {renderCellValue(card, row)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
                   {resolvedSlots.filter(Boolean).map((card, idx) => (

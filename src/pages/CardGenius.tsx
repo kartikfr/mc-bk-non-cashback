@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logo from "@/assets/moneycontrol-logo.png";
-import { CardGeniusProgressBar } from "@/components/CardGeniusProgressBar";
 interface SpendingQuestion {
   field: string;
   question: string;
@@ -186,6 +185,7 @@ const CardGenius = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Eligibility states
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
@@ -206,6 +206,26 @@ const CardGenius = () => {
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
   useEffect(() => {
     setShowWelcomeDialog(true);
+  }, []);
+  useEffect(() => {
+    if (selectedCard?.spending_breakdown) {
+      const firstActiveCategory = Object.entries(selectedCard.spending_breakdown)
+        .find(([, details]) => details && (details as any).spend > 0);
+      setSelectedCategory(firstActiveCategory ? firstActiveCategory[0] : null);
+      setBreakdownView('yearly');
+    } else if (!selectedCard) {
+      setSelectedCategory(null);
+    }
+  }, [selectedCard]);
+  useEffect(() => {
+    const updateIsMobile = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
+    };
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    return () => window.removeEventListener('resize', updateIsMobile);
   }, []);
   const currentQuestion = questions[currentStep];
   const progress = (currentStep + 1) / questions.length * 100;
@@ -382,6 +402,24 @@ const CardGenius = () => {
       behavior: 'smooth'
     });
   };
+  const handleApplyFromList = (card: CardGeniusResult, event?: React.MouseEvent<HTMLElement>) => {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    const success = redirectToCardApplication(card, {
+      bankName: card.card_name?.split(' ')[0] || 'Bank',
+      bankLogo: card.card_bg_image,
+      cardName: card.card_name
+    });
+    if (!success) {
+      toast({
+        title: "Unable to open bank site",
+        description: "Please allow pop-ups or try again later.",
+        variant: "destructive"
+      });
+    }
+  };
   const handlePrev = () => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
@@ -468,84 +506,76 @@ const CardGenius = () => {
     const displayMonthlySpend = totalMonthlySpend + monthlyEquivalentOfAnnual;
     const totalAnnualSpend = totalMonthlySpend * 12 + totalAnnualFieldsSpend;
     if (selectedCard) {
-      // Detailed card view
-      return <div className="min-h-screen bg-background pt-24">
+      const bankLabel = selectedCard.bank_name || selectedCard.card_name?.split(' ')[0] || 'Top Pick';
+      const totalLoungeValue = Number(selectedCard.airport_lounge_value || 0);
+      const milestoneValue = Number(selectedCard.milestone_benefits_only || 0);
+      const joiningFeeValue = Number(selectedCard.joining_fees || 0);
+      return <div className="min-h-screen bg-slate-50">
           <Navigation />
-          <header className="sticky top-20 bg-white border-b border-border z-40">
-            <div className="container mx-auto px-4 py-4">
-              <div className="flex items-center justify-between">
-                <button onClick={() => setSelectedCard(null)} className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
-                  <ArrowLeft className="w-5 h-5" />
-                  <span className="font-semibold">Back to Results</span>
+          <main className="section-shell mx-auto pt-24 pb-16 max-w-4xl space-y-6">
+            <button onClick={() => setSelectedCard(null)} className="inline-flex items-center text-sm font-semibold text-primary hover:text-primary/80 transition-colors gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to all recommendations
                 </button>
                 
-                {/* Escape key hint */}
-                <div className="text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
-                  <span>Press</span>
-                  <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">Esc</kbd>
-                  <span>to close</span>
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1B1C3F] via-[#2D3E94] to-[#4C7DFE] text-white p-6 sm:p-8 shadow-2xl flex flex-col gap-6 sm:flex-row sm:items-center">
+              <button onClick={() => setSelectedCard(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+              <div className="space-y-3 max-w-xl">
+                <p className="text-xs uppercase tracking-[0.4em] text-white/70">{bankLabel}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold leading-snug">{selectedCard.card_name}</h1>
+                <p className="text-sm text-white/80">Best card curated using your spends of ₹{(totalAnnualSpend / 100000).toFixed(2)}L annually.</p>
                 </div>
-              </div>
-            </div>
-          </header>
-
-          <main className="container mx-auto px-4 py-8 max-w-6xl mb-8">{/* Added mb-8 for footer spacing */}
-            <h1 className="text-2xl font-bold text-foreground mb-6">{selectedCard.card_name}</h1>
-            
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Card Image */}
-              <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-2xl p-8 flex items-center justify-center">
-                <img src={selectedCard.card_bg_image} alt={selectedCard.card_name} className="w-full max-w-sm h-64 object-contain" onError={e => {
-                e.currentTarget.src = "/placeholder.svg";
-              }} />
-              </div>
-
-              {/* Savings Summary */}
-              <div className="bg-blue-50 rounded-2xl p-6">
-                <p className="text-sm text-muted-foreground mb-4">On The Spends Of ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</p>
-                
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-foreground">Total Savings</span>
-                    <span className="text-lg font-semibold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</span>
-                  </div>
-                  
-                  {selectedCard.milestone_benefits_only !== undefined && selectedCard.milestone_benefits_only > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-foreground">Milestone Benefits</span>
-                      <span className="text-lg font-semibold text-foreground">₹{selectedCard.milestone_benefits_only.toLocaleString()}</span>
-                    </div>
-                  )}
-                  
-                  {selectedCard.airport_lounge_value !== undefined && selectedCard.airport_lounge_value > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-foreground">Airport Lounges</span>
-                      <span className="text-lg font-semibold text-foreground">₹{selectedCard.airport_lounge_value.toLocaleString()}</span>
-                    </div>
-                  )}
-                  
-                  {selectedCard.joining_fees !== undefined && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-foreground">Joining Fees</span>
-                      <span className={`text-lg font-semibold ${selectedCard.joining_fees > 0 ? 'text-red-500' : 'text-foreground'}`}>
-                        {selectedCard.joining_fees > 0 ? `-₹${selectedCard.joining_fees.toLocaleString()}` : '₹0'}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="h-px bg-border"></div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-foreground">Your Net Savings</span>
-                    <span className="text-2xl font-bold text-green-600">₹{selectedCard.net_savings.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <Button className="w-full" size="lg" onClick={handleApplyFromDetail}>Apply Now</Button>
+              <div className="flex justify-center sm:justify-end w-full sm:w-auto">
+                <img
+                  src={selectedCard.card_bg_image}
+                  alt={selectedCard.card_name}
+                  className="w-40 sm:w-56 h-auto object-contain drop-shadow-2xl"
+                  onError={e => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
             </div>
 
-            {/* Welcome Benefits Section */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-5">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">On the spends of ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</p>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Total Savings</p>
+                  <p className="text-xl font-semibold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</p>
+              </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Milestone Benefits</p>
+                  <p className="text-xl font-semibold text-foreground">{milestoneValue > 0 ? `₹${milestoneValue.toLocaleString()}` : '—'}</p>
+                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Joining Fees</p>
+                  <p className={`text-xl font-semibold ${joiningFeeValue > 0 ? 'text-red-500' : 'text-foreground'}`}>
+                    {joiningFeeValue > 0 ? `-₹${joiningFeeValue.toLocaleString()}` : '₹0'}
+                  </p>
+                    </div>
+                    </div>
+              {totalLoungeValue > 0 && <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Airport Lounge Value</p>
+                    <p className="text-xl font-semibold text-foreground">₹{totalLoungeValue.toLocaleString()}</p>
+                    </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Estimated lounge visits</p>
+                    <p className="text-xl font-semibold text-foreground">{userDomesticLoungeVisits + userInternationalLoungeVisits}</p>
+                  </div>
+                </div>}
+              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-emerald-700">Your Net Savings</p>
+                  <p className="text-3xl font-bold text-emerald-700">₹{selectedCard.net_savings.toLocaleString()}</p>
+                </div>
+                <span className="text-xs text-emerald-700/70">per year</span>
+              </div>
+            </div>
+
             {(() => {
             const list = Array.isArray(selectedCard.welcome_benefits) ? selectedCard.welcome_benefits : [];
             const fallbackItem = (selectedCard as any).voucher_of || (selectedCard as any).voucher_bonus ? [{
@@ -555,63 +585,59 @@ const CardGenius = () => {
             }] : [];
             const display = list.length > 0 ? list : fallbackItem;
             if (!display || display.length === 0) return null;
-            return <div className="bg-white rounded-xl border border-border p-6 mb-8">
-                  <h2 className="text-xl font-bold text-foreground mb-2">Extra Benefits</h2>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Note: These extra benefits are not included in your annual savings. They are for your reference
-                  </p>
-                  
-                  <h3 className="text-lg font-semibold text-primary mb-4">Welcome Benefit</h3>
-                  
+            return <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-primary">Extra benefits</p>
+                    <h2 className="text-xl font-semibold text-foreground">Welcome bonuses curated for you</h2>
+                  </div>
                   <div className="space-y-3">
-                    {display.map((benefit: any, idx: number) => <div key={idx} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    {display.map((benefit: any, idx: number) => <div key={idx} className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
                         <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
                           <p className="text-sm text-foreground">
                             On card activation you get a {benefit.voucher_of || 'benefit'}
-                            {benefit.voucher_bonus && ` of ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
-                            {benefit.minimum_spend && benefit.minimum_spend !== "0" && <span className="text-muted-foreground">{' '} (Minimum spend: ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>}
+                          {benefit.voucher_bonus && ` worth ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
+                          {benefit.minimum_spend && benefit.minimum_spend !== "0" && <span className="text-muted-foreground">{' '} (Min spend ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>}
                           </p>
-                        </div>
                       </div>)}
                   </div>
                 </div>;
           })()}
 
-
-            {/* Savings Breakdown */}
-            <div className="bg-white rounded-xl border border-border p-6">
-              <h2 className="text-xl font-bold text-foreground mb-6">Your Total Savings Breakdown</h2>
-              
-              {/* Category Pills - Horizontal Scroll */}
-              <div className="relative mb-6">
-                <div className="overflow-x-auto pb-2 scrollbar-hide">
-                  <div className="flex gap-3 min-w-max">
-                    {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
-                    if (!details || !details.spend || details.spend === 0) return null;
-                    const isActive = selectedCategory === category || !selectedCategory && Object.keys(selectedCard.spending_breakdown).findIndex(k => selectedCard.spending_breakdown[k]?.spend > 0) === Object.keys(selectedCard.spending_breakdown).indexOf(category);
-                    return <button key={category} onClick={() => setSelectedCategory(category)} className={`px-6 py-3 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-                          {category.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Savings
-                        </button>;
-                  })}
-                  </div>
-                </div>
+            <section className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-6">
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Your Total Savings Breakdown</p>
+                <h2 className="text-xl font-bold text-foreground">See how each category contributes</h2>
               </div>
 
-              {/* Savings Breakdown Title and Toggle */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Savings Breakdown</h3>
-                <div className="flex gap-2 bg-muted rounded-lg p-1">
-                  <button onClick={() => setBreakdownView('yearly')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${breakdownView === 'yearly' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
+                {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
+                  if (!details || !details.spend || details.spend === 0) return null;
+                  const isActive = selectedCategory === category || (!selectedCategory && details.spend > 0);
+                  const label = category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-4 sm:px-5 py-2.5 rounded-full text-sm font-semibold transition-colors border shadow-sm inline-flex items-center justify-center whitespace-nowrap ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200 hover:border-primary/40'}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-muted-foreground">Savings Breakdown</h3>
+                <div className="flex gap-2 bg-slate-100 rounded-full p-1">
+                  <button onClick={() => setBreakdownView('yearly')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${breakdownView === 'yearly' ? 'bg-white shadow text-foreground' : 'text-muted-foreground'}`}>
                     Yearly
                   </button>
-                  <button onClick={() => setBreakdownView('monthly')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${breakdownView === 'monthly' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
+                  <button onClick={() => setBreakdownView('monthly')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${breakdownView === 'monthly' ? 'bg-white shadow text-foreground' : 'text-muted-foreground'}`}>
                     Monthly
                   </button>
                 </div>
               </div>
 
-              {/* Category Breakdown Details */}
               {(() => {
               const activeCategory = selectedCategory || Object.keys(selectedCard.spending_breakdown).find(k => selectedCard.spending_breakdown[k]?.spend > 0);
               if (!activeCategory) return null;
@@ -623,69 +649,40 @@ const CardGenius = () => {
               const pointsEarned = (details.points_earned || 0) * multiplier;
               const convRate = details.conv_rate || 0;
               const savings = (details.savings || 0) * multiplier;
-              return <div className="border border-border rounded-xl p-6 bg-muted/30">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center pb-4 border-b border-border">
-                        <span className="text-muted-foreground">Total Spends</span>
-                        <span className="text-lg font-semibold text-foreground">₹{spend.toLocaleString()}</span>
+              return <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 space-y-4">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Total Spends</span>
+                      <span className="font-semibold text-foreground">₹{spend.toLocaleString()}</span>
                       </div>
-                      
-                      <div className="flex justify-between items-center pb-4 border-b border-border">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Points Earned</span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p>Reward points earned on your spending in this category</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Points Earned</span>
+                      <span className="font-semibold text-foreground">{pointsEarned.toLocaleString()}</span>
                         </div>
-                        <span className="text-lg font-semibold text-foreground">{pointsEarned.toLocaleString()}</span>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Value of 1 Point</span>
+                      <span className="font-semibold text-foreground">₹{convRate.toFixed(2)}</span>
                       </div>
-                      
-                      <div className="flex justify-between items-center pb-4 border-b border-border">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Value of 1 Point</span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p>The monetary value of each reward point</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <span className="text-lg font-semibold text-foreground">₹{convRate.toFixed(2)}</span>
-                      </div>
-                      
-                      {pointsEarned > 0 && convRate > 0 && <div className="text-center py-2 text-sm text-muted-foreground">
+                    {pointsEarned > 0 && convRate > 0 && <div className="text-xs text-muted-foreground text-center">
                           ₹{pointsEarned.toLocaleString()} × {convRate.toFixed(2)}
                         </div>}
-                      
-                      <div className="flex justify-between items-center pt-2 bg-green-50 dark:bg-green-950 -mx-6 px-6 py-4 rounded-b-xl">
+                    <div className="flex justify-between items-center pt-3 border-t border-slate-200">
                         <span className="font-semibold text-foreground">Total Savings</span>
                         <span className="text-2xl font-bold text-green-600">₹{savings.toLocaleString()}</span>
                       </div>
-                    </div>
-
-                    {/* Explanation */}
-                    {details.explanation && details.explanation.length > 0 && <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs font-semibold text-primary mb-2">How it&apos;s calculated:</p>
-                        <div className="space-y-1">
-                          {details.explanation.map((exp, idx) => <div key={idx} className="text-xs text-foreground" dangerouslySetInnerHTML={{
-                      __html: sanitizeHtml(exp.replace(/On spend(s)? of ₹/g, 'On monthly spend$1 of ₹'))
+                    {details.explanation && details.explanation.length > 0 && <div className="rounded-2xl bg-white border border-slate-200 p-4 space-y-2">
+                        <p className="text-xs uppercase tracking-wide text-primary">How it's calculated</p>
+                        {details.explanation.map((exp, idx) => <div key={idx} className="text-sm text-foreground" dangerouslySetInnerHTML={{
+                      __html: sanitizeHtml(exp)
                     }} />)}
-                        </div>
                       </div>}
                   </div>;
             })()}
-            </div>
+            </section>
+
+            <Button className="w-full h-12 text-base font-semibold shadow-xl" size="lg" onClick={handleApplyFromDetail}>
+              Apply Now
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </main>
           <Footer />
         </div>;
@@ -735,54 +732,49 @@ const CardGenius = () => {
       .map(([key]) => key);
 
     // Results list view
-    return <div className="min-h-screen bg-background pt-16">
+    return <div className="min-h-screen bg-slate-50">
         <Navigation />
-        <header className="sticky top-16 bg-white border-b border-border z-50">
-          <div className="container mx-auto px-4 py-4">
             
+        <main className="section-shell max-w-6xl mx-auto pt-24 pb-16 space-y-8">
+          <div className="text-center space-y-2">
+            <p className="text-xs uppercase tracking-[0.4em] text-primary">Card Genius</p>
+            <h1 className="text-3xl font-bold text-foreground">The Best Cards Sorted By Annual Savings!</h1>
+            <p className="text-sm text-muted-foreground">Personalized to your spending profile</p>
           </div>
-        </header>
 
-        <main className="container mx-auto px-4 py-8 max-w-7xl mb-8">{/* Added mb-8 for footer spacing */}
-          {/* Title */}
-          <h1 className="text-3xl font-bold text-center text-foreground mb-8">
-            The Best Cards Sorted By Annual Savings!
-          </h1>
-
-          {/* Total Spends Summary */}
-          <div className="bg-muted/50 rounded-xl p-6 mb-6 text-center">
-            <p className="text-sm font-medium text-foreground mb-2">Your Total Spends:</p>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-2xl font-bold text-foreground">
-                ₹{(displayMonthlySpend / 100000).toFixed(2)}L Monthly
-              </span>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-2xl font-bold text-primary">
-                ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually
-              </span>
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Your Total Spends</p>
+              <div className="font-bold text-foreground text-xl sm:text-2xl">
+                <p className="flex items-center gap-2 whitespace-nowrap justify-center sm:justify-start text-base sm:text-[1.35rem]">
+                  <span>₹{(displayMonthlySpend / 100000).toFixed(2)}L Monthly</span>
+                  <span className="text-muted-foreground text-sm sm:text-base font-medium">|</span>
+                  <span className="text-primary">₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</span>
+                </p>
+              </div>
+            </div>
               <button onClick={() => {
               setShowResults(false);
               setCurrentStep(0);
-            }} className="ml-2 text-primary hover:text-primary/80 font-medium text-sm flex items-center gap-1">
-                Edit Spends <ArrowRight className="w-4 h-4" />
+          }} className="inline-flex items-center gap-2 rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors mx-auto sm:mx-0">
+              Edit Spends
+              <ArrowRight className="w-4 h-4" />
               </button>
-            </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            <Button variant={showLifetimeFreeOnly ? "default" : "outline"} size="sm" onClick={() => setShowLifetimeFreeOnly(!showLifetimeFreeOnly)}>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button variant={showLifetimeFreeOnly ? "default" : "outline"} size="sm" className="rounded-full px-4 py-1 text-xs font-semibold" onClick={() => setShowLifetimeFreeOnly(!showLifetimeFreeOnly)}>
               Lifetime Free Cards
             </Button>
             
             <Popover open={eligibilityOpen} onOpenChange={setEligibilityOpen}>
               <PopoverTrigger asChild>
-                <Button size="sm" variant={eligibilityApplied ? "default" : "outline"} className="gap-2">
+                <Button size="sm" variant={eligibilityApplied ? "default" : "outline"} className="rounded-full px-4 py-1 text-xs font-semibold gap-2" >
                   <CheckCircle2 className="w-4 h-4" />
                   {eligibilityApplied ? "Eligibility Applied" : "Check Eligibility"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-6 bg-card rounded-xl shadow-2xl border-2 border-primary/20 z-50" align="start" sideOffset={8}>
+              <PopoverContent className="w-80 p-6 bg-white rounded-3xl shadow-2xl border border-slate-100 z-50" align="start" sideOffset={8}>
                 <h3 className="font-semibold text-lg mb-4">Check Your Eligibility</h3>
                 <div className="space-y-4">
                   <div>
@@ -808,7 +800,7 @@ const CardGenius = () => {
                     ...eligibilityData,
                     empStatus: value
                   })}>
-                      <SelectTrigger id="empStatus">
+                      <SelectTrigger id="empStatus" className="rounded-2xl">
                         <SelectValue placeholder="Select employment status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -824,31 +816,154 @@ const CardGenius = () => {
               </PopoverContent>
             </Popover>
             
-            {/* Keyboard hint */}
-            <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
+            <div className="ml-auto text-xs text-muted-foreground hidden lg:flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-full shadow-sm">
               <span>Scroll table:</span>
-              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">←</kbd>
-              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-background border border-border rounded">→</kbd>
+              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded">←</kbd>
+              <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded">→</kbd>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-border mb-6">
-            <div className="flex gap-8">
-              <button onClick={() => setActiveTab('quick')} className={`pb-3 px-1 font-semibold transition-colors relative ${activeTab === 'quick' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+          <div className="border-b border-slate-200">
+            <div className="flex gap-6 overflow-x-auto pb-1 scrollbar-hide">
+            <button onClick={() => setActiveTab('quick')} className={`pb-3 text-sm font-semibold relative transition-colors whitespace-nowrap ${activeTab === 'quick' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 Quick Insights
-                {activeTab === 'quick' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>}
+              {activeTab === 'quick' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>}
               </button>
-              <button onClick={() => setActiveTab('detailed')} className={`pb-3 px-1 font-semibold transition-colors relative ${activeTab === 'detailed' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button onClick={() => setActiveTab('detailed')} className={`pb-3 text-sm font-semibold relative transition-colors whitespace-nowrap ${activeTab === 'detailed' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 Detailed Breakdown
-                {activeTab === 'detailed' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>}
+              {activeTab === 'detailed' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>}
               </button>
             </div>
           </div>
 
-          {/* Results Table */}
+          {/* Mobile Results List */}
+          <div className="hidden space-y-5">
+            {filteredResults.map((card, index) => {
+              const detailedItems = spendingCategories.map(category => {
+                const breakdown = card.spending_breakdown?.[category];
+                if (!breakdown || !breakdown.savings) return null;
+                const yearlySavings = (breakdown.savings || 0) * 12;
+                return (
+                  <div key={`${card.seo_card_alias}-${category}`} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    </span>
+                    <span className="font-semibold text-foreground">₹{yearlySavings.toLocaleString()}</span>
+                  </div>
+                );
+              });
+              const hasDetailed = detailedItems.some(Boolean);
+              return (
+                <div
+                  key={card.seo_card_alias || `${card.card_name}-${index}`}
+                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_20px_45px_rgba(15,23,42,0.08)] space-y-4"
+                  onClick={() => handleCardSelect(card)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCardSelect(card);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-lg font-semibold text-foreground leading-tight">{card.card_name}</p>
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        Net Savings
+                        <span className="font-semibold text-green-600 text-sm">
+                          ₹{card.net_savings.toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                    <img
+                      src={card.card_bg_image}
+                      alt={card.card_name}
+                      className="w-20 h-14 object-contain flex-shrink-0"
+                    />
+                  </div>
+
+                  {activeTab === 'quick' && (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground">Total Savings</p>
+                        <p className="text-base font-semibold text-green-600">
+                          ₹{card.total_savings_yearly.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground">Milestones</p>
+                        <p className="text-base font-semibold text-blue-600">
+                          ₹{card.total_extra_benefits.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground">Lounge Value</p>
+                        <p className="text-base font-semibold text-purple-600">
+                          {card.airport_lounge_value && card.airport_lounge_value > 0
+                            ? `₹${card.airport_lounge_value.toLocaleString()}`
+                            : '—'}
+                        </p>
+                      </div>
+                      <div className="bg-muted/40 rounded-xl p-3">
+                        <p className="text-xs text-muted-foreground">Joining Fee</p>
+                        <p className="text-base font-semibold text-red-600">
+                          ₹{card.joining_fees.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'detailed' && (
+                    <div className="rounded-xl border border-border/60 p-3 space-y-2 bg-muted/30">
+                      {hasDetailed ? detailedItems : (
+                        <p className="text-sm text-muted-foreground">No category savings captured for your inputs.</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {card.joining_fees === 0 && (
+                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">
+                        Lifetime Free
+                      </span>
+                    )}
+                    {card.rating && (
+                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-600">
+                        ⭐ {card.rating}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col xs:flex-row gap-2">
+                    <Button
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCardSelect(card);
+                      }}
+                    >
+                      View Insights
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={(e) => handleApplyFromList(card, e)}
+                    >
+                      Apply Now
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Unified Results Table */}
+          <div className="block w-full overflow-x-auto">
+          <div className="mx-auto w-full max-w-full">
           <TooltipProvider>
-            <div className="relative bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="relative bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
               {/* Scroll hint indicator */}
               <div className="bg-gradient-to-r from-transparent via-muted/20 to-transparent h-1"></div>
               
@@ -866,11 +981,11 @@ const CardGenius = () => {
                 <table className="w-full table-auto">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left p-4 font-semibold text-sm text-foreground sticky left-0 bg-muted/50 z-10 min-w-[200px]">Credit Cards</th>
+                      <th className="text-left p-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground sticky left-0 bg-white z-20 min-w-[260px]">Credit Cards</th>
                       
                       {/* Quick Insights Tab - Show summary columns */}
                       {activeTab === 'quick' && <>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[140px]">
+                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[120px] sm:min-w-[140px]">
                             <div className="flex items-center justify-center gap-1">
                               Total Savings
                               <Tooltip>
@@ -883,10 +998,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
+                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
                             <span className="text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[140px]">
+                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[120px] sm:min-w-[140px]">
                             <div className="flex items-center justify-center gap-1">
                               Milestones
                               <Tooltip>
@@ -899,10 +1014,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
+                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
                             <span className="text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[140px]">
+                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[120px] sm:min-w-[140px]">
                             <div className="flex items-center justify-center gap-1">
                               Airport Lounges
                               <Tooltip>
@@ -915,10 +1030,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
+                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
                             <span className="text-2xl">-</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[120px]">
+                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[110px] sm:min-w-[120px]">
                             <div className="flex items-center justify-center gap-1">
                               Joining Fee
                               <Tooltip>
@@ -931,10 +1046,10 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-sm text-muted-foreground w-8">
+                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
                             <span className="text-2xl">=</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
+                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[130px] sm:w-36">
                             <div className="flex items-center justify-center gap-1">
                               Net Savings
                               <Tooltip>
@@ -1175,14 +1290,15 @@ const CardGenius = () => {
                   </thead>
                   <tbody>
                     {filteredResults.map((card, index) => {
-                    return <tr key={index} className={`border-t border-border hover:bg-muted/30 transition-colors cursor-pointer ${index === 0 ? 'bg-green-50/50' : ''}`} onClick={() => handleCardSelect(card)}>
-                          <td className="p-4 sticky left-0 bg-white z-10">
+                    return <tr key={index} className={`border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${index === 0 ? 'bg-emerald-50/60' : 'bg-white'}`} onClick={() => handleCardSelect(card)}>
+                          <td className="p-3 sticky left-0 bg-white z-20 min-w-[260px] shadow-[4px_0_6px_-4px_rgba(15,23,42,0.08)]">
                             <div className="flex items-center gap-4">
-                              <img src={card.card_bg_image} alt={card.card_name} className="w-20 h-12 object-contain flex-shrink-0" onError={e => {
+                              <img src={card.card_bg_image} alt={card.card_name} className="w-16 h-12 object-contain flex-shrink-0 rounded-md border border-slate-100" onError={e => {
                             e.currentTarget.src = "/placeholder.svg";
                           }} />
                               <div className="min-w-0">
-                                <p className="font-semibold text-foreground break-words">{card.card_name}</p>
+                                <p className="font-semibold text-foreground text-sm leading-tight break-words">{card.card_name}</p>
+                                <p className="text-[11px] text-muted-foreground">Net Savings ₹{card.net_savings.toLocaleString()}</p>
                               </div>
                             </div>
                           </td>
@@ -1275,6 +1391,9 @@ const CardGenius = () => {
               </div>
             </div>
           </TooltipProvider>
+          <p className="text-xs text-muted-foreground text-center mt-2 lg:hidden">Swipe horizontally to view all columns</p>
+          </div>
+          </div>
 
           {/* Start Over Button */}
           <div className="mt-8 text-center">
@@ -1296,22 +1415,22 @@ const CardGenius = () => {
       <div className="min-h-screen bg-gradient-primary pt-32 md:pt-36">{/* Added padding for nav + progress bar */}
       {/* Welcome Dialog */}
       <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg w-[92vw] sm:w-auto max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8">
           <button onClick={() => setShowWelcomeDialog(false)} className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </button>
           
-          <div className="flex flex-col items-center text-center space-y-4 pt-6">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-2">
-              <img src={logo} alt="Card Genius 360" className="w-24 h-24 object-contain" />
+          <div className="flex flex-col items-center text-center space-y-4 pt-4 sm:pt-6">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-2">
+              <img src={logo} alt="Card Genius 360" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
             </div>
             
             <DialogHeader className="space-y-3">
-              <DialogTitle className="text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent whitespace-nowrap">
+              <DialogTitle className="text-2xl sm:text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">
                 Welcome to Super Card Genius
               </DialogTitle>
-              <DialogDescription className="text-base text-charcoal-700 leading-relaxed">
+              <DialogDescription className="text-sm sm:text-base text-charcoal-700 leading-relaxed">
                 We help you find the <span className="font-semibold text-primary">best credit card</span> tailored to your unique spending habits.
               </DialogDescription>
             </DialogHeader>
@@ -1374,24 +1493,35 @@ const CardGenius = () => {
           </div>
         </div>}
 
-      {/* Sticky Progress Bar */}
-      {!showResults && <CardGeniusProgressBar currentStep={currentStep} totalSteps={questions.length} questionRefs={questionRefs} />}
-
-      {/* Main Content - Add padding for sticky progress bar */}
-      <div className="pt-4"></div>
-
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="section-shell">
         <div className="max-w-2xl mx-auto">
           {/* Welcome Message */}
-          {currentStep === 0 && <div className="mb-8 text-center animate-fade-in">
-              <h1 className="text-4xl md:text-5xl font-bold text-charcoal-900 mb-4">
+          {currentStep === 0 && <div className="mb-8 text-center animate-fade-in px-4">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-charcoal-900 mb-4">
                 Let's Find Your Perfect Card
               </h1>
-              <p className="text-xl text-charcoal-700">
+              <p className="text-base sm:text-lg md:text-xl text-charcoal-700">
                 Answer {questions.length} quick questions about your spending habits, and we'll recommend the best cards for you.
               </p>
             </div>}
+
+          {/* Step Indicator */}
+          <div className="mb-4 rounded-2xl border border-border bg-card/90 shadow-[0_8px_30px_rgb(0,0,0,0.05)] p-4 flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary flex items-center gap-1">
+                <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
+                  {currentStep + 1}
+                </span>
+                of {questions.length}
+              </p>
+              <p className="text-sm text-muted-foreground">Swipe the slider or tap amount to answer</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Progress</p>
+              <p className="text-lg font-semibold text-foreground">{Math.round(progress)}%</p>
+            </div>
+          </div>
 
           {/* Question Card */}
           <div ref={el => {
@@ -1403,17 +1533,37 @@ const CardGenius = () => {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex gap-4 mt-8">
-            <Button variant="outline" size="lg" onClick={handlePrev} disabled={currentStep === 0} className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="w-full sm:flex-1 touch-target cg-nav-btn cg-prev-btn"
+              aria-label="Go to previous question"
+            >
               <ArrowLeft className="mr-2" />
               Previous
             </Button>
             
-            {currentStep !== questions.length - 1 && <Button variant="ghost" size="lg" onClick={() => setCurrentStep(questions.length - 1)} className="flex-1">
+            {currentStep !== questions.length - 1 && (
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => setCurrentStep(questions.length - 1)}
+                className="w-full sm:flex-1 touch-target cg-nav-btn cg-skip-all-btn"
+                aria-label="Skip all remaining questions"
+              >
                 Skip All
-              </Button>}
+              </Button>
+            )}
             
-            <Button size="lg" onClick={handleNext} className="flex-1">
+            <Button
+              size="lg"
+              onClick={handleNext}
+              className="w-full sm:flex-1 touch-target cg-nav-btn cg-next-btn"
+              aria-label={currentStep === questions.length - 1 ? "Show card genius results" : "Go to next question"}
+            >
               {currentStep === questions.length - 1 ? <>
                   Show My Results
                   <Sparkles className="ml-2" />
@@ -1426,7 +1576,11 @@ const CardGenius = () => {
 
           {/* Skip Option */}
           <div className="text-center mt-6">
-            <button onClick={handleNext} className="text-charcoal-500 hover:text-primary font-medium transition-colors">
+            <button
+              onClick={handleNext}
+              className="text-charcoal-500 hover:text-primary font-medium transition-colors cg-skip-question-link"
+              aria-label="Skip this question"
+            >
               Skip this question →
             </button>
           </div>

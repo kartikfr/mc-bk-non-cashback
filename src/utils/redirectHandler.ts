@@ -8,14 +8,17 @@ const BANK_URLS: Record<string, string> = {
   AXIS: "https://www.axis.bank.in/cards/credit-card",
   IDFC: "https://www.idfcfirst.bank.in/credit-card",
   SBI: "https://www.sbicard.com/en/personal/credit-cards.page",
-  HDFC: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&LGCode=MKTG&mc_id=hdfcbank_ccntb_paid_search_brand_ntb_unified&utm_source=paid_search_ntb&utm_medium=search&utm_campaign=CC-ACQ-HDFC_CC_Retail_Google_Search_Leads_NTB_br_super_brand_top-city&utm_content=marketing&utm_creative=generic_top-city_pixel-ltf&utm_term=Hdfc%20Credit%20Card&p_id=&gad_source=1&gad_campaignid=22991160211&gbraid=0AAAAAD74LQZOMxLfZof2fQmP-ULVXgTi9&gclid=CjwKCAiAoNbIBhB5EiwAZFbYGAjIZ0gduKikbOozHs7jAjebF18FVdeGRL1aD1BGcqbgGXsLLyTp7xoCyhoQAvD_BwE#nbb",
-  AU: "https://cconboarding.aubank.in/auccself/#/landing",
+  HDFC: "https://applyonline.hdfcbank.com/cards/credit-cards.html#nbb",
+  AU: "https://www.au.bank.in/personal-banking/credit-cards",
   INDUSIND: "https://www.indusind.bank.in/in/en/personal/cards/credit-card.html",
   STAN_CHART: "https://www.sc.com/in/credit-cards/",
   AMEX: "https://www.americanexpress.com/en-in/",
-  HSBC: "https://www.hsbc.co.in/credit-cards/products/visa-platinum/?WABFormEntryCommand=cmd_init&form.campaign_id=Platinum_Product&form.source=ZEE&WT.ac=CC_Platinum_zee2&gclid=NA&card=vpc&cid=INM:OK(:A0:CC:05:2505:031:ZEECC_Platinum&gad_source=1",
+  HSBC: "https://www.hsbc.co.in/credit-cards/",
   KOTAK: "https://cards.kotak.com/",
-  ICICI: "https://www.icici.bank.in/personal-banking/cards"
+  ICICI: "https://www.icici.bank.in/personal-banking/cards",
+  RBL: "https://www.rbl.bank.in/personal-banking/cards/credit-cards",
+  YES: "https://www.yes.bank.in/personal-banking/yes-individual/cards/credit-cards",
+  FEDERAL: "https://www.federal.bank.in/credit-cards"
 };
 
 const REDIRECT_ANALYTICS_ENABLED = (import.meta.env.VITE_ENABLE_REDIRECT_ANALYTICS || '').toString().toLowerCase() === 'true';
@@ -62,7 +65,14 @@ const normalizeBankName = (bankName: string): string | null => {
     'KOTAK MAHINDRA': 'KOTAK',
     'KOTAK MAHINDRA BANK': 'KOTAK',
     'ICICI': 'ICICI',
-    'ICICI BANK': 'ICICI'
+    'ICICI BANK': 'ICICI',
+    'RBL': 'RBL',
+    'RBL BANK': 'RBL',
+    'YES': 'YES',
+    'YES BANK': 'YES',
+    'THE FEDERAL BANK': 'FEDERAL',
+    'FEDERAL BANK': 'FEDERAL',
+    'FEDERAL': 'FEDERAL'
   };
   
   return variations[normalized] || null;
@@ -107,7 +117,8 @@ export const openRedirectInterstitial = (params: RedirectParams): Window | null 
     console.error('Redirect handler: Bank not found in whitelist and no fallback URL provided:', bankName);
   }
 
-  const destinationUrl = normalizedNetworkUrl || bankUrl || '';
+  // Always prefer our hard-coded bank URL; fall back to a validated network URL only if needed
+  const destinationUrl = bankUrl || normalizedNetworkUrl || '';
 
   // Build query parameters for the interstitial page
   const queryParams = new URLSearchParams({
@@ -239,7 +250,8 @@ export const isAllowedDomain = (url: string, allowedDomains?: string[]): boolean
  */
 export const redirectToCardApplication = (card: any, overrides: Partial<RedirectParams> = {}): boolean => {
   const windowRef = openRedirectInterstitial({
-    networkUrl: overrides.networkUrl ?? card?.network_url,
+    // Intentionally DO NOT use card.network_url – we always want hard-coded bank URLs
+    networkUrl: overrides.networkUrl,
     bankName: overrides.bankName ?? extractBankName(card),
     bankLogo: overrides.bankLogo ?? extractBankLogo(card),
     cardName: overrides.cardName ?? card?.name ?? 'Credit Card',

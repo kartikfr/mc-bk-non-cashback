@@ -191,32 +191,84 @@ export default function GeniusDialog({
     onSubmit(spendingData);
     onOpenChange(false);
   };
+  const categoryLabels: Record<string, string> = {
+    'fuel': 'Fuel',
+    'shopping': 'Shopping',
+    'online-food': 'Food Delivery',
+    'dining': 'Dining',
+    'grocery': 'Grocery',
+    'travel': 'Travel',
+    'utility': 'Utility'
+  };
+
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Sparkles className="w-6 h-6 text-primary" />
-            ✨ AI Card Genius – {category.charAt(0).toUpperCase() + category.slice(1)} Spending
-          </DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col p-0">
+        {/* Header - Fixed */}
+        <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b border-border bg-gradient-to-r from-purple-50 to-emerald-50 dark:from-purple-950/20 dark:to-emerald-950/20">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl md:text-2xl">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-600 to-emerald-600">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="font-bold text-foreground">Calculate {categoryLabels[category]} Savings</div>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal mt-0.5">
+                  Get yearly savings for each card
+                </p>
+              </div>
+            </DialogTitle>
           </DialogHeader>
-          <DialogDescription>
-            Tell us your monthly spends and we'll estimate your total yearly savings.
-          </DialogDescription>
+        </div>
         
-        <div className="space-y-6 mt-4">
-          
-          
-          <div className="space-y-2">
-            {questions.map(question => <SpendingInput key={question.key} question={question.label} emoji="" value={spendingData[question.key] || 0} onChange={value => handleInputChange(question.key, value.toString())} showCurrency={question.showCurrency} suffix={question.suffix} max={question.max} step={question.step} />)}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+          <div className="space-y-4">
+            {questions.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No questions available for this category.</p>
+              </div>
+            ) : (
+              questions.map((question, index) => (
+                <div key={question.key} className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                      {index + 1}
+                    </span>
+                    {question.label}
+                  </label>
+                  <SpendingInput 
+                    key={question.key} 
+                    question="" 
+                    emoji="" 
+                    value={spendingData[question.key] || 0} 
+                    onChange={value => handleInputChange(question.key, value.toString())} 
+                    showCurrency={question.showCurrency} 
+                    suffix={question.suffix} 
+                    max={question.max} 
+                    step={question.step}
+                  />
+                </div>
+              ))
+            )}
           </div>
-          
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+        </div>
+        
+        {/* Footer - Fixed */}
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-card">
+          <div className="flex gap-2 sm:gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="flex-1 h-10 sm:h-11 text-sm sm:text-base font-semibold"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} className="gap-2">
+            <Button 
+              onClick={handleSubmit} 
+              className="flex-1 h-10 sm:h-11 text-sm sm:text-base font-bold bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-700 hover:to-emerald-700 gap-2"
+            >
               <Sparkles className="w-4 h-4" />
-              Calculate Savings
+              Calculate
             </Button>
           </div>
         </div>

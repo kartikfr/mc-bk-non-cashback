@@ -116,7 +116,7 @@ export const CreditCard3D = ({
     <div className={`perspective-container ${className}`} style={{ perspective: "1200px" }}>
       <div
         ref={cardRef}
-        className="credit-card-3d"
+        className="credit-card-3d lg:hover:shadow-[0_30px_80px_rgba(0,0,0,0.4)]"
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

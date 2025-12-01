@@ -430,25 +430,25 @@ const CategoryCardGenius = () => {
       handleViewDetails(card);
     }
   };
-  return <section className="pt-32 pb-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
-      <div className="container mx-auto px-4">
+  return <section className="pt-28 sm:pt-32 pb-12 sm:pb-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
+      <div className="section-shell">
         {/* Header - Always visible */}
-        <div className="text-center mb-12 my-0 py-0">
+        <div className="text-center mb-8 sm:mb-12">
           
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-4">
             Find Best Cards by Category
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Tell us where you spend, and we'll find the best credit card for you in 30 seconds
           </p>
         </div>
 
         {/* Category Selection - Always visible */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-12">
-          {categories.map(category => <button key={category.id} onClick={() => handleCategorySelect(category.id)} className={`p-6 rounded-2xl bg-card shadow-md hover:shadow-xl transition-all text-center group relative overflow-hidden ${selectedCategory === category.id ? 'ring-2 ring-primary shadow-glow' : ''}`}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-8 sm:mb-12">
+          {categories.map(category => <button key={category.id} onClick={() => handleCategorySelect(category.id)} className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-card shadow-md hover:shadow-xl transition-all text-center group relative overflow-hidden touch-target ${selectedCategory === category.id ? 'ring-2 ring-primary shadow-glow' : ''}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <category.icon className={`w-12 h-12 mx-auto mb-3 ${category.color} group-hover:scale-110 transition-transform relative z-10`} />
-              <p className="text-sm font-semibold relative z-10">{category.name}</p>
+              <category.icon className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mx-auto mb-2 sm:mb-3 ${category.color} group-hover:scale-110 transition-transform relative z-10`} />
+              <p className="text-xs sm:text-sm font-semibold relative z-10">{category.name}</p>
             </button>)}
         </div>
 
@@ -465,7 +465,7 @@ const CategoryCardGenius = () => {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="cards-grid mb-8 sm:mb-12">
               {results.map((card: any, index: number) => <div key={card.id || index} className="bg-card rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 relative">
                   {index === 0 && <div className="absolute top-4 right-4 z-10">
                       <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 px-3 py-1 text-xs font-bold shadow-lg">
@@ -563,19 +563,28 @@ const CategoryCardGenius = () => {
                                   <span className="text-lg font-bold text-green-600 dark:text-green-400">
                                   +₹{savingsValue.toLocaleString()}
                                 </span>
-                                </div>
+                              </div>
                               </div>
                               
-                              {Array.isArray(data?.explanation) && data.explanation.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-muted/50">
-                                  <div 
-                                    className="text-xs text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-strong:text-foreground prose-strong:font-semibold"
-                                    dangerouslySetInnerHTML={{ 
-                                      __html: sanitizeHtml(data.explanation[0]) 
-                                    }}
-                                  />
-                                </div>
-                              )}
+                              {(() => {
+                                if (!Array.isArray(data?.explanation)) return null;
+                                const meaningfulBlocks = data.explanation
+                                  .filter((block: any) => typeof block === 'string' && block.trim() !== '' && block.trim() !== '0');
+                                if (!meaningfulBlocks.length) return null;
+                                const combinedHtml = meaningfulBlocks
+                                  .map(block => `<p>${block}</p>`)
+                                  .join('');
+                                return (
+                                  <div className="mt-3 pt-3 border-t border-muted/50">
+                                    <div 
+                                      className="text-xs text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-strong:text-foreground prose-strong:font-semibold"
+                                      dangerouslySetInnerHTML={{ 
+                                        __html: sanitizeHtml(combinedHtml) 
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}

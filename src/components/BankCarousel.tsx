@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cardService } from "@/services/cardService";
 import gsap from "gsap";
 
 const BankCarousel = () => {
   const [banks, setBanks] = useState<any[]>([]);
   const [error, setError] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchBanks = async () => {
@@ -21,7 +22,6 @@ const BankCarousel = () => {
         }
         
         if (response.data?.bank_data) {
-          // Duplicate for seamless infinite scroll
           const bankData = response.data.bank_data;
           setBanks([...bankData, ...bankData]);
         }
@@ -35,23 +35,23 @@ const BankCarousel = () => {
   }, []);
 
   useEffect(() => {
-    if (banks.length > 0) {
-      const track = document.querySelector('.bank-track');
-      if (track) {
-        const animation = gsap.to(track, {
-          xPercent: -50,
-          duration: 30,
-          repeat: -1,
-          ease: "none",
-          force3D: true,
-          smoothOrigin: true
-        });
+    if (!trackRef.current || banks.length === 0) return;
 
-        return () => {
-          animation.kill();
-        };
-      }
-    }
+    // Adjust duration based on screen size - faster on mobile for smoother experience
+    const duration = window.innerWidth < 768 ? 40 : 30;
+
+    const animation = gsap.to(trackRef.current, {
+      xPercent: -50,
+      duration: duration,
+      repeat: -1,
+      ease: "none",
+      force3D: true,
+      smoothOrigin: true
+    });
+
+    return () => {
+      animation.kill();
+    };
   }, [banks]);
 
   if (error) {
@@ -74,25 +74,30 @@ const BankCarousel = () => {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-b from-background to-muted/30 overflow-hidden">
-      <div className="container mx-auto px-4 mb-8">
-        <h2 className="text-3xl font-bold text-center text-foreground">
+    <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-b from-background to-muted/20 overflow-hidden">
+      <div className="section-shell mb-6 sm:mb-8">
+        <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-center text-muted-foreground/80">
           Trusted Partner Banks
         </h2>
       </div>
-      
-      <div className="relative">
-        <div className="flex bank-track will-change-transform">
+
+      <div className="relative w-full px-4 sm:px-6 lg:px-0">
+        {/* Gradient fade on edges */}
+        <div className="absolute inset-y-0 left-0 w-8 sm:w-12 md:w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-8 sm:w-12 md:w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+        
+        <div ref={trackRef} className="flex bank-track will-change-transform w-[200%] lg:w-full">
           {banks.map((bank, index) => (
             <div
               key={`${bank.id}-${index}`}
-              className="flex-shrink-0 w-48 h-24 mx-4 flex items-center justify-center bg-card rounded-lg shadow-sm border border-border p-6 hover:shadow-md transition-all duration-300"
+              className="flex-shrink-0 w-24 h-14 sm:w-32 sm:h-16 md:w-36 md:h-18 lg:w-40 lg:h-20 mx-2 sm:mx-3 lg:mx-4 flex items-center justify-center bg-card/60 rounded-lg shadow-sm border border-border/30 p-3 sm:p-4 transition-opacity duration-300"
             >
               <img
                 src={bank.logo}
                 alt={`${bank.name} logo`}
-                className="max-w-full max-h-full object-contain"
-                style={{ filter: 'none' }}
+                className="max-w-full max-h-full object-contain opacity-75"
+                style={{ filter: 'grayscale(10%)' }}
+                loading="lazy"
               />
             </div>
           ))}

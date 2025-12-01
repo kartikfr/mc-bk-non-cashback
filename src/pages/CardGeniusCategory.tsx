@@ -14,9 +14,6 @@ const CardGeniusCategory = () => {
               <p className="text-sm opacity-80 leading-relaxed">
                 Helping Indians make smarter credit card decisions with personalized recommendations and detailed comparisons.
               </p>
-              <p className="text-sm opacity-80">
-                Compare 100+ cards and find your perfect match.
-              </p>
             </div>
             <div className="space-y-4">
               <h4 className="font-bold text-xl mb-6">Quick Links</h4>

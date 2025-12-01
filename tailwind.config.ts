@@ -7,12 +7,34 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1.5rem",
+        sm: "2rem",
+        lg: "3rem",
+        xl: "4.5rem",
+      },
       screens: {
-        "2xl": "1400px",
+        sm: "600px",
+        md: "768px",
+        lg: "992px",
+        xl: "1200px",
+        "2xl": "1360px",
       },
     },
+    screens: {
+      xs: "375px",
+      sm: "600px",
+      md: "768px",
+      lg: "992px",
+      xl: "1200px",
+      "2xl": "1360px",
+    },
     extend: {
+      spacing: {
+        section: "80px",
+        "section-md": "48px",
+        "section-sm": "32px",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

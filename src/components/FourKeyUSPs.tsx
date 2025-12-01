@@ -114,20 +114,17 @@ const FourKeyUSPs = () => {
   ];
 
   return (
-    <section ref={sectionRef} className="py-20 bg-background">
-      <div className="container mx-auto px-4">
+    <section ref={sectionRef} className="py-12 sm:py-16 md:py-20 lg:py-24 bg-background">
+      <div className="section-shell">
         {/* Section Heading */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Find Your Perfect Card in 4 Easy Ways
+        <div className="text-center mb-8 sm:mb-12 md:mb-16 space-y-3 sm:space-y-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground px-4">
+            Find Your Perfect Card
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the method that works best for you
-          </p>
         </div>
 
-        {/* 4 Circular Feature Cards */}
-        <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        {/* 4 Circular Feature Cards - Mobile: 2x2, Tablet: 2x2, Desktop: 1x4 */}
+        <div ref={cardsRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
@@ -137,27 +134,27 @@ const FourKeyUSPs = () => {
                   navigate(feature.redirect);
                   setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
                 }}
-                className="feature-card bg-card rounded-2xl shadow-card p-8 flex flex-col items-center text-center cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:-translate-y-2 group h-full"
+                className="feature-card bg-card rounded-xl sm:rounded-2xl shadow-card p-4 sm:p-6 md:p-8 flex flex-col items-center text-center cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 sm:hover:-translate-y-2 group h-full touch-target"
               >
                 {/* Circular Icon */}
-                <div className={`w-24 h-24 rounded-full ${feature.iconColor} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="w-12 h-12 text-white" />
+                <div className={`w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full ${feature.iconColor} flex items-center justify-center mb-3 sm:mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className="w-7 h-7 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
                 </div>
 
                 {/* Title */}
-                <h3 className="text-xl font-bold text-foreground mb-4 min-h-[3.5rem] flex items-center">
+                <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-foreground mb-2 sm:mb-3 min-h-[2.5rem] sm:min-h-[3rem] flex items-center px-1">
                   {feature.title}
                 </h3>
 
-                {/* Description */}
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6 flex-grow">
+                {/* Description - Hidden on mobile, shown on tablet+ */}
+                <p className="hidden sm:block text-xs md:text-sm text-muted-foreground leading-relaxed mb-4 md:mb-6 flex-grow">
                   {feature.description}
                 </p>
 
                 {/* CTA */}
-                <div className="flex items-center gap-2 text-primary font-semibold group-hover:gap-3 transition-all">
+                <div className="flex items-center gap-1.5 sm:gap-2 text-primary text-xs sm:text-sm md:text-base font-semibold group-hover:gap-2 sm:group-hover:gap-3 transition-all">
                   <span>{feature.cta}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             );
