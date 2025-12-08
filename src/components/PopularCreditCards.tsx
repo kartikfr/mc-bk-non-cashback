@@ -341,9 +341,10 @@ const PopularCreditCards = () => {
                         {/* Best For Pills - Show all tags */}
                         {getCardTags(card).length > 0 && (
                           <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-muted-foreground">Best For:</span>
                             {getCardTags(card).map((tag, idx) => (
                               <Badge key={tag.id || idx} variant="outline" className="text-xs font-medium border-primary/30 text-primary">
-                                {idx === 0 ? 'Best For: ' : ''}{tag.name}
+                                {tag.name}
                               </Badge>
                             ))}
                           </div>
@@ -434,9 +435,10 @@ const PopularCreditCards = () => {
                     {/* Best For Pills - Show all tags */}
                     {getCardTags(card).length > 0 && (
                       <div className="mb-4 flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground">Best For:</span>
                         {getCardTags(card).map((tag, idx) => (
                           <Badge key={tag.id || idx} variant="outline" className="text-xs font-medium border-primary/30 text-primary">
-                            {idx === 0 ? 'Best For: ' : ''}{tag.name}
+                            {tag.name}
                           </Badge>
                         ))}
                 </div>
