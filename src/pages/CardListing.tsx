@@ -4,7 +4,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard, LayoutGrid } from "lucide-react";
+import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard } from "lucide-react";
 import { cardService, SpendingData } from "@/services/cardService";
 import { Badge } from "@/components/ui/badge";
 import GeniusDialog from "@/components/GeniusDialog";
@@ -958,12 +958,6 @@ const CardListing = () => {
                 <p className="text-sm text-muted-foreground">
                   Showing {Math.min(displayCount, filteredCards.length)} of {filteredCards.length} cards
                 </p>
-                <button 
-                  className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                  aria-label="Widget"
-                >
-                  <LayoutGrid className="w-5 h-5" />
-                </button>
               </div>
 
               {/* Mobile Filter Info Bar - Sticky when scrolling up */}
@@ -1226,13 +1220,13 @@ const CardListing = () => {
                             </div>
                           </div>
 
-                          <div className="flex flex-col md:flex-row gap-1.5 sm:gap-2 mt-auto pt-1">
-                            <Link to={`/cards/${getCardAlias(card) || card.id}`} className="flex-1">
+                          <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 mt-auto pt-1 justify-center items-center">
+                            <Link to={`/cards/${getCardAlias(card) || card.id}`} className="w-full sm:w-auto sm:flex-1 max-w-[140px] sm:max-w-none">
                               <Button variant="outline" className="w-full h-8 sm:h-9 md:h-10 text-[11px] sm:text-xs md:text-sm font-semibold border-2">
                                 Details
                               </Button>
                             </Link>
-                            <Button className="flex-1 h-8 sm:h-9 md:h-10 text-[11px] sm:text-xs md:text-sm font-semibold" onClick={() => handleApplyClick(card)}>
+                            <Button className="w-full sm:w-auto sm:flex-1 max-w-[140px] sm:max-w-none h-8 sm:h-9 md:h-10 text-[11px] sm:text-xs md:text-sm font-semibold" onClick={() => handleApplyClick(card)}>
                               Apply&nbsp;Now
                             </Button>
                           </div>
