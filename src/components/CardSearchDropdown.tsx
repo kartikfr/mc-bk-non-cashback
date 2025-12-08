@@ -18,13 +18,15 @@ interface CardSearchDropdownProps {
   onCardSelect: (card: Card) => void;
   onClearSelection: () => void;
   isLoading?: boolean;
+  placeholder?: string;
 }
 export const CardSearchDropdown = ({
   cards,
   selectedCard,
   onCardSelect,
   onClearSelection,
-  isLoading = false
+  isLoading = false,
+  placeholder = "Search for your card..."
 }: CardSearchDropdownProps) => {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -98,7 +100,7 @@ export const CardSearchDropdown = ({
         </div> : <>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input ref={inputRef} type="text" placeholder="Search for your card..." value={query} onChange={e => setQuery(e.target.value)} onFocus={() => setIsOpen(true)} onKeyDown={handleKeyDown} disabled={isLoading} className="pl-10 h-12 text-lg my-0" />
+            <Input ref={inputRef} type="text" placeholder={placeholder} value={query} onChange={e => setQuery(e.target.value)} onFocus={() => setIsOpen(true)} onKeyDown={handleKeyDown} disabled={isLoading} className="pl-10 h-12 text-base sm:text-lg my-0 placeholder:text-sm sm:placeholder:text-base" />
           </div>
 
           {isOpen && <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-lg shadow-lg max-h-80 overflow-y-auto">

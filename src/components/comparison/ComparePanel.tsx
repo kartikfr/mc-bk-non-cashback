@@ -13,6 +13,7 @@ import { getCardAlias, getCardKey } from '@/utils/cardAlias';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 
 interface ComparePanelProps {
@@ -26,6 +27,8 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
   const [searchQueries, setSearchQueries] = useState<string[]>(['', '', '']);
   const [searchResults, setSearchResults] = useState<any[][]>([[], [], []]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['fee-eligibility'])); // Fee & Eligibility expanded by default
+  const [expandedUsps, setExpandedUsps] = useState<Set<string>>(new Set()); // Track expanded USPs for mobile
   const [detailViewCard, setDetailViewCard] = useState<any>(null);
   const [detailViewOpen, setDetailViewOpen] = useState(false);
   const [allCards, setAllCards] = useState<any[]>([]);
@@ -56,8 +59,32 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
   const handleSearchChange = (slotIndex: number, value: string) => setSearchQueries(prev => { const newQueries = [...prev]; newQueries[slotIndex] = value; return newQueries; });
   const handleSelectCard = (slotIndex: number, card: any) => { toggleCard(card); handleSearchChange(slotIndex, ''); };
   const toggleRowExpansion = (rowKey: string) => setExpandedRows(prev => { const newSet = new Set(prev); if (newSet.has(rowKey)) newSet.delete(rowKey); else newSet.add(rowKey); return newSet; });
+  const toggleSectionExpansion = (sectionId: string) => setExpandedSections(prev => { const newSet = new Set(prev); if (newSet.has(sectionId)) newSet.delete(sectionId); else newSet.add(sectionId); return newSet; });
+  const toggleUspExpansion = (uspKey: string) => setExpandedUsps(prev => { const newSet = new Set(prev); if (newSet.has(uspKey)) newSet.delete(uspKey); else newSet.add(uspKey); return newSet; });
   const getNestedValue = (obj: any, path: string) => path.split('.').reduce((acc, part) => acc?.[part], obj);
-  const isLongText = (text: string) => text ? text.replace(/<[^>]*>/g, '').length > 150 : false;
+  const isLongText = (text: string) => text ? text.replace(/<[^>]*>/g, '').length > 70 : false;
+  
+  // Helper function to truncate and shorten text for mobile display
+  const shortenText = (text: string, maxLength: number = 50): string => {
+    if (!text) return '';
+    const cleanText = text.replace(/<[^>]*>/g, '').trim();
+    if (cleanText.length <= maxLength) return cleanText;
+    return cleanText.substring(0, maxLength).trim() + '...';
+  };
+  
+  // Helper to format long descriptions into shorter text
+  const formatLongText = (text: string): string => {
+    if (!text) return '';
+    const cleanText = text.replace(/<[^>]*>/g, '').trim();
+    // Remove common verbose phrases
+    return cleanText
+      .replace(/\b(annually|per year|yearly)\b/gi, '/yr')
+      .replace(/\b(greater than|more than|above)\b/gi, '>')
+      .replace(/\b(spends of|spend of|spending)\b/gi, 'spend')
+      .replace(/\b(can be|will be|is)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
 
   const comparisonSections = [
     {
@@ -231,7 +258,7 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
     });
   }, [open, selectedCards]);
 
-  const renderCellValue = (card: any, row: any) => {
+  const renderCellValue = (card: any, row: any, cardIndex?: number) => {
     const value = getNestedValue(card, row.key);
     
     // For Fee Structure rows with comments, check both value and comment
@@ -251,30 +278,193 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
       if (!value || value === 'N/A' || value === '') return <span className="text-muted-foreground italic">Not Available</span>;
     }
     
-    if (row.type === 'rating') return <div className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-semibold">{value}</span></div>;
-    if (row.type === 'usps') return <div className="space-y-2">{(Array.isArray(value) ? value : []).sort((a: any, b: any) => a.priority - b.priority).map((usp: any, idx: number) => (<div key={idx} className="p-2 bg-muted/50 rounded-lg"><div className="font-semibold text-sm mb-1">{usp.header}</div><div className="text-xs text-muted-foreground">{usp.description}</div></div>))}</div>;
-    if (row.type === 'tags') return <div className="flex flex-wrap gap-2">{(Array.isArray(value) ? value : []).map((t: any) => <span key={t.id || t.name} className="px-2 py-1 rounded-full bg-muted text-foreground text-xs">{t.name}</span>)}</div>;
-    if (row.type === 'list') return <ul className="list-disc list-inside space-y-1 text-sm">{value.split(',').map((item: string) => item.trim()).filter(Boolean).map((item: string, idx: number) => <li key={idx}>{item}</li>)}</ul>;
-    if (row.type === 'link') return <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">View Catalogue <ExternalLink className="w-3 h-3" /></a>;
-    if (row.type === 'html') {
-      const rowKey = `${row.key}`; const isExpanded = expandedRows.has(rowKey); const needsExpansion = isLongText(value);
-      return <div><div className={cn("prose prose-sm max-w-none", !isExpanded && needsExpansion && "line-clamp-3")} dangerouslySetInnerHTML={{ __html: sanitizeHtml(value) }} />{needsExpansion && <Button variant="link" size="sm" onClick={() => toggleRowExpansion(rowKey)} className="mt-1 p-0 h-auto text-xs">{isExpanded ? <>Show Less <ChevronUp className="w-3 h-3 ml-1" /></> : <>Show More <ChevronDown className="w-3 h-3 ml-1" /></>}</Button>}</div>;
+    if (row.type === 'rating') return <div className="flex items-center gap-1"><Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /><span className="font-semibold text-xs">{value}</span></div>;
+    if (row.type === 'usps') {
+      const usps = (Array.isArray(value) ? value : []).sort((a: any, b: any) => a.priority - b.priority);
+      const cardKey = card ? getCardKey(card) : '';
+      
+      return (
+        <div className="space-y-1">
+          {usps.map((usp: any, idx: number) => {
+            const uspKey = `${cardKey}-${row.key}-${idx}`;
+            const isExpanded = expandedUsps.has(uspKey);
+            
+            return (
+              <div key={idx}>
+                {/* Mobile: Only heading, collapsible description */}
+                <div className="sm:hidden">
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleUspExpansion(uspKey)}>
+                    <CollapsibleTrigger className="w-full text-left">
+                      <div className="pl-3 pr-2 py-1.5 bg-gradient-to-r from-muted/40 to-muted/30 rounded-md border-l-4 border-primary/40 flex items-center justify-between group hover:from-muted/60 hover:to-muted/50 active:scale-[0.98] transition-all duration-150 shadow-sm">
+                        <div className="font-semibold text-[11px] text-foreground line-clamp-1 flex-1 pr-1">{usp.header}</div>
+                        <ChevronDown className={cn("w-3 h-3 text-primary/60 ml-1 flex-shrink-0 transition-transform duration-200", isExpanded && "rotate-180")} />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pl-3 pr-2 pt-1.5 pb-1.5 ml-1 border-l-2 border-primary/20 bg-muted/20 rounded-b-md">
+                        <div className="text-[10px] text-muted-foreground leading-relaxed">{usp.description || ''}</div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+                
+                {/* Desktop: Full content with heading and description */}
+                <div className="hidden sm:block">
+                  <div className="pl-3 pr-2 py-1.5 bg-gradient-to-r from-muted/50 to-muted/40 rounded-md border-l-4 border-primary/30 hover:from-muted/60 hover:to-muted/50 transition-colors shadow-sm">
+                    <div className="font-semibold text-[11px] mb-1 text-foreground">{usp.header}</div>
+                    <div className="text-[10px] text-muted-foreground leading-relaxed pl-0.5">{usp.description || ''}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
     }
-    const rowKey = `${row.key}`; const isExpanded = expandedRows.has(rowKey); const strValue = String(value); const needsExpansion = strValue.length > 150;
-    return <div><div className={cn(!isExpanded && needsExpansion && "line-clamp-3")}>{strValue}</div>{needsExpansion && <Button variant="link" size="sm" onClick={() => toggleRowExpansion(rowKey)} className="mt-1 p-0 h-auto text-xs">{isExpanded ? <>Show Less <ChevronUp className="w-3 h-3 ml-1" /></> : <>Show More <ChevronDown className="w-3 h-3 ml-1" /></>}</Button>}</div>;
+    if (row.type === 'tags') return <div className="flex flex-wrap gap-1.5">{(Array.isArray(value) ? value : []).map((t: any) => <span key={t.id || t.name} className="px-1.5 py-0.5 rounded-full bg-muted text-foreground text-[10px] font-medium">{shortenText(t.name, 20)}</span>)}</div>;
+    if (row.type === 'list') {
+      const items = value.split(',').map((item: string) => item.trim()).filter(Boolean);
+      return (
+        <ul className="list-disc list-inside space-y-0.5 text-[10px] text-foreground leading-tight pl-2.5">
+          {items.map((item: string, idx: number) => (
+            <li key={idx} className="line-clamp-1 pl-0.5">{shortenText(item, 35)}</li>
+          ))}
+        </ul>
+      );
+    }
+    if (row.type === 'link') return <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs font-medium">View Catalogue <ExternalLink className="w-3 h-3" /></a>;
+    if (row.type === 'html') {
+      const rowKey = `${row.key}`; const isExpanded = expandedRows.has(rowKey);
+      const cleanHtml = value ? value.replace(/<[^>]*>/g, '').trim() : '';
+      const needsExpansion = isLongText(cleanHtml);
+      const displayText = !isExpanded && needsExpansion ? shortenText(cleanHtml, 50) : cleanHtml;
+      return (
+        <div className="text-[10px] sm:text-xs">
+          <div className={cn("break-words leading-tight pl-0.5", !isExpanded && needsExpansion && "line-clamp-2")}>
+            {isExpanded ? <div className="prose prose-sm max-w-none text-[10px] sm:text-xs leading-tight pl-0.5" dangerouslySetInnerHTML={{ __html: sanitizeHtml(value) }} /> : displayText}
+          </div>
+          {needsExpansion && <Button variant="link" size="sm" onClick={() => toggleRowExpansion(rowKey)} className="mt-0.5 p-0 h-auto text-[9px] sm:text-[10px]">{isExpanded ? <>Less <ChevronUp className="w-2 h-2 ml-0.5" /></> : <>More <ChevronDown className="w-2 h-2 ml-0.5" /></>}</Button>}
+        </div>
+      );
+    }
+    const rowKey = `${row.key}`; const isExpanded = expandedRows.has(rowKey); const strValue = String(value);
+    const cleanText = strValue.replace(/<[^>]*>/g, '').trim();
+    const formattedText = formatLongText(cleanText);
+    const needsExpansion = formattedText.length > 50;
+    const displayText = !isExpanded && needsExpansion ? shortenText(formattedText, 45) : formattedText;
+    
+    return (
+      <div className="text-[10px] sm:text-xs">
+        <div className={cn("break-words leading-tight pl-0.5", !isExpanded && needsExpansion && "line-clamp-2")}>
+          {displayText}
+        </div>
+        {needsExpansion && (
+          <Button 
+            variant="link" 
+            size="sm" 
+            onClick={() => toggleRowExpansion(rowKey)} 
+            className="mt-0.5 p-0 h-auto text-[9px] sm:text-[10px]"
+          >
+            {isExpanded ? <>Less <ChevronUp className="w-2 h-2 ml-0.5" /></> : <>More <ChevronDown className="w-2 h-2 ml-0.5" /></>}
+          </Button>
+        )}
+      </div>
+    );
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] h-[92vh] sm:h-[90vh] p-0">
-          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
-            <DialogTitle className="text-xl sm:text-2xl font-bold">Compare Credit Cards</DialogTitle>
+        <DialogContent className="max-w-[100vw] sm:max-w-[95vw] h-[100vh] sm:h-[90vh] p-0 rounded-none sm:rounded-lg">
+          <DialogHeader className="px-3 sm:px-6 pt-3 sm:pt-4 pb-2 sm:pb-3 border-b">
+            <DialogTitle className="text-base sm:text-lg font-bold">Compare Credit Cards</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-full px-4 sm:px-6 pb-4 sm:pb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <ScrollArea className="h-full px-3 sm:px-6 pb-3 sm:pb-6">
+            {/* Mobile: Horizontal scrollable cards, Desktop: Grid */}
+            <div className="sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-4 mb-6 sm:mb-8">
+              {/* Mobile: Horizontal scroll - Compact cards side by side */}
+              <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 mb-3 -mx-3 px-3 scrollbar-hide snap-x snap-mandatory">
+                {resolvedSlots.map((card, index) => (
+                  <div key={`mobile-${index}`} className="flex-shrink-0 w-[calc((100vw-1rem)/3)] min-w-[130px] max-w-[145px] snap-center border rounded-lg p-2 bg-card">
+                  {card ? (
+                    <div className="space-y-2 flex flex-col h-full">
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={card.image || '/placeholder.svg'}
+                          alt={card.name}
+                          className="w-full h-14 object-contain rounded-md bg-gradient-to-br from-muted to-muted/50"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-0 right-0 bg-background/95 hover:bg-background touch-target h-5 w-5 p-0 rounded-full"
+                          onClick={() => removeCard(getCardKey(card))}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </Button>
+                      </div>
+                      <div className="flex-1 flex flex-col justify-between min-h-0">
+                        <div className="space-y-0.5">
+                          <h3 className="font-semibold text-xs leading-tight line-clamp-2 text-foreground">{card.name}</h3>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">{card.banks?.name}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-[10px] h-7 mt-1.5 px-1.5"
+                          onClick={() => {
+                            setDetailViewCard(card);
+                            setDetailViewOpen(true);
+                          }}
+                        >
+                          <Info className="w-3 h-3 mr-1" />
+                          Details
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 flex flex-col h-full">
+                      <div className="relative w-full h-14 flex items-center justify-center bg-muted/50 rounded-md border-2 border-dashed flex-shrink-0">
+                        <Plus className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1.5 relative min-h-0">
+                        <Input
+                          placeholder="Search card..."
+                          value={searchQueries[index]}
+                          onChange={(e) => handleSearchChange(index, e.target.value)}
+                          className="w-full text-xs h-7 touch-target"
+                        />
+                        {searchResults[index].length > 0 && (
+                          <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-48 overflow-auto">
+                            {searchResults[index].map((searchCard: any) => (
+                              <button
+                                key={searchCard.id}
+                                className="w-full text-left px-2 py-1.5 hover:bg-muted flex items-center gap-1.5"
+                                onClick={() => handleSelectCard(index, searchCard)}
+                              >
+                                <img
+                                  src={searchCard.image}
+                                  alt={searchCard.name}
+                                  className="w-10 h-6 object-contain"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-xs line-clamp-1">{searchCard.name}</div>
+                                  <div className="text-[10px] text-muted-foreground line-clamp-1">{searchCard.banks?.name}</div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Desktop: Grid layout */}
               {resolvedSlots.map((card, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-card">
+                <div key={`desktop-${index}`} className="hidden sm:block border rounded-lg p-4 bg-card">
                   {card ? (
                     <div className="space-y-3">
                       <div className="relative">
@@ -364,36 +554,38 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
 
             {selectedCards.length >= 2 && (
               <div className="space-y-6">
-                {/* Mobile-friendly stacked comparison */}
-                <div className="space-y-4 sm:hidden">
-                  {comparisonSections.map((section) => (
-                    <div key={section.id} className="border rounded-lg overflow-hidden">
-                      <div className="bg-muted px-4 py-3">
-                        <h3 className="font-semibold text-base">{section.title}</h3>
-                      </div>
+                {/* Mobile-friendly stacked comparison - Cards side by side */}
+                <div className="space-y-3 sm:hidden">
+                  {comparisonSections.map((section) => {
+                    const isExpanded = expandedSections.has(section.id);
+                    return (
+                    <Collapsible 
+                      key={section.id} 
+                      open={isExpanded}
+                      onOpenChange={() => toggleSectionExpansion(section.id)}
+                      className="border rounded-lg overflow-hidden"
+                    >
+                      <CollapsibleTrigger className="w-full bg-muted/80 hover:bg-muted px-3 py-1.5 flex items-center justify-between transition-colors">
+                        <h3 className="font-semibold text-xs text-left leading-tight">{section.title}</h3>
+                        <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0", isExpanded && "rotate-180")} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
                       <div className="divide-y">
                         {section.rows.map((row) => (
-                          <div key={row.key} className="px-4 py-3">
-                            <div className="text-[11px] font-semibold text-muted-foreground mb-2">
+                          <div key={row.key} className="px-3 py-1">
+                            <div className="text-[10px] font-semibold text-muted-foreground mb-1">
                               {row.label}
                             </div>
-                            <div
-                              className={cn(
-                                "grid gap-2",
-                                activeCards.length === 1 && "grid-cols-1",
-                                activeCards.length === 2 && "grid-cols-2",
-                                activeCards.length >= 3 && "grid-cols-3"
-                              )}
-                            >
+                            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3">
                               {activeCards.map((card, idx) => (
                                 <div
                                   key={idx}
-                                  className="border rounded-md bg-background/70 px-2.5 py-2 space-y-1"
+                                  className="flex-shrink-0 w-[calc((100vw-4rem)/3)] min-w-[125px] max-w-[135px] border rounded-md bg-background/70 px-1.5 py-1"
                                 >
-                                  <div className="text-[10px] font-semibold line-clamp-2 min-h-[1.5rem]">
+                                  <div className="text-[9px] font-semibold line-clamp-1 text-foreground mb-0.5">
                                     {card?.name || 'Card'}
                                   </div>
-                                  <div className="text-[10px] leading-snug">
+                                  <div className="text-[10px] leading-tight break-words">
                                     {renderCellValue(card, row)}
                                   </div>
                                 </div>
@@ -402,56 +594,69 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
                           </div>
                         ))}
                       </div>
+                    </CollapsibleContent>
+                    </Collapsible>
+                  );
+                  })}
                     </div>
-                  ))}
-                </div>
 
                 {/* Tablet / Desktop table view */}
                 <div className="hidden sm:block space-y-6">
-                  {comparisonSections.map((section) => (
-                    <div key={section.id} className="border rounded-lg overflow-hidden">
-                      <div className="bg-muted px-4 py-3">
-                        <h3 className="font-semibold text-lg">{section.title}</h3>
-                      </div>
+                {comparisonSections.map((section) => {
+                  const isExpanded = expandedSections.has(section.id);
+                  return (
+                  <Collapsible 
+                    key={section.id}
+                    open={isExpanded}
+                    onOpenChange={() => toggleSectionExpansion(section.id)}
+                    className="border rounded-lg overflow-hidden"
+                  >
+                    <CollapsibleTrigger className="w-full bg-muted/80 hover:bg-muted px-4 py-2.5 flex items-center justify-between transition-colors">
+                      <h3 className="font-semibold text-sm text-left">{section.title}</h3>
+                      <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
                       {/* Make the comparison table horizontally scrollable on small tablet widths */}
                       <div className="w-full overflow-x-auto">
                         <Table className="min-w-[680px] sm:min-w-full">
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] font-semibold sticky left-0 bg-background z-10 text-sm sm:text-base">
-                                Attribute
-                              </TableHead>
+                      <TableHeader>
+                        <TableRow>
+                              <TableHead className="w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] font-semibold sticky left-0 bg-background z-10 text-xs">
+                            Attribute
+                          </TableHead>
                               {activeCards.map((card, idx) => (
                                 <TableHead
                                   key={idx}
-                                  className="font-semibold text-center min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-sm sm:text-base"
+                                  className="font-semibold text-center min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-xs"
                                 >
-                                  {card?.name || 'Card'}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {section.rows.map((row) => (
-                              <TableRow key={row.key} className="hover:bg-muted/50">
-                                <TableCell className="font-medium align-top w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] sticky left-0 bg-background z-10 text-xs sm:text-sm">
-                                  {row.label}
-                                </TableCell>
+                              {card?.name || 'Card'}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {section.rows.map((row) => (
+                          <TableRow key={row.key} className="hover:bg-muted/50">
+                                <TableCell className="font-medium align-top w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] sticky left-0 bg-background z-10 text-[11px] py-2">
+                              {row.label}
+                            </TableCell>
                                 {activeCards.map((card, idx) => (
                                   <TableCell
                                     key={idx}
-                                    className="align-top min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-xs sm:text-sm"
+                                    className="align-top min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-[10px] py-2"
                                   >
-                                    {renderCellValue(card, row)}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
+                                {renderCellValue(card, row)}
+                              </TableCell>
                             ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                  );
+                })}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">

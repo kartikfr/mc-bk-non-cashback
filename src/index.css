@@ -285,8 +285,10 @@ All colors MUST be HSL.
   
   .filter-option input[type="radio"],
   .filter-option input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 10px !important;
+    height: 10px !important;
+    min-width: 10px !important;
+    min-height: 10px !important;
   }
 
   .credit-card-3d {
@@ -296,19 +298,34 @@ All colors MUST be HSL.
     position: relative;
     border-radius: 24px;
     box-shadow: 
-      0 20px 60px rgba(0, 0, 0, 0.3),
-      0 30px 90px rgba(0, 0, 0, 0.2),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+      0 20px 60px rgba(0, 0, 0, 0.12),
+      0 30px 80px rgba(0, 0, 0, 0.08),
+      inset 0 0 0 2px rgba(255, 255, 255, 0.8),
+      0 0 40px rgba(34, 197, 94, 0.15),
+      0 8px 32px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    transition: box-shadow 0.3s ease;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    will-change: transform;
+  }
+
+  @media (max-width: 768px) {
+    .credit-card-3d {
+      box-shadow: 
+        0 15px 40px rgba(0, 0, 0, 0.1),
+        0 20px 60px rgba(0, 0, 0, 0.06),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.7),
+        0 0 30px rgba(34, 197, 94, 0.12),
+        0 6px 24px rgba(0, 0, 0, 0.08);
+    }
   }
 
   .credit-card-3d:hover {
     box-shadow: 
-      0 30px 80px rgba(0, 0, 0, 0.4),
-      0 40px 120px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-      0 0 60px rgba(0, 166, 81, 0.3);
+      0 25px 80px rgba(0, 0, 0, 0.15),
+      0 35px 100px rgba(0, 0, 0, 0.1),
+      inset 0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 0 50px rgba(34, 197, 94, 0.2),
+      0 10px 40px rgba(0, 0, 0, 0.12);
   }
 
   .perspective-container {
@@ -583,15 +600,17 @@ All colors MUST be HSL.
   }
   
   @media (max-width: 768px) {
-    /* Mobile Touch Targets */
+  /* Mobile Touch Targets */
     button, a, input[type="radio"], input[type="checkbox"] {
       min-height: 44px;
       min-width: 44px;
     }
     
     input[type="radio"], input[type="checkbox"] {
-      width: 24px;
-      height: 24px;
+      width: 10px !important;
+      height: 10px !important;
+      min-width: 10px !important;
+      min-height: 10px !important;
     }
 
     /* Hero: Card listing mobile optimization */
@@ -697,9 +716,9 @@ All colors MUST be HSL.
 
     .cg-skip-question-link:hover {
       color: hsl(var(--primary));
-    }
-
-    /* Prevent horizontal scroll on mobile */
+  }
+  
+  /* Prevent horizontal scroll on mobile */
     body {
       overflow-x: hidden;
     }
@@ -796,5 +815,122 @@ All colors MUST be HSL.
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Floating animation for background elements */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) translateX(0px);
+    }
+    33% {
+      transform: translateY(-20px) translateX(10px);
+    }
+    66% {
+      transform: translateY(-10px) translateX(-10px);
+    }
+  }
+
+  .animate-float {
+    animation: float 20s ease-in-out infinite;
+  }
+
+  /* Hero section overflow handling */
+  @media (max-width: 1024px) {
+    .hero-card-container {
+      overflow: visible;
+    }
+  }
+
+  /* Ensure floating bubbles don't overflow on mobile */
+  @media (max-width: 768px) {
+    .credit-card-3d-container {
+      overflow: visible;
+      padding: 1rem;
+    }
+    
+    /* Ensure hero section allows overflow for floating elements */
+    section.relative.overflow-hidden {
+      overflow: visible;
+    }
+    
+    /* Adjust card container padding on mobile */
+    .section-shell {
+      overflow: visible;
+    }
+  }
+  
+  /* Ensure card animations work smoothly on mobile */
+  @media (max-width: 768px) {
+    .credit-card-3d {
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+    }
+    
+    /* Reduce animation intensity on mobile for better performance */
+    .credit-card-3d * {
+      will-change: transform;
+    }
+  }
+
+  /* Filter bar animated underline */
+  .filter-tab-active {
+    position: relative;
+  }
+
+  .filter-tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: hsl(var(--primary));
+    border-radius: 2px;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    to {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+
+  /* Sticky Filter Bar */
+  .sticky-filter-bar {
+    top: -1px;
+    transition: all 0.3s ease;
+  }
+
+  .sticky-filter-bar.sticky-filter-active {
+    position: sticky;
+    top: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  /* Hide scrollbar but allow scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Enhanced card shadows and spacing */
+  .popular-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .popular-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
   }
 }

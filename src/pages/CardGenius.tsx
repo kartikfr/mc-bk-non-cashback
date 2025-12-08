@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
-import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, ChevronDown, Info, Check, X, TrendingUp, CheckCircle2, Lock, Shield, FileCheck } from "lucide-react";
 import { cardService } from "@/services/cardService";
 import type { SpendingData } from "@/services/cardService";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,7 @@ interface SpendingQuestion {
   step: number;
   showCurrency?: boolean;
   suffix?: string;
+  context?: string; // Why this question matters
 }
 const questions: SpendingQuestion[] = [{
   field: 'amazon_spends',
@@ -34,70 +35,80 @@ const questions: SpendingQuestion[] = [{
   emoji: '🛍️',
   min: 0,
   max: 100000,
-  step: 500
+  step: 500,
+  context: 'This helps us calculate your cashback on Amazon and compare it with other cards.'
 }, {
   field: 'flipkart_spends',
   question: 'How much do you spend on Flipkart in a month?',
   emoji: '📦',
   min: 0,
   max: 100000,
-  step: 500
+  step: 500,
+  context: 'We use this to find cards that offer the best rewards on Flipkart purchases.'
 }, {
   field: 'other_online_spends',
   question: 'How much do you spend on other online shopping?',
   emoji: '💸',
   min: 0,
   max: 50000,
-  step: 500
+  step: 500,
+  context: 'This helps us identify cards with the best general online shopping rewards.'
 }, {
   field: 'other_offline_spends',
   question: 'How much do you spend at local shops or offline stores monthly?',
   emoji: '🏪',
   min: 0,
   max: 100000,
-  step: 1000
+  step: 1000,
+  context: 'We match you with cards that offer rewards on offline purchases.'
 }, {
   field: 'grocery_spends_online',
   question: 'How much do you spend on groceries (Blinkit, Zepto etc.) every month?',
   emoji: '🥦',
   min: 0,
   max: 50000,
-  step: 500
+  step: 500,
+  context: 'This helps us find cards with the highest cashback on grocery purchases.'
 }, {
   field: 'online_food_ordering',
   question: 'How much do you spend on food delivery apps in a month?',
   emoji: '🛵🍜',
   min: 0,
   max: 30000,
-  step: 500
+  step: 500,
+  context: 'We calculate which cards offer the best rewards on food delivery.'
 }, {
   field: 'fuel',
   question: 'How much do you spend on fuel in a month?',
   emoji: '⛽',
   min: 0,
   max: 20000,
-  step: 500
+  step: 500,
+  context: 'This helps us find cards with the best fuel surcharge waivers and rewards.'
 }, {
   field: 'dining_or_going_out',
   question: 'How much do you spend on dining out in a month?',
   emoji: '🥗',
   min: 0,
   max: 30000,
-  step: 500
+  step: 500,
+  context: 'We match you with cards that offer the highest rewards on dining.'
 }, {
   field: 'flights_annual',
   question: 'How much do you spend on flights in a year?',
   emoji: '✈️',
   min: 0,
   max: 500000,
-  step: 5000
+  step: 5000,
+  context: 'This helps us recommend travel cards with the best air miles and discounts.'
 }, {
   field: 'hotels_annual',
   question: 'How much do you spend on hotel stays in a year?',
   emoji: '🛌',
   min: 0,
   max: 300000,
-  step: 5000
+  step: 5000,
+  context: 'We find cards that offer the best hotel booking rewards and discounts.'
 }, {
   field: 'domestic_lounge_usage_quarterly',
   question: 'How often do you visit domestic airport lounges in a year?',
@@ -106,7 +117,8 @@ const questions: SpendingQuestion[] = [{
   max: 50,
   step: 1,
   showCurrency: false,
-  suffix: ' visits'
+  suffix: ' visits',
+  context: 'This helps us calculate the value of complimentary lounge access.'
 }, {
   field: 'international_lounge_usage_quarterly',
   question: 'Plus, what about international airport lounges?',
@@ -115,56 +127,64 @@ const questions: SpendingQuestion[] = [{
   max: 50,
   step: 1,
   showCurrency: false,
-  suffix: ' visits'
+  suffix: ' visits',
+  context: 'We factor in international lounge access value for travel cards.'
 }, {
   field: 'mobile_phone_bills',
   question: 'How much do you spend on recharging your mobile or Wi-Fi monthly?',
   emoji: '📱',
   min: 0,
   max: 10000,
-  step: 100
+  step: 100,
+  context: 'This helps us find cards with the best rewards on utility bill payments.'
 }, {
   field: 'electricity_bills',
   question: "What's your average monthly electricity bill?",
   emoji: '⚡️',
   min: 0,
   max: 20000,
-  step: 500
+  step: 500,
+  context: 'We match you with cards that offer rewards on electricity bill payments.'
 }, {
   field: 'water_bills',
   question: 'And what about your monthly water bill?',
   emoji: '💧',
   min: 0,
   max: 5000,
-  step: 100
+  step: 100,
+  context: 'This helps us calculate total utility rewards across all bills.'
 }, {
   field: 'insurance_health_annual',
   question: 'How much do you pay for health or term insurance annually?',
   emoji: '🛡️',
   min: 0,
   max: 100000,
-  step: 1000
+  step: 1000,
+  context: 'We find cards that offer rewards on insurance premium payments.'
 }, {
   field: 'insurance_car_or_bike_annual',
   question: 'How much do you pay for car or bike insurance annually?',
   emoji: '🚗',
   min: 0,
   max: 50000,
-  step: 1000
+  step: 1000,
+  context: 'This helps us calculate rewards on vehicle insurance payments.'
 }, {
   field: 'rent',
   question: 'How much do you pay for house rent every month?',
   emoji: '🏠',
   min: 0,
   max: 100000,
-  step: 1000
+  step: 1000,
+  context: 'We find cards that offer rewards on rent payments (where available).'
 }, {
   field: 'school_fees',
   question: 'How much do you pay in school fees monthly?',
   emoji: '🎓',
   min: 0,
   max: 50000,
-  step: 1000
+  step: 1000,
+  context: 'This helps us calculate rewards on education-related expenses.'
 }];
 const funFacts = ["Credit cards were first introduced in India in 1980!", "Indians saved over ₹2,000 crores in credit card rewards last year!", "Premium cards often pay for themselves through lounge access alone.", "The average Indian has 2-3 cards but maximizes only one!", "Reward points can be worth 3x more than instant cashback!", "Your credit score improves by 50+ points in 6 months with smart usage.", "Travel cards can get you business class at economy prices!", "You can negotiate annual fees—most people don't know this!", "5% cashback vs 1%? That's ₹40,000 saved on ₹10L spending!", "Airport lounges aren't just for the rich—many cards offer them free."];
 const CardGenius = () => {
@@ -177,6 +197,36 @@ const CardGenius = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [results, setResults] = useState<CardGeniusResult[]>([]);
+  const [showEncouragement, setShowEncouragement] = useState(false);
+  const [encouragementMessage, setEncouragementMessage] = useState('');
+
+  // Get encouragement message based on progress
+  const getEncouragementMessage = (step: number, total: number) => {
+    const progress = (step + 1) / total;
+    if (step === 4 || step === 5) {
+      return "Great progress!";
+    } else if (step === 9 || step === 10) {
+      return "You're halfway there!";
+    } else if (step === 14 || step === 15) {
+      return "Almost done — recommendations are getting more accurate.";
+    } else if (step === 17 || step === 18) {
+      return "Final questions! Your perfect card match is almost ready.";
+    }
+    return null;
+  };
+
+  // Show encouragement message when reaching milestone steps
+  useEffect(() => {
+    const message = getEncouragementMessage(currentStep, questions.length);
+    if (message) {
+      setEncouragementMessage(message);
+      setShowEncouragement(true);
+      const timer = setTimeout(() => {
+        setShowEncouragement(false);
+      }, 4000); // Show for 4 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
   const [showResults, setShowResults] = useState(false);
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<'quick' | 'detailed'>('quick');
@@ -518,26 +568,30 @@ const CardGenius = () => {
               Back to all recommendations
                 </button>
                 
-            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1B1C3F] via-[#2D3E94] to-[#4C7DFE] text-white p-6 sm:p-8 shadow-2xl flex flex-col gap-6 sm:flex-row sm:items-center">
-              <button onClick={() => setSelectedCard(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
-                <X className="w-5 h-5" />
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1B1C3F] via-[#2D3E94] to-[#4C7DFE] text-white p-4 sm:p-6 md:p-8 shadow-2xl flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center">
+              <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors z-10 touch-target">
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div className="space-y-3 max-w-xl">
+              <div className="space-y-1.5 sm:space-y-2 md:space-y-3 max-w-xl pr-10 sm:pr-0 flex-1 min-w-0">
                 {bankLabel && (
-                  <p className="text-xs uppercase tracking-[0.4em] text-white/70">
+                  <p className="text-[9px] sm:text-[10px] md:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white/70 truncate">
                     {bankLabel}
                   </p>
                 )}
-                <h1 className="text-2xl sm:text-3xl font-bold leading-snug">
-                  {selectedCard.card_name}
-                </h1>
-                <p className="text-sm text-white/80">Best card curated using your spends of ₹{(totalAnnualSpend / 100000).toFixed(2)}L annually.</p>
+                <div className="space-y-1 sm:space-y-0 min-w-0">
+                  <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold leading-tight sm:leading-snug pr-2 break-words sm:break-normal">
+                    {selectedCard.card_name}
+                  </h1>
+                  <p className="text-[9px] sm:text-[10px] md:text-xs text-white/80 leading-tight sm:leading-relaxed">
+                    Best card curated using your spends of ₹{(totalAnnualSpend / 100000).toFixed(2)}L annually.
+                  </p>
                 </div>
-              <div className="flex justify-center sm:justify-end w-full sm:w-auto">
+                </div>
+              <div className="flex justify-center sm:justify-end w-full sm:w-auto flex-shrink-0">
                 <img
                   src={selectedCard.card_bg_image}
                   alt={selectedCard.card_name}
-                  className="w-40 sm:w-56 h-auto object-contain drop-shadow-2xl"
+                  className="w-32 sm:w-40 md:w-56 h-auto object-contain drop-shadow-2xl max-h-[120px] sm:max-h-[160px] md:max-h-none"
                   onError={e => {
                     e.currentTarget.style.display = 'none';
                   }}
@@ -545,41 +599,57 @@ const CardGenius = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-5">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">On the spends of ₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</p>
-              <div className="grid sm:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Total Savings</p>
-                  <p className="text-xl font-semibold text-foreground">₹{selectedCard.total_savings_yearly.toLocaleString()}</p>
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-4 sm:p-6 space-y-4 sm:space-y-5">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                <span className="text-xl sm:text-2xl">💰</span>
+                <h2 className="text-lg sm:text-xl font-bold text-foreground">Your Annual Savings Summary</h2>
               </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Milestone Benefits</p>
-                  <p className="text-xl font-semibold text-foreground">{milestoneValue > 0 ? `₹${milestoneValue.toLocaleString()}` : '—'}</p>
-                  </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Joining Fees</p>
-                  <p className={`text-xl font-semibold ${joiningFeeValue > 0 ? 'text-red-500' : 'text-foreground'}`}>
-                    {joiningFeeValue > 0 ? `-₹${joiningFeeValue.toLocaleString()}` : '₹0'}
-                  </p>
-                    </div>
-                    </div>
-              {totalLoungeValue > 0 && <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Airport Lounge Value</p>
-                    <p className="text-xl font-semibold text-foreground">₹{totalLoungeValue.toLocaleString()}</p>
-                    </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Estimated lounge visits</p>
-                    <p className="text-xl font-semibold text-foreground">{userDomesticLoungeVisits + userInternationalLoungeVisits}</p>
-                  </div>
-                </div>}
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-emerald-700">Your Net Savings</p>
-                  <p className="text-3xl font-bold text-emerald-700">₹{selectedCard.net_savings.toLocaleString()}</p>
+              
+              <div className="space-y-3 sm:space-y-4">
+                {/* Cashback Earned */}
+                <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-100">
+                  <span className="text-sm sm:text-base text-muted-foreground font-medium">Cashback Earned:</span>
+                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">₹{selectedCard.total_savings_yearly.toLocaleString()}</span>
                 </div>
-                <span className="text-xs text-emerald-700/70">per year</span>
+                
+                {/* Milestone Rewards */}
+                {milestoneValue > 0 && (
+                  <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-100">
+                    <span className="text-sm sm:text-base text-muted-foreground font-medium">Milestone Rewards:</span>
+                    <span className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">₹{milestoneValue.toLocaleString()}</span>
+                  </div>
+                )}
+                
+                {/* Airport Lounge Value */}
+                {totalLoungeValue > 0 && (
+                  <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-100">
+                    <span className="text-sm sm:text-base text-muted-foreground font-medium">Airport Lounge Value:</span>
+                    <span className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">₹{totalLoungeValue.toLocaleString()}</span>
+                  </div>
+                )}
+                
+                {/* Fees Paid */}
+                <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-200">
+                  <span className="text-sm sm:text-base text-muted-foreground font-medium">Fees Paid:</span>
+                  <span className={`text-lg sm:text-xl md:text-2xl font-bold ${joiningFeeValue > 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                    {joiningFeeValue > 0 ? `-₹${joiningFeeValue.toLocaleString()}` : '₹0'}
+                  </span>
+                </div>
+                
+                {/* Net Savings */}
+                <div className="rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between mt-4 sm:mt-5">
+                  <div>
+                    <p className="text-xs sm:text-sm uppercase tracking-wide text-emerald-700 font-semibold mb-1">Net Savings</p>
+                    <p className="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-700">₹{selectedCard.net_savings.toLocaleString()}</p>
+                  </div>
+                  <span className="text-xs sm:text-sm text-emerald-700/70 font-medium">/ year</span>
+                </div>
               </div>
+              
+              {/* Context Note */}
+              <p className="text-[10px] sm:text-xs text-muted-foreground italic pt-2 border-t border-slate-100">
+                Based on your annual spend of ₹{(totalAnnualSpend / 100000).toFixed(2)}L
+              </p>
             </div>
 
             {(() => {
@@ -615,30 +685,30 @@ const CardGenius = () => {
                 <h2 className="text-xl font-bold text-foreground">See how each category contributes</h2>
               </div>
 
-              <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
-                {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
-                  if (!details || !details.spend || details.spend === 0) return null;
-                  const isActive = selectedCategory === category || (!selectedCategory && details.spend > 0);
-                  const label = category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+              <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-2 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory">
+                    {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
+                    if (!details || !details.spend || details.spend === 0) return null;
+                const isActive = selectedCategory === category || (!selectedCategory && details.spend > 0);
+                const label = category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
                   return (
                     <button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
-                      className={`px-4 sm:px-5 py-2.5 rounded-full text-sm font-semibold transition-colors border shadow-sm inline-flex items-center justify-center whitespace-nowrap ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200 hover:border-primary/40'}`}
-                    >
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                      className={`px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors border shadow-sm inline-flex items-center justify-center whitespace-nowrap flex-shrink-0 snap-center min-w-fit ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200 hover:border-primary/40'}`}
+                >
                       {label}
                     </button>
                   );
-                })}
+                  })}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-base font-semibold text-muted-foreground">Savings Breakdown</h3>
-                <div className="flex gap-2 bg-slate-100 rounded-full p-1">
-                  <button onClick={() => setBreakdownView('yearly')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${breakdownView === 'yearly' ? 'bg-white shadow text-foreground' : 'text-muted-foreground'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+                <h3 className="text-sm sm:text-base font-semibold text-muted-foreground">Savings Breakdown</h3>
+                <div className="flex gap-1.5 sm:gap-2 bg-slate-100 rounded-full p-0.5 sm:p-1">
+                  <button onClick={() => setBreakdownView('yearly')} className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${breakdownView === 'yearly' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
                     Yearly
                   </button>
-                  <button onClick={() => setBreakdownView('monthly')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${breakdownView === 'monthly' ? 'bg-white shadow text-foreground' : 'text-muted-foreground'}`}>
+                  <button onClick={() => setBreakdownView('monthly')} className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${breakdownView === 'monthly' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
                     Monthly
                   </button>
                 </div>
@@ -655,40 +725,73 @@ const CardGenius = () => {
               const pointsEarned = (details.points_earned || 0) * multiplier;
               const convRate = details.conv_rate || 0;
               const savings = (details.savings || 0) * multiplier;
-              return <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 space-y-4">
-                    <div className="flex justify-between text-sm text-muted-foreground">
+              return <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6 space-y-3 sm:space-y-4">
+                    <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
                       <span>Total Spends</span>
                       <span className="font-semibold text-foreground">₹{spend.toLocaleString()}</span>
                       </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
+                    <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
                       <span>Points Earned</span>
                       <span className="font-semibold text-foreground">{pointsEarned.toLocaleString()}</span>
                         </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
+                    <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
                       <span>Value of 1 Point</span>
                       <span className="font-semibold text-foreground">₹{convRate.toFixed(2)}</span>
                       </div>
-                    {pointsEarned > 0 && convRate > 0 && <div className="text-xs text-muted-foreground text-center">
+                    {pointsEarned > 0 && convRate > 0 && <div className="text-[10px] sm:text-xs text-muted-foreground text-center">
                           ₹{pointsEarned.toLocaleString()} × {convRate.toFixed(2)}
                         </div>}
-                    <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                        <span className="font-semibold text-foreground">Total Savings</span>
-                        <span className="text-2xl font-bold text-green-600">₹{savings.toLocaleString()}</span>
+                    <div className="flex justify-between items-center pt-2 sm:pt-3 border-t border-slate-200">
+                        <span className="text-sm sm:text-base font-semibold text-foreground">Total Savings</span>
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600">₹{savings.toLocaleString()}</span>
                       </div>
-                    {details.explanation && details.explanation.length > 0 && <div className="rounded-2xl bg-white border border-slate-200 p-4 space-y-2">
-                        <p className="text-xs uppercase tracking-wide text-primary">How it's calculated</p>
-                        {details.explanation.map((exp, idx) => <div key={idx} className="text-sm text-foreground" dangerouslySetInnerHTML={{
-                      __html: sanitizeHtml(exp)
-                    }} />)}
+                    {details.explanation && details.explanation.length > 0 && <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 space-y-2 sm:space-y-3">
+                        <p className="text-xs sm:text-sm uppercase tracking-wide text-primary font-semibold">How it's calculated</p>
+                        {details.explanation.map((exp, idx) => {
+                          // Add "monthly" to the explanation text if it's not already there
+                          let processedExp = exp;
+                          if (typeof exp === 'string') {
+                            // Replace "On spend of" with "On monthly spend of" if breakdownView is monthly
+                            if (breakdownView === 'monthly') {
+                              processedExp = exp.replace(/On spend of/gi, 'On monthly spend of');
+                            } else {
+                              // For yearly view, ensure it says "On monthly spend of" since yearly is calculated from monthly
+                              processedExp = exp.replace(/On spend of/gi, 'On monthly spend of');
+                            }
+                          }
+                          return (
+                            <div key={idx} className="text-xs sm:text-sm text-foreground leading-relaxed" dangerouslySetInnerHTML={{
+                              __html: sanitizeHtml(processedExp)
+                            }} />
+                          );
+                        })}
                       </div>}
                   </div>;
             })()}
             </section>
 
-            <Button className="w-full h-12 text-base font-semibold shadow-xl" size="lg" onClick={handleApplyFromDetail}>
-              Apply Now
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            <div className="space-y-4">
+              <Button className="w-full h-12 text-base font-semibold shadow-xl" size="lg" onClick={handleApplyFromDetail}>
+                Apply Now
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              
+              {/* Trust Indicators */}
+              <div className="flex flex-row items-center justify-center gap-2 sm:gap-3 md:gap-4 text-[10px] sm:text-xs md:text-sm text-muted-foreground pt-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 whitespace-nowrap">
+                  <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-emerald-600 flex-shrink-0" />
+                  <span>Secure bank application</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 whitespace-nowrap">
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-blue-600 flex-shrink-0" />
+                  <span>100% unbiased</span>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 whitespace-nowrap">
+                  <FileCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-purple-600 flex-shrink-0" />
+                  <span>Verified savings</span>
+                </div>
+              </div>
+            </div>
           </main>
           <Footer />
         </div>;
@@ -747,24 +850,62 @@ const CardGenius = () => {
             <p className="text-sm text-muted-foreground">Personalized to your spending profile</p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Your Total Spends</p>
-              <div className="font-bold text-foreground text-xl sm:text-2xl">
-                <p className="flex items-center gap-2 whitespace-nowrap justify-center sm:justify-start text-base sm:text-[1.35rem]">
-                  <span>₹{(displayMonthlySpend / 100000).toFixed(2)}L Monthly</span>
-                  <span className="text-muted-foreground text-sm sm:text-base font-medium">|</span>
-                  <span className="text-primary">₹{(totalAnnualSpend / 100000).toFixed(2)}L Annually</span>
-                </p>
+          {/* Enhanced Spending Profile Card */}
+          <div className="bg-gradient-to-br from-emerald-50 via-primary/5 to-accent/5 border-2 border-emerald-200/60 rounded-3xl shadow-lg p-4 sm:p-6 md:p-8">
+            {/* Header Row - Title, Badge, and Button */}
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-5">
+              {/* Title and Badge Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground whitespace-nowrap">Your Spending Profile</h2>
+                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-100 text-emerald-700 text-[10px] sm:text-xs font-semibold rounded-full border border-emerald-300 whitespace-nowrap flex-shrink-0">
+                  <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                  <span className="hidden xs:inline">Personalized using your {questions.length} answers</span>
+                  <span className="xs:hidden">{questions.length} answers</span>
+                </span>
               </div>
-            </div>
-              <button onClick={() => {
-              setShowResults(false);
-              setCurrentStep(0);
-          }} className="inline-flex items-center gap-2 rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors mx-auto sm:mx-0">
-              Edit Spends
-              <ArrowRight className="w-4 h-4" />
+              {/* Edit Button */}
+              <button 
+                onClick={() => {
+                  setShowResults(false);
+                  setCurrentStep(0);
+                }} 
+                className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-emerald-600 bg-white px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors shadow-sm hover:shadow-md whitespace-nowrap self-start sm:self-auto flex-shrink-0"
+              >
+                Edit Spends
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
+            </div>
+            
+            {/* Spending Amounts Section */}
+            <div className="space-y-2 sm:space-y-3">
+              {/* Monthly and Annual Spend Display */}
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
+                {/* Monthly Spend */}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-foreground leading-tight">
+                    ₹{(displayMonthlySpend / 100000).toFixed(2)}L
+                  </span>
+                  <span className="text-sm sm:text-base md:text-lg text-muted-foreground font-medium">/ month</span>
+                </div>
+                
+                {/* Arrow Separator */}
+                <span className="hidden sm:inline text-emerald-600 text-xl sm:text-2xl font-bold mx-1">→</span>
+                <span className="sm:hidden text-emerald-600 text-lg font-bold self-center">↓</span>
+                
+                {/* Annual Spend */}
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+                  <span className="text-xs sm:text-sm text-emerald-700 font-semibold">Projected Annual Spend:</span>
+                  <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-emerald-700 leading-tight">
+                    ₹{(totalAnnualSpend / 100000).toFixed(2)}L
+                  </span>
+                </div>
+              </div>
+              
+              {/* Helper Text */}
+              <p className="text-[11px] sm:text-xs md:text-sm text-muted-foreground italic pt-1">
+                (Used to calculate card recommendations)
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 items-center">
@@ -986,16 +1127,16 @@ const CardGenius = () => {
                 <table className="w-full table-auto">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-left p-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground sticky left-0 bg-white z-20 min-w-[260px]">Credit Cards</th>
+                      <th className="text-left p-2 sm:p-3 font-semibold text-xs sm:text-xs uppercase tracking-wide text-muted-foreground sticky left-0 bg-white z-20 min-w-[180px] sm:min-w-[260px]">Credit Cards</th>
                       
                       {/* Quick Insights Tab - Show summary columns */}
                       {activeTab === 'quick' && <>
-                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[120px] sm:min-w-[140px]">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-3 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[80px] sm:w-[100px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Total Savings
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Total savings earned across all spending categories combined</p>
@@ -1003,15 +1144,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
-                            <span className="text-2xl">+</span>
+                          <th className="text-center p-1 sm:p-2 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">+</span>
                           </th>
-                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[120px] sm:min-w-[140px]">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-3 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[80px] sm:w-[100px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Milestones
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Additional benefits like vouchers, reward points, or perks earned by achieving spending milestones</p>
@@ -1019,15 +1160,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
-                            <span className="text-2xl">+</span>
+                          <th className="text-center p-1 sm:p-2 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">+</span>
                           </th>
-                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[120px] sm:min-w-[140px]">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-3 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[80px] sm:w-[100px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Airport Lounges
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Estimated value of domestic and international lounge access (₹750 per domestic, ₹1250 per international)</p>
@@ -1035,15 +1176,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
-                            <span className="text-2xl">-</span>
+                          <th className="text-center p-1 sm:p-2 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">-</span>
                           </th>
-                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[110px] sm:min-w-[120px]">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-3 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[75px] sm:w-[90px] md:w-[120px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Joining Fee
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Annual or one-time fees charged by the bank for this credit card</p>
@@ -1051,15 +1192,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-2 font-semibold text-xs sm:text-sm text-muted-foreground w-6 sm:w-8">
-                            <span className="text-2xl">=</span>
+                          <th className="text-center p-1 sm:p-2 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">=</span>
                           </th>
-                          <th className="text-center p-3 font-semibold text-xs sm:text-sm text-foreground min-w-[130px] sm:w-36">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-3 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[85px] sm:w-[110px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Net Savings
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                              <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                              <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Your actual profit calculated as: Total Savings + Milestones + Airport Lounges - Joining Fees</p>
@@ -1151,12 +1292,12 @@ const CardGenius = () => {
                           tooltip: 'Total yearly savings in this category'
                         };
                         return <React.Fragment key={category}>
-                                <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
-                                  <div className="flex items-center justify-center gap-1">
-                                    {info.name}
+                                <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground min-w-[60px] sm:min-w-[90px] md:w-32">
+                                  <div className="flex items-center justify-center gap-0.5 sm:gap-1">
+                                    <span className="truncate">{info.name}</span>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                        <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground cursor-help flex-shrink-0" />
                                       </TooltipTrigger>
                                       <TooltipContent className="max-w-xs">
                                         <p>{info.tooltip}</p>
@@ -1164,8 +1305,8 @@ const CardGenius = () => {
                                     </Tooltip>
                                   </div>
                                 </th>
-                                {idx < spendingCategories.length - 1 && <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                                    <span className="text-2xl">+</span>
+                                {idx < spendingCategories.length - 1 && <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                                    <span className="text-lg sm:text-xl md:text-2xl">+</span>
                                   </th>}
                               </React.Fragment>;
                       })}
@@ -1173,15 +1314,15 @@ const CardGenius = () => {
                           {/* Add Domestic and Intl Lounge columns if user entered lounge usage */}
                           {(domesticLoungeValue > 0 || internationalLoungeValue > 0) && <>
                             {domesticLoungeValue > 0 && <>
-                              <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                                <span className="text-2xl">+</span>
+                              <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                                <span className="text-lg sm:text-xl md:text-2xl">+</span>
                               </th>
-                              <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
-                                <div className="flex items-center justify-center gap-1">
+                              <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground min-w-[60px] sm:min-w-[90px] md:w-32">
+                                <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                                   Domestic Lounge
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                      <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground cursor-help flex-shrink-0" />
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-xs">
                                       <p>Value from domestic airport lounge access (₹750 per visit)</p>
@@ -1191,15 +1332,15 @@ const CardGenius = () => {
                               </th>
                             </>}
                             {internationalLoungeValue > 0 && <>
-                              <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                                <span className="text-2xl">+</span>
+                              <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                                <span className="text-lg sm:text-xl md:text-2xl">+</span>
                               </th>
-                              <th className="text-center p-4 font-semibold text-sm text-foreground w-32">
-                                <div className="flex items-center justify-center gap-1">
+                              <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground min-w-[60px] sm:min-w-[90px] md:w-32">
+                                <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                                   Intl Lounge
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                      <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground cursor-help flex-shrink-0" />
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-xs">
                                       <p>Value from international airport lounge access (₹1250 per visit)</p>
@@ -1210,15 +1351,15 @@ const CardGenius = () => {
                             </>}
                           </>}
                           
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                            <span className="text-2xl">=</span>
+                          <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">=</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[80px] sm:w-[100px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Total Savings
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Total savings earned across all spending categories combined</p>
@@ -1226,15 +1367,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                            <span className="text-2xl">+</span>
+                          <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-40">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[80px] sm:w-[100px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Milestones
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Additional benefits like vouchers, reward points, or perks earned by achieving spending milestones</p>
@@ -1242,15 +1383,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                            <span className="text-2xl">+</span>
+                          <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">+</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground min-w-[140px]">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[80px] sm:w-[100px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Airport Lounges
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Estimated value of domestic and international lounge access (₹750 per domestic, ₹1250 per international)</p>
@@ -1258,15 +1399,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                            <span className="text-2xl">-</span>
+                          <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">-</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[75px] sm:w-[90px] md:w-[120px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Joining Fee
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Annual or one-time fees charged by the bank for this credit card</p>
@@ -1274,15 +1415,15 @@ const CardGenius = () => {
                               </Tooltip>
                             </div>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-muted-foreground w-12">
-                            <span className="text-2xl">=</span>
+                          <th className="text-center p-1 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-muted-foreground w-4 sm:w-8 md:w-12">
+                            <span className="text-lg sm:text-xl md:text-2xl">=</span>
                           </th>
-                          <th className="text-center p-4 font-semibold text-sm text-foreground w-36">
-                            <div className="flex items-center justify-center gap-1">
+                          <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground w-[85px] sm:w-[110px] md:w-[140px]">
+                            <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                               Net Savings
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                              <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                              <Info className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground cursor-help flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p>Your actual profit calculated as: Total Savings + Milestones + Airport Lounges - Joining Fees</p>
@@ -1296,40 +1437,56 @@ const CardGenius = () => {
                   <tbody>
                     {filteredResults.map((card, index) => {
                     return <tr key={index} className={`border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${index === 0 ? 'bg-emerald-50/60' : 'bg-white'}`} onClick={() => handleCardSelect(card)}>
-                          <td className="p-3 sticky left-0 bg-white z-20 min-w-[260px] shadow-[4px_0_6px_-4px_rgba(15,23,42,0.08)]">
-                            <div className="flex items-center gap-4">
-                              <img src={card.card_bg_image} alt={card.card_name} className="w-16 h-12 object-contain flex-shrink-0 rounded-md border border-slate-100" onError={e => {
+                          <td className="p-2 sm:p-3 sticky left-0 bg-white z-20 min-w-[180px] sm:min-w-[260px] shadow-[4px_0_6px_-4px_rgba(15,23,42,0.08)]">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                              <img src={card.card_bg_image} alt={card.card_name} className="w-12 h-9 sm:w-16 sm:h-12 object-contain flex-shrink-0 rounded-md border border-slate-100" onError={e => {
                             e.currentTarget.src = "/placeholder.svg";
                           }} />
-                              <div className="min-w-0">
-                                <p className="font-semibold text-foreground text-sm leading-tight break-words">{card.card_name}</p>
-                                <p className="text-[11px] text-muted-foreground">Net Savings ₹{card.net_savings.toLocaleString()}</p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {index === 0 && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white text-[10px] sm:text-xs font-bold rounded-full shadow-sm">
+                                      🥇 Best Match
+                                    </span>
+                                  )}
+                                  {index === 1 && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-slate-300 to-slate-400 text-white text-[10px] sm:text-xs font-bold rounded-full shadow-sm">
+                                      🥈 Strong Match
+                                    </span>
+                                  )}
+                                  {index === 2 && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-amber-600 to-amber-700 text-white text-[10px] sm:text-xs font-bold rounded-full shadow-sm">
+                                      🥉 Good Match
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="font-semibold text-foreground text-[11px] sm:text-sm leading-tight break-words">{card.card_name}</p>
                               </div>
                             </div>
                           </td>
                           
                           {/* Quick Insights Tab - Show summary data */}
                           {activeTab === 'quick' && <>
-                              <td className="p-4 text-center font-semibold text-green-600">
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 w-[80px] sm:w-[100px] md:w-[140px]">
                                 ₹{card.total_savings_yearly.toLocaleString()}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-blue-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-blue-600 w-[80px] sm:w-[100px] md:w-[140px]">
                                 ₹{card.total_extra_benefits.toLocaleString()}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-purple-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-purple-600 w-[80px] sm:w-[100px] md:w-[140px]">
                                 {card.airport_lounge_value && card.airport_lounge_value > 0 
                                   ? `₹${card.airport_lounge_value.toLocaleString()}`
                                   : '—'}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-red-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-red-600 w-[75px] sm:w-[90px] md:w-[120px]">
                                 ₹{card.joining_fees.toLocaleString()}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center">
-                                <span className="font-bold text-lg text-green-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center w-[85px] sm:w-[110px] md:w-[140px]">
+                                <span className="font-bold text-xs sm:text-base md:text-lg text-green-600">
                                   ₹{card.net_savings.toLocaleString()}
                                 </span>
                               </td>
@@ -1341,50 +1498,50 @@ const CardGenius = () => {
                           const breakdown = card.spending_breakdown[category];
                           const yearlySavings = breakdown?.savings ? breakdown.savings * 12 : 0;
                           return <React.Fragment key={category}>
-                                    <td className="p-4 text-center font-semibold text-green-600">
+                                    <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 min-w-[60px] sm:min-w-[90px] md:w-32">
                                       ₹{yearlySavings.toLocaleString()}
                                     </td>
-                                    {idx < spendingCategories.length - 1 && <td className="p-4"></td>}
+                                    {idx < spendingCategories.length - 1 && <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>}
                                   </React.Fragment>;
                         })}
                               
                               {/* Add Domestic and Intl Lounge values - use pre-calculated card-specific values */}
                               {(domesticLoungeValue > 0 || internationalLoungeValue > 0) && <>
                                 {domesticLoungeValue > 0 && <>
-                                  <td className="p-4"></td>
-                                  <td className="p-4 text-center font-semibold text-purple-600">
+                                  <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                                  <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-purple-600 min-w-[60px] sm:min-w-[90px] md:w-32">
                                     ₹{(card.domestic_lounge_value || 0).toLocaleString()}
                                   </td>
                                 </>}
                                 {internationalLoungeValue > 0 && <>
-                                  <td className="p-4"></td>
-                                  <td className="p-4 text-center font-semibold text-purple-600">
+                                  <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                                  <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-purple-600 min-w-[60px] sm:min-w-[90px] md:w-32">
                                     ₹{(card.international_lounge_value || 0).toLocaleString()}
                                   </td>
                                 </>}
                               </>}
                               
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-green-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 w-[80px] sm:w-[100px] md:w-[140px]">
                                 ₹{card.total_savings_yearly.toLocaleString()}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-blue-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-blue-600 w-[80px] sm:w-[100px] md:w-[140px]">
                                 ₹{card.total_extra_benefits.toLocaleString()}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-purple-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-purple-600 w-[80px] sm:w-[100px] md:w-[140px]">
                                 {card.airport_lounge_value && card.airport_lounge_value > 0 
                                   ? `₹${card.airport_lounge_value.toLocaleString()}`
                                   : '—'}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center font-semibold text-red-600">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-red-600 w-[75px] sm:w-[90px] md:w-[120px]">
                                 ₹{card.joining_fees.toLocaleString()}
                               </td>
-                              <td className="p-4"></td>
-                              <td className="p-4 text-center">
-                                <span className="font-bold text-lg text-green-700">
+                              <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
+                              <td className="p-1.5 sm:p-4 text-center w-[85px] sm:w-[110px] md:w-[140px]">
+                                <span className="font-bold text-xs sm:text-base md:text-lg text-green-700">
                                   ₹{card.net_savings.toLocaleString()}
                                 </span>
                               </td>
@@ -1420,61 +1577,62 @@ const CardGenius = () => {
       <div className="min-h-screen bg-gradient-primary pt-32 md:pt-36">{/* Added padding for nav + progress bar */}
       {/* Welcome Dialog */}
       <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
-        <DialogContent className="sm:max-w-lg w-[92vw] sm:w-auto max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8">
-          <button onClick={() => setShowWelcomeDialog(false)} className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </button>
-          
-          <div className="flex flex-col items-center text-center space-y-4 pt-4 sm:pt-6">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-2">
-              <img src={logo} alt="Card Genius 360" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
+        <DialogContent className="sm:max-w-lg w-[95vw] sm:w-auto overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 border-0 shadow-2xl">
+          <div className="flex flex-col space-y-3 sm:space-y-4">
+            {/* Logo - Centered */}
+            <div className="flex justify-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                <img src={logo} alt="Card Genius 360" className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain" />
+              </div>
             </div>
             
-            <DialogHeader className="space-y-3">
-              <DialogTitle className="text-2xl sm:text-3xl font-bold bg-gradient-accent bg-clip-text text-transparent">
+            {/* Header - Center Aligned */}
+            <DialogHeader className="space-y-1.5 sm:space-y-2 text-center sm:text-center">
+              <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-primary text-center">
                 Welcome to Super Card Genius
               </DialogTitle>
-              <DialogDescription className="text-sm sm:text-base text-charcoal-700 leading-relaxed">
+              <DialogDescription className="text-xs sm:text-sm md:text-base text-foreground leading-relaxed text-center px-2">
                 We help you find the <span className="font-semibold text-primary">best credit card</span> tailored to your unique spending habits.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="w-full bg-primary/5 rounded-xl p-6 space-y-3 text-left">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Sparkles className="w-4 h-4 text-primary" />
+            {/* Features - Left Aligned */}
+            <div className="w-full bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg sm:rounded-xl p-3 sm:p-4 space-y-3">
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-charcoal-900">Personalized Recommendations</h4>
-                  <p className="text-sm text-charcoal-600">Answer a few quick questions about your spending</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Check className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-charcoal-900">Smart Analysis</h4>
-                  <p className="text-sm text-charcoal-600">Get cards ranked by maximum savings and benefits</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm sm:text-base text-foreground mb-1">Personalized Recommendations</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">Answer a few quick questions about your spending</p>
                 </div>
               </div>
               
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <TrendingUp className="w-4 h-4 text-primary" />
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-charcoal-900">Maximize Your Savings</h4>
-                  <p className="text-sm text-charcoal-600">Discover how much you can save annually</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm sm:text-base text-foreground mb-1">Smart Analysis</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">Get cards ranked by maximum savings and benefits</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm sm:text-base text-foreground mb-1">Maximize Your Savings</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">Discover how much you can save annually</p>
                 </div>
               </div>
             </div>
 
-            <Button size="lg" onClick={() => setShowWelcomeDialog(false)} className="w-full shadow-lg">
+            {/* CTA Button */}
+            <Button size="lg" onClick={() => setShowWelcomeDialog(false)} className="w-full shadow-lg text-sm sm:text-base h-10 sm:h-11 md:h-12 mt-1">
               Let's Get Started
-              <ArrowRight className="ml-2" />
+              <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </DialogContent>
@@ -1503,7 +1661,7 @@ const CardGenius = () => {
         <div className="max-w-2xl mx-auto">
           {/* Welcome Message */}
           {currentStep === 0 && <div className="mb-8 text-center animate-fade-in px-4">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-charcoal-900 mb-4">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-charcoal-900 mb-4 whitespace-nowrap">
                 Let's Find Your Perfect Card
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-charcoal-700">
@@ -1520,7 +1678,7 @@ const CardGenius = () => {
                 </span>
                 of {questions.length}
               </p>
-              <p className="text-sm text-muted-foreground">Swipe the slider or tap amount to answer</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Drag the slider or type the amount</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Progress</p>
@@ -1528,13 +1686,25 @@ const CardGenius = () => {
             </div>
           </div>
 
+          {/* Micro-Encouragement Message */}
+          {showEncouragement && encouragementMessage && (
+            <div className="mb-4 animate-fade-in">
+              <div className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-3 sm:p-4 text-center">
+                <p className="text-sm sm:text-base font-semibold text-primary flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {encouragementMessage}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Question Card */}
           <div ref={el => {
             if (questionRefs.current) {
               questionRefs.current[currentStep] = el;
             }
           }} className="animate-fade-in">
-            <SpendingInput question={currentQuestion.question} emoji={currentQuestion.emoji} value={responses[currentQuestion.field] || 0} onChange={handleValueChange} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency} suffix={currentQuestion.suffix} />
+            <SpendingInput question={currentQuestion.question} emoji={currentQuestion.emoji} value={responses[currentQuestion.field] || 0} onChange={handleValueChange} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency} suffix={currentQuestion.suffix} context={currentQuestion.context} />
           </div>
 
           {/* Navigation Buttons */}
@@ -1550,18 +1720,6 @@ const CardGenius = () => {
               <ArrowLeft className="mr-2" />
               Previous
             </Button>
-            
-            {currentStep !== questions.length - 1 && (
-              <Button
-                variant="ghost"
-                size="lg"
-                onClick={() => setCurrentStep(questions.length - 1)}
-                className="w-full sm:flex-1 touch-target cg-nav-btn cg-skip-all-btn"
-                aria-label="Skip all remaining questions"
-              >
-                Skip All
-              </Button>
-            )}
             
             <Button
               size="lg"
@@ -1579,8 +1737,30 @@ const CardGenius = () => {
             </Button>
           </div>
 
+          {/* Skip All Button - Moved below, less prominent */}
+          {currentStep !== questions.length - 1 && (
+            <div className="mt-4 flex justify-center">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setCurrentStep(questions.length - 1)}
+                      className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      aria-label="Skip all remaining questions"
+                    >
+                      Skip all <span className="text-[10px] sm:text-xs">(not recommended)</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">Skipping may reduce accuracy of your recommendations.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+
           {/* Skip Option */}
-          <div className="text-center mt-6">
+          <div className="text-center mt-6 mb-12 sm:mb-16 md:mb-20">
             <button
               onClick={handleNext}
               className="text-charcoal-500 hover:text-primary font-medium transition-colors cg-skip-question-link"

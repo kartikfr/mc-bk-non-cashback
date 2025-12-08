@@ -4,7 +4,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard } from "lucide-react";
+import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard, LayoutGrid } from "lucide-react";
 import { cardService, SpendingData } from "@/services/cardService";
 import { Badge } from "@/components/ui/badge";
 import GeniusDialog from "@/components/GeniusDialog";
@@ -27,6 +27,35 @@ const normalizeCategory = (value: string | null) => {
   return VALID_CATEGORIES.includes(value) ? value : 'all';
 };
 
+// Helper function to format fee values
+const formatFee = (feeText: string | null | undefined): string => {
+  if (!feeText || feeText === "0" || feeText?.toLowerCase() === "free" || feeText?.toLowerCase() === "n/a" || feeText === "N/A") {
+    return "Free";
+  }
+  // Extract numeric value and format with commas
+  const numericValue = feeText.replace(/[^\d]/g, '');
+  if (numericValue) {
+    return `₹${parseInt(numericValue).toLocaleString('en-IN')}`;
+  }
+  return feeText;
+};
+
+// Helper function to format annual fee with "No Annual Fee" for N/A
+const formatAnnualFee = (feeText: string | null | undefined): string => {
+  if (!feeText || feeText === "0" || feeText?.toLowerCase() === "free") {
+    return "Free";
+  }
+  if (feeText?.toLowerCase() === "n/a" || feeText === "N/A") {
+    return "No Annual Fee";
+  }
+  // Extract numeric value and format with commas
+  const numericValue = feeText.replace(/[^\d]/g, '');
+  if (numericValue) {
+    return `₹${parseInt(numericValue).toLocaleString('en-IN')}`;
+  }
+  return feeText;
+};
+
 const CardListing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [cards, setCards] = useState<any[]>([]);
@@ -40,9 +69,7 @@ const CardListing = () => {
   const [showGeniusDialog, setShowGeniusDialog] = useState(false);
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
-  const [showStickyEligibility, setShowStickyEligibility] = useState(false);
   const [showStickyFilter, setShowStickyFilter] = useState(false);
-  const lastScrollY = useRef(0);
   const heroRef = useRef<HTMLElement | null>(null);
   const eligibilityRef = useRef<HTMLDivElement | null>(null);
   const filtersRef = useRef<HTMLDivElement | null>(null);
@@ -60,8 +87,8 @@ const CardListing = () => {
     card_networks: [] as string[],
     annualFees: "",
     credit_score: "",
-    sort_by: "priority",
-    // Empty string by default, can be "recommended", "annual_savings", or "annual_fees"
+    sort_by: "Recommended",
+    // Default is "Recommended", can be "recommended", "annual_savings", or "annual_fees"
     free_cards: false,
     category: initialCategory // all, fuel, shopping, online-food, dining, grocery, travel, utility
   });
@@ -85,9 +112,28 @@ const CardListing = () => {
     empStatus: "salaried"
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Ensure default sort_by filter is applied on initial load
+  useEffect(() => {
+    // Set default sort_by if not already set
+    if (!filters.sort_by) {
+      setFilters(prev => ({ ...prev, sort_by: "Recommended" }));
+    }
+  }, []);
+
   useEffect(() => {
     fetchCards();
   }, [filters]);
+
+  // Refetch cards when eligibility is cleared (but not when it's applied, as handleEligibilitySubmit handles that)
+  const prevEligibilitySubmitted = useRef(eligibilitySubmitted);
+  useEffect(() => {
+    // If eligibility was just cleared (changed from true to false), refetch all cards
+    if (prevEligibilitySubmitted.current === true && eligibilitySubmitted === false) {
+      fetchCards();
+    }
+    prevEligibilitySubmitted.current = eligibilitySubmitted;
+  }, [eligibilitySubmitted]);
 
   useEffect(() => {
     return () => {
@@ -95,20 +141,17 @@ const CardListing = () => {
     };
   }, []);
 
-  // Scroll listener for sticky elements
+  // Scroll listener for sticky filter button only (search and eligibility removed)
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
-      const isScrollingUp = currentY < lastScrollY.current;
-      lastScrollY.current = currentY;
-
-      setShowStickyEligibility(isScrollingUp && currentY > 300 && !eligibilitySubmitted);
+      // Only manage sticky filter button, search and eligibility are always hidden
       setShowStickyFilter(currentY > 60);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [eligibilitySubmitted]);
+  }, []);
 
   const scrollToSection = (ref: React.RefObject<HTMLElement | HTMLDivElement>) => {
     if (!ref.current) return;
@@ -126,24 +169,31 @@ const CardListing = () => {
       setLoading(true);
 
       // Build base payload with active filters
+      // Map "Recommended" or "priority" to "recommended" for API payload
+      const sortByValue = filters.sort_by || "Recommended";
+      const mappedSortBy = (sortByValue === "priority" || sortByValue === "Recommended") ? "recommended" : sortByValue;
+      
       const baseParams: any = {
         slug: categoryToSlug[filters.category] || "",
         banks_ids: filters.banks_ids || [],
         card_networks: filters.card_networks || [],
         annualFees: filters.annualFees === "free" ? "" : filters.annualFees || "",
         credit_score: filters.credit_score || "",
-        sort_by: filters.sort_by || "priority",
+        sort_by: mappedSortBy,
         free_cards: filters.annualFees === "free" ? "true" : "",
         cardGeniusPayload: []
       };
 
-      // Handle eligiblityPayload based on user input
-      if (eligibilitySubmitted && eligibility.pincode && eligibility.inhandIncome && eligibility.empStatus) {
+      // Handle eligiblityPayload based on user input or override
+      const shouldUseEligibility = eligibilitySubmitted;
+      const eligibilityData = eligibility;
+      
+      if (shouldUseEligibility && eligibilityData.pincode && eligibilityData.inhandIncome && eligibilityData.empStatus) {
         // User filled all fields - send actual values
         baseParams.eligiblityPayload = {
-          pincode: eligibility.pincode,
-          inhandIncome: eligibility.inhandIncome,
-          empStatus: eligibility.empStatus
+          pincode: eligibilityData.pincode,
+          inhandIncome: eligibilityData.inhandIncome,
+          empStatus: eligibilityData.empStatus
         };
       } else {
         // First load or no eligibility - send empty object
@@ -293,14 +343,14 @@ const CardListing = () => {
   const filteredCards = useMemo(() => {
     // 1) Apply search filter
     let base = sortedCards.filter(card => {
-      if (!searchQuery.trim()) return true;
-      const query = searchQuery.toLowerCase();
-      const cardName = (card.name || '').toLowerCase();
-      const bankName = (card.banks?.name || '').toLowerCase();
-      const cardType = (card.card_type || '').toLowerCase();
-      const benefits = (card.benefits || '').toLowerCase();
-      return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
-    });
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const cardName = (card.name || '').toLowerCase();
+    const bankName = (card.banks?.name || '').toLowerCase();
+    const cardType = (card.card_type || '').toLowerCase();
+    const benefits = (card.benefits || '').toLowerCase();
+    return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
+  });
 
     // 2) Apply eligibility filter purely on frontend (seo_card_alias mapping)
     if (eligibilitySubmitted && eligibleCardAliases.length > 0) {
@@ -365,7 +415,7 @@ const CardListing = () => {
       card_networks: [],
       annualFees: "",
       credit_score: "",
-      sort_by: "priority",
+      sort_by: "Recommended",
       free_cards: false,
       category: "all"
     });
@@ -418,23 +468,23 @@ const CardListing = () => {
           .filter(Boolean);
 
         setEligibleCardAliases(aliases);
-        setEligibilitySubmitted(true);
-        setEligibilityOpen(false);
+    setEligibilitySubmitted(true);
+    setEligibilityOpen(false);
 
         // Refetch cards with eligibility criteria and other filters
-        await fetchCards();
+    await fetchCards();
 
         if (aliases.length > 0) {
-          toast.success("Eligibility criteria applied!", {
+    toast.success("Eligibility criteria applied!", {
             description: `${ineligibleCount} cards filtered out. Showing ${aliases.length} eligible cards.`
-          });
-          confetti({
-            particleCount: 60,
-            spread: 50,
-            origin: {
-              y: 0.6
-            }
-          });
+    });
+    confetti({
+      particleCount: 60,
+      spread: 50,
+      origin: {
+        y: 0.6
+      }
+    });
         } else {
           toast.error("No Eligible Cards", {
             description: "No cards match your eligibility criteria"
@@ -580,10 +630,10 @@ const CardListing = () => {
           id: 'travel',
           label: 'Travel',
           icon: Plane
-        }].map(cat => <label key={cat.id} className="filter-option flex items-center gap-3 cursor-pointer px-3 py-3 transition-all touch-target">
-              <input type="radio" name="category" className="accent-primary w-5 h-5" checked={filters.category === cat.id} onChange={() => handleFilterChange('category', cat.id)} />
-              <cat.icon className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm flex-1">{cat.label}</span>
+        }].map(cat => <label key={cat.id} className="filter-option flex items-center gap-2 cursor-pointer px-3 py-1.5 transition-all touch-target">
+              <input type="radio" name="category" className="accent-primary w-2.5 h-2.5 min-w-[10px] min-h-[10px] flex-shrink-0 scale-90" checked={filters.category === cat.id} onChange={() => handleFilterChange('category', cat.id)} style={{ width: '10px', height: '10px' }} />
+              <cat.icon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm flex-1 leading-tight">{cat.label}</span>
             </label>)}
         </CollapsibleContent>
       </Collapsible>
@@ -613,9 +663,9 @@ const CardListing = () => {
         }, {
           label: '₹5,000+',
           value: '5000+'
-        }].map(fee => <label key={fee.value} className="filter-option flex items-center gap-3 cursor-pointer px-3 py-3 transition-all touch-target">
-              <input type="radio" name="annualFee" className="accent-primary w-5 h-5" checked={filters.annualFees === fee.value} onChange={() => handleFilterChange('annualFees', fee.value)} />
-              <span className="text-sm">{fee.label}</span>
+        }].map(fee => <label key={fee.value} className="filter-option flex items-center gap-2 cursor-pointer px-3 py-1.5 transition-all touch-target">
+              <input type="radio" name="annualFee" className="accent-primary w-2.5 h-2.5 min-w-[10px] min-h-[10px] flex-shrink-0 scale-90" checked={filters.annualFees === fee.value} onChange={() => handleFilterChange('annualFees', fee.value)} style={{ width: '10px', height: '10px' }} />
+              <span className="text-sm leading-tight">{fee.label}</span>
             </label>)}
         </CollapsibleContent>
       </Collapsible>
@@ -655,14 +705,14 @@ const CardListing = () => {
           <ChevronDown className="w-4 h-4 transition-transform ui-expanded:rotate-180" />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 space-y-2 pl-1">
-          {['VISA', 'Mastercard', 'RuPay', 'AmericanExpress'].map(network => <label key={network} className="filter-option flex items-center gap-3 cursor-pointer px-3 py-3 transition-all touch-target">
-              <input type="checkbox" className="accent-primary w-5 h-5" checked={filters.card_networks.includes(network)} onChange={e => {
+          {['VISA', 'Mastercard', 'RuPay', 'AmericanExpress'].map(network => <label key={network} className="filter-option flex items-center gap-2 cursor-pointer px-3 py-1.5 transition-all touch-target">
+              <input type="checkbox" className="accent-primary w-2.5 h-2.5 min-w-[10px] min-h-[10px] flex-shrink-0 scale-90" checked={filters.card_networks.includes(network)} onChange={e => {
             setFilters((prev: any) => ({
               ...prev,
               card_networks: e.target.checked ? [...prev.card_networks, network] : prev.card_networks.filter((n: string) => n !== network)
             }));
-          }} />
-              <span className="text-sm">{network === 'AmericanExpress' ? 'American Express' : network}</span>
+          }} style={{ width: '10px', height: '10px' }} />
+              <span className="text-sm leading-tight">{network === 'AmericanExpress' ? 'American Express' : network}</span>
             </label>)}
         </CollapsibleContent>
       </Collapsible>
@@ -671,12 +721,13 @@ const CardListing = () => {
   return <div className="min-h-screen bg-background">
       <Navigation />
       
+
       {/* Hero Search */}
       <section ref={heroRef} className="hero-card-listing pt-24 sm:pt-28 pb-8 sm:pb-12 bg-gradient-hero">
         <div className="section-shell">
           {/* Mobile & Desktop unified layout */}
-          <div className="max-w-3xl mx-auto text-center mb-6 sm:mb-8 space-y-2 sm:space-y-3 px-4 hero-card-listing-header">
-            <h1 className="hero-card-listing-title text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
+          <div className="max-w-3xl mx-auto text-center mb-6 sm:mb-8 space-y-2 sm:space-y-3 px-2 sm:px-4 hero-card-listing-header">
+            <h1 className="hero-card-listing-title text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground leading-tight whitespace-nowrap">
               Discover India's Best Credit&nbsp;Cards
             </h1>
           </div>
@@ -701,7 +752,7 @@ const CardListing = () => {
                       <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
-            </div>
+              </div>
                 <Button
                   size="lg"
                   className="hero-card-listing-search-btn h-12 sm:h-14 w-full sm:w-auto px-6 sm:px-8 touch-target"
@@ -907,60 +958,83 @@ const CardListing = () => {
                 <p className="text-sm text-muted-foreground">
                   Showing {Math.min(displayCount, filteredCards.length)} of {filteredCards.length} cards
                 </p>
+                <button 
+                  className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  aria-label="Widget"
+                >
+                  <LayoutGrid className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Mobile Filter Info Bar - Just show count */}
+              {/* Mobile Filter Info Bar - Sticky when scrolling up */}
               <div ref={filtersRef} className="lg:hidden mb-3">
                 <div className="flex items-center justify-between px-1">
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     <span className="font-semibold text-foreground">{filteredCards.length}</span> cards found
                   </p>
-                  {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted) && (
-                    <button 
-                      onClick={clearFilters}
-                      className="text-xs text-primary hover:text-primary/80 font-semibold"
-                    >
-                      Clear all
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Filter Sheet - Opens from bottom on mobile */}
+                    <Sheet>
+                      {/* Visible Filter Button */}
+                      <SheetTrigger asChild>
+                        <button 
+                          className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground touch-target relative"
+                          aria-label="Open Filters"
+                        >
+                          <Filter className="w-4 h-4" />
+                          {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted || filters.credit_score) && (
+                            <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                              {(filters.category !== 'all' ? 1 : 0) + filters.card_networks.length + (filters.annualFees ? 1 : 0) + (filters.credit_score ? 1 : 0)}
+                            </span>
+                          )}
+                        </button>
+                      </SheetTrigger>
+                      {/* Hidden trigger for backward compatibility with sticky filter button */}
+                      <SheetTrigger asChild>
+                        <button id="mobile-filter-trigger" className="hidden"></button>
+                      </SheetTrigger>
+                      <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl px-0">
+                          <div className="drag-handle" />
+                          <SheetHeader className="text-left mb-4 px-4">
+                            <div className="flex items-center justify-between">
+                              <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
+                              <span className="text-xs text-muted-foreground">{filteredCards.length} cards</span>
+                            </div>
+                        </SheetHeader>
+                          <div className="overflow-y-auto h-[calc(70vh-140px)] px-4 space-y-5 pb-24">
+                          <FilterSidebar />
+                        </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-background border-t border-border p-4 shadow-lg">
+                            <div className="flex gap-3">
+                              <SheetClose asChild>
+                                <Button variant="outline" className="flex-1 h-11 text-sm font-semibold" onClick={clearFilters}>
+                                  Clear
+                                </Button>
+                              </SheetClose>
+                              <SheetClose asChild>
+                                <Button className="flex-1 h-11 text-sm font-bold">
+                                  Show {filteredCards.length} Cards
+                                </Button>
+                              </SheetClose>
+                            </div>
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                    {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted) && (
+                      <button 
+                        onClick={clearFilters}
+                        className="text-xs text-primary hover:text-primary/80 font-semibold"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
                 </div>
-                
-                {/* Hidden sheet trigger for programmatic open */}
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <button id="mobile-filter-trigger" className="hidden"></button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl px-0">
-                      <div className="drag-handle" />
-                      <SheetHeader className="text-left mb-4 px-4">
-                        <div className="flex items-center justify-between">
-                          <SheetTitle className="text-lg font-bold">Filters</SheetTitle>
-                          <span className="text-xs text-muted-foreground">{filteredCards.length} cards</span>
-                        </div>
-                    </SheetHeader>
-                      <div className="overflow-y-auto h-[calc(70vh-140px)] px-4 space-y-5 pb-24">
-                      <FilterSidebar />
-                    </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-background border-t border-border p-4 shadow-lg">
-                        <div className="flex gap-3">
-                          <SheetClose asChild>
-                            <Button variant="outline" className="flex-1 h-11 text-sm font-semibold" onClick={clearFilters}>
-                              Clear
-                            </Button>
-                          </SheetClose>
-                          <SheetClose asChild>
-                            <Button className="flex-1 h-11 text-sm font-bold">
-                              Show {filteredCards.length} Cards
-                            </Button>
-                          </SheetClose>
-                        </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
               </div>
 
               {/* Active Filters */}
-              {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.free_cards || filters.annualFees || filters.credit_score || eligibilitySubmitted || geniusSpendingData || searchQuery) && <div className="mb-4 flex flex-wrap gap-2">
+              {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.free_cards || filters.annualFees || filters.credit_score || eligibilitySubmitted || geniusSpendingData || searchQuery) && (
+                <div className="mb-4 flex flex-wrap gap-2">
                   {searchQuery && <Badge variant="secondary" className="gap-2">
                       Search: {searchQuery}
                       <X className="w-3 h-3 cursor-pointer" onClick={() => {
@@ -1010,13 +1084,17 @@ const CardListing = () => {
                       <CheckCircle2 className="w-3 h-3" />
                       Eligibility Applied
                       <X className="w-3 h-3 cursor-pointer" onClick={async () => {
+                        // Clear eligibility state first
                         setEligibilitySubmitted(false);
+                        setEligibleCardAliases([]);
                         setEligibility({
                           pincode: "",
                           inhandIncome: "",
                           empStatus: "salaried"
                         });
-                        await fetchCards();
+                        // Reset display count to show all cards
+                        setDisplayCount(12);
+                        // The useEffect will automatically trigger fetchCards when eligibilitySubmitted changes to false
                         toast.success("Eligibility filter removed");
                       }} />
                     </Badge>}
@@ -1029,7 +1107,8 @@ const CardListing = () => {
                         toast.success("Category genius filter removed");
                       }} />
                     </Badge>}
-                </div>}
+                </div>
+              )}
 
               {/* Cards Grid - Scrollable */}
               <div ref={cardsRef} className="flex-1 overflow-y-auto px-1">
@@ -1042,11 +1121,11 @@ const CardListing = () => {
                     Clear All Filters
                   </Button>
                 </div> : <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 pb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6 pb-6">
                     {filteredCards.slice(0, displayCount).map((card, index) => <div key={card.id || index} className="card-item bg-card rounded-xl sm:rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:scale-[1.02] lg:hover:-translate-y-2 flex flex-col h-full active:scale-[0.98]">
-                        <div className="card-image-container relative h-40 sm:h-44 md:h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-3 sm:p-4 flex-shrink-0">
+                        <div className="card-image-container relative h-36 sm:h-40 md:h-44 lg:h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-2.5 sm:p-3 md:p-4 flex-shrink-0">
                           {/* Compare Toggle Icon - Top Right */}
-                          <div className="absolute top-3 right-3 z-20">
+                          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 md:top-3 md:right-3 z-20">
                             <CompareToggleIcon card={card} />
                           </div>
 
@@ -1070,13 +1149,13 @@ const CardListing = () => {
                       return null;
                     })()}
 
-                          {/* Eligibility Badge - Only show for cards that are actually eligible (and not already showing savings or LTF) */}
+                          {/* Eligibility Badge - Show for eligible cards (even if LTF) when eligibility filter is applied */}
                           {eligibilitySubmitted && eligibleCardAliases.length > 0 && !(() => {
                       const categorySavings = cardSavings[filters.category] || {};
                       const cardKey = getCardKey(card);
                       const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
                       return saving !== undefined && saving !== null;
-                    })() && !((card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free")) && (() => {
+                    })() && (() => {
                       const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias;
                       return alias && eligibleCardAliases.includes(String(alias));
                     })() && (
@@ -1086,12 +1165,23 @@ const CardListing = () => {
                             </Badge>
                           )}
 
-                          {/* LTF Badge */}
+                          {/* LTF Badge - Only show when eligibility filter is NOT applied, or when card is not eligible */}
                           {(() => {
                       const categorySavings = cardSavings[filters.category] || {};
                       const cardKey = getCardKey(card);
                       const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
-                      return !saving && (card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free") && <Badge className="absolute bottom-3 right-3 bg-primary z-10">LTF</Badge>;
+                      const isLTF = card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free";
+                      
+                      // Don't show LTF badge if eligibility filter is applied and card is eligible
+                      if (eligibilitySubmitted && eligibleCardAliases.length > 0) {
+                        const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias;
+                        const isEligible = alias && eligibleCardAliases.includes(String(alias));
+                        if (isEligible) {
+                          return null; // Show "Eligible" badge instead
+                        }
+                      }
+                      
+                      return !saving && isLTF && <Badge className="absolute bottom-3 right-3 bg-primary z-10">LTF</Badge>;
                     })()}
 
                           <img src={card.card_bg_image || card.image} alt={card.name} className="max-h-full max-w-full object-contain" onError={e => {
@@ -1099,10 +1189,10 @@ const CardListing = () => {
                     }} />
                         </div>
 
-                        <div className="p-5 sm:p-6 flex flex-col flex-grow gap-4">
-                          <div className="flex items-center gap-2 flex-wrap">
+                        <div className="p-4 sm:p-5 md:p-6 flex flex-col flex-grow gap-3 sm:gap-3.5 md:gap-4">
+                            <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs">
-                              {card.card_type || 'Credit Card'}
+                                {card.card_type || 'Credit Card'}
                             </Badge>
                             {card.banks?.name && (
                               <span className="text-xs text-muted-foreground">
@@ -1111,35 +1201,38 @@ const CardListing = () => {
                             )}
                           </div>
           
-                          <div className="space-y-1.5">
-                            <h3 className="text-lg sm:text-xl font-bold leading-snug line-clamp-2">{card.name}</h3>
+                          <div className="space-y-1">
+                            <h3 className="text-[11px] sm:text-xs md:text-sm lg:text-base font-bold leading-tight line-clamp-2">{card.name}</h3>
                             {(card.reward_rate || card.welcome_bonus) && <p className="text-xs text-muted-foreground line-clamp-2 md:hidden">
                                 {card.reward_rate || card.welcome_bonus}
                               </p>}
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-3 md:gap-4 p-3 md:p-4 bg-muted/30 rounded-lg">
-                            <div className="flex flex-col">
-                              <p className="text-[11px] text-muted-foreground mb-1">Joining</p>
-                              <p className="text-sm font-semibold">
-                                {card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase() === "free" ? "Free" : `₹${card.joining_fee_text}`}
-                              </p>
+                          {/* Fee Block - Labels in One Row, Values Below */}
+                          <div className="p-2.5 sm:p-3 md:p-3.5 bg-muted/30 rounded-lg border border-border/50">
+                            {/* Labels Row */}
+                            <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium whitespace-nowrap">Joining Fee</span>
+                              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium whitespace-nowrap">Annual Fee</span>
                             </div>
-                            <div className="flex flex-col">
-                              <p className="text-[11px] text-muted-foreground mb-1">Annual</p>
-                              <p className="text-sm font-semibold">
-                                {card.annual_fee_text === "0" || card.annual_fee_text?.toLowerCase() === "free" ? "Free" : `₹${card.annual_fee_text}`}
+                            {/* Values Row */}
+                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                              <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight">
+                                {formatFee(card.joining_fee_text)}
+                              </p>
+                              <p className="text-xs sm:text-sm font-semibold text-foreground leading-tight">
+                                {formatAnnualFee(card.annual_fee_text)}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex flex-col md:flex-row gap-2 mt-auto">
+                          <div className="flex flex-col md:flex-row gap-1.5 sm:gap-2 mt-auto pt-1">
                             <Link to={`/cards/${getCardAlias(card) || card.id}`} className="flex-1">
-                              <Button variant="outline" className="w-full h-11 md:h-10 text-sm font-semibold">
+                              <Button variant="outline" className="w-full h-8 sm:h-9 md:h-10 text-[11px] sm:text-xs md:text-sm font-semibold border-2">
                                 Details
                               </Button>
                             </Link>
-                            <Button className="flex-1 h-11 md:h-10 text-sm font-semibold" onClick={() => handleApplyClick(card)}>
+                            <Button className="flex-1 h-8 sm:h-9 md:h-10 text-[11px] sm:text-xs md:text-sm font-semibold" onClick={() => handleApplyClick(card)}>
                               Apply&nbsp;Now
                             </Button>
                           </div>
@@ -1172,27 +1265,6 @@ const CardListing = () => {
         </div>
       </section>
 
-      {/* Sticky Eligibility Bar (Top) - Shows on scroll */}
-      {showStickyEligibility && !eligibilitySubmitted && (
-        <div className="lg:hidden fixed top-14 left-0 right-0 z-40 bg-white dark:bg-background border-b border-border shadow-md animate-in slide-in-from-top duration-300">
-          <div className="px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-semibold">Check Eligibility</span>
-            </div>
-            <Button 
-              size="sm" 
-              onClick={() => {
-                setEligibilityOpen(true);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700"
-            >
-              Quick Check
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Floating Try Genius Widget (Bottom-Right) - Shows when category selected */}
       {filters.category !== 'all' && !showGeniusDialog && (
@@ -1212,28 +1284,28 @@ const CardListing = () => {
       {/* Sticky Filter Button (Bottom) - Shows on scroll */}
       {showStickyFilter && (
         <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom duration-300 px-4 w-full">
-          <div className="bg-card/95 backdrop-blur-md border border-primary/40 rounded-full shadow-2xl px-4 py-2 flex items-center justify-center gap-3">
+          <div className="bg-card/95 backdrop-blur-md border border-primary/40 rounded-full shadow-2xl px-3 sm:px-4 py-1.5 sm:py-2 flex items-center justify-center gap-2 sm:gap-3">
             {/* Filters trigger */}
-            <button
-              onClick={() => document.getElementById('mobile-filter-trigger')?.click()}
-              className="flex items-center gap-2 text-foreground text-xs font-semibold"
-            >
-              <Filter className="w-4 h-4" />
+          <button
+            onClick={() => document.getElementById('mobile-filter-trigger')?.click()}
+              className="flex items-center gap-1.5 sm:gap-2 text-foreground text-[10px] sm:text-xs font-semibold"
+          >
+            <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Filters</span>
-              {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted) && (
+            {(filters.category !== 'all' || filters.card_networks.length > 0 || filters.annualFees || eligibilitySubmitted) && (
                 <span className="ml-1 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] rounded-full font-bold">
-                  {[filters.category !== 'all', filters.card_networks.length > 0, filters.annualFees, eligibilitySubmitted].filter(Boolean).length}
-                </span>
-              )}
-            </button>
+                {[filters.category !== 'all', filters.card_networks.length > 0, filters.annualFees, eligibilitySubmitted].filter(Boolean).length}
+              </span>
+            )}
+          </button>
 
             {/* Divider */}
             {selectedCards.length > 0 && (
               <>
-                <span className="h-5 w-px bg-border" />
+                <span className="h-4 w-px bg-border" />
                 <button
                   onClick={() => window.dispatchEvent(new Event('openComparison'))}
-                  className="text-primary font-semibold text-xs"
+                  className="text-primary font-semibold text-[10px] sm:text-xs whitespace-nowrap"
                 >
                   View Compare
                 </button>

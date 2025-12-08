@@ -43,6 +43,7 @@ interface CategoryConfig {
   icon: any;
   color: string;
   questions: CategoryQuestion[];
+  examples?: string; // Subtext with examples
 }
 const creditCardFacts = ["💳 The first credit card was introduced in 1950 by Diners Club!", "🌟 Cashback rewards can save you thousands annually if used smartly", "✈️ Travel cards can get you free flights worth lakhs every year", "🛡️ Credit cards offer better fraud protection than debit cards", "💰 Premium cards often pay for themselves through benefits alone", "🎁 Welcome bonuses can be worth ₹10,000+ on premium cards", "⚡ Using 30% or less of your credit limit boosts your credit score", "🏨 Hotel cards can save you up to 50% on premium stays", "🍽️ Dining cards offer up to 20% savings on restaurant bills", "⛽ Fuel surcharge waivers can save ₹4,000+ annually", "📱 Contactless payments are 10x faster than cash transactions", "🎯 Category-specific cards can give 5-10% returns on spending", "💎 Airport lounge access saves ₹2,000+ per visit", "🔒 EMI conversions at 0% interest can save huge amounts", "🎊 Milestone benefits reward you for regular spending", "🌐 International cards save 3-5% on forex markup fees", "⭐ Co-branded cards offer exclusive brand discounts up to 30%", "🎪 Entertainment cards get you buy-1-get-1 movie tickets", "💡 Smart card users save an average of ₹50,000+ yearly", "🚀 The right card can turn everyday spending into wealth!"];
 const categories: CategoryConfig[] = [{
@@ -50,6 +51,7 @@ const categories: CategoryConfig[] = [{
   name: 'Shopping',
   icon: ShoppingBag,
   color: 'text-pink-500',
+  examples: 'Amazon, Flipkart',
   questions: [{
     field: 'amazon_spends',
     question: 'How much do you spend on Amazon in a month?',
@@ -84,6 +86,7 @@ const categories: CategoryConfig[] = [{
   name: 'Paying Bills',
   icon: CreditCard,
   color: 'text-indigo-500',
+  examples: 'Electricity, DTH',
   questions: [{
     field: 'mobile_phone_bills',
     question: 'How much do you spend on recharging your mobile or Wi-Fi monthly?',
@@ -118,6 +121,7 @@ const categories: CategoryConfig[] = [{
   name: 'Fuel',
   icon: Fuel,
   color: 'text-blue-500',
+  examples: 'Petrol, diesel',
   questions: [{
     field: 'fuel',
     question: 'How much do you spend on fuel in a month?',
@@ -131,6 +135,7 @@ const categories: CategoryConfig[] = [{
   name: 'Flight & Hotel',
   icon: Plane,
   color: 'text-purple-500',
+  examples: 'Travel bookings, hotels',
   questions: [{
     field: 'flights_annual',
     question: 'How much do you spend on flights in a year?',
@@ -171,6 +176,7 @@ const categories: CategoryConfig[] = [{
   name: 'Food Delivery',
   icon: Coffee,
   color: 'text-red-500',
+  examples: 'Swiggy, Zomato',
   questions: [{
     field: 'online_food_ordering',
     question: 'How much do you spend on food delivery apps in a month?',
@@ -184,6 +190,7 @@ const categories: CategoryConfig[] = [{
   name: 'Grocery',
   icon: ShoppingCart,
   color: 'text-green-500',
+  examples: 'Blinkit, Zepto',
   questions: [{
     field: 'grocery_spends_online',
     question: 'How much do you spend on groceries (Blinkit, Zepto etc.) every month?',
@@ -197,6 +204,7 @@ const categories: CategoryConfig[] = [{
   name: 'Dining Out',
   icon: Utensils,
   color: 'text-orange-500',
+  examples: 'Restaurants, cafes',
   questions: [{
     field: 'dining_or_going_out',
     question: 'How much do you spend on dining out in a month?',
@@ -209,7 +217,7 @@ const categories: CategoryConfig[] = [{
 const CategoryCardGenius = () => {
   const navigate = useNavigate();
   const resultsRef = useRef<HTMLDivElement>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showQuestions, setShowQuestions] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, number>>({});
@@ -276,18 +284,80 @@ const CategoryCardGenius = () => {
       controller.abort();
     };
   }, []);
-  const selectedCategoryData = categories.find(c => c.id === selectedCategory);
-  const currentQuestion = selectedCategoryData?.questions[currentQuestionIndex];
+  // Get all questions from selected categories
+  const getAllQuestions = () => {
+    if (selectedCategories.length === 0) return [];
+    const allQuestions: Array<{ question: CategoryQuestion; categoryId: string; categoryName: string }> = [];
+    selectedCategories.forEach(categoryId => {
+      const category = categories.find(c => c.id === categoryId);
+      if (category) {
+        category.questions.forEach(q => {
+          allQuestions.push({
+            question: q,
+            categoryId: categoryId,
+            categoryName: category.name
+          });
+        });
+      }
+    });
+    return allQuestions;
+  };
+
+  const allQuestions = getAllQuestions();
+  const currentQuestionData = allQuestions[currentQuestionIndex];
+  const currentQuestion = currentQuestionData?.question;
+
   const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setShowQuestions(true);
-    setCurrentQuestionIndex(0);
-    setResponses({});
-    setResults([]);
+    setSelectedCategories(prev => {
+      const isSelected = prev.includes(categoryId);
+      if (isSelected) {
+        // Deselect category
+        const newSelection = prev.filter(id => id !== categoryId);
+        // Clear responses for this category
+        const category = categories.find(c => c.id === categoryId);
+        if (category) {
+          setResponses(prevResponses => {
+            const newResponses = { ...prevResponses };
+            category.questions.forEach(q => {
+              delete newResponses[q.field];
+            });
+            return newResponses;
+          });
+        }
+        // Reset questions if no categories selected
+        if (newSelection.length === 0) {
+          setShowQuestions(false);
+          setCurrentQuestionIndex(0);
+          setResults([]);
+        } else {
+          // Recalculate question index
+          const newAllQuestions = newSelection.flatMap(catId => {
+            const cat = categories.find(c => c.id === catId);
+            return cat ? cat.questions.map(q => ({ question: q, categoryId: catId, categoryName: cat.name })) : [];
+          });
+          // Adjust current question index if needed
+          if (currentQuestionIndex >= newAllQuestions.length) {
+            setCurrentQuestionIndex(Math.max(0, newAllQuestions.length - 1));
+          }
+        }
+        return newSelection;
+      } else {
+        // Select category
+        const newSelection = [...prev, categoryId];
+        // Start questions if this is the first category
+        if (prev.length === 0) {
+          setShowQuestions(true);
+          setCurrentQuestionIndex(0);
+          setResponses({});
+          setResults([]);
+        }
+        return newSelection;
+      }
+    });
   };
   const handleNext = () => {
-    if (!selectedCategoryData) return;
-    if (currentQuestionIndex < selectedCategoryData.questions.length - 1) {
+    if (allQuestions.length === 0) return;
+    if (currentQuestionIndex < allQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       handleCalculate();
@@ -299,10 +369,17 @@ const CategoryCardGenius = () => {
     }
   };
   const handleCalculate = async () => {
-    if (!selectedCategoryData) return;
+    if (selectedCategories.length === 0) {
+      toast.error("Please select at least one category.");
+      return;
+    }
 
-    const requiredQuestions = selectedCategoryData.questions.filter(q => !q.optional);
-    const questionsToCheck = requiredQuestions.length > 0 ? requiredQuestions : selectedCategoryData.questions;
+    // Check if at least one required question has a value
+    const requiredQuestions = allQuestions
+      .filter(qd => !qd.question.optional)
+      .map(qd => qd.question);
+    
+    const questionsToCheck = requiredQuestions.length > 0 ? requiredQuestions : allQuestions.map(qd => qd.question);
     const hasValue = questionsToCheck.some(q => {
       const val = responses[q.field];
       return typeof val === 'number' && val > 0;
@@ -384,11 +461,11 @@ const CategoryCardGenius = () => {
     }
   };
   const resetCalculator = () => {
-    setSelectedCategory(null);
+    setSelectedCategories([]);
     setShowQuestions(false);
     setCurrentQuestionIndex(0);
     setResponses({});
-    setResults(null);
+    setResults([]);
   };
   const getTotalSpending = () => {
     return Object.values(responses).reduce((sum, val) => sum + val, 0);
@@ -443,75 +520,132 @@ const CategoryCardGenius = () => {
       handleViewDetails(card);
     }
   };
-  return <section className="pt-28 sm:pt-32 pb-12 sm:pb-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
-      <div className="section-shell">
+  return <section className="pt-20 sm:pt-28 pb-8 sm:pb-12 md:pb-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5">
+      <div className="section-shell px-4 sm:px-6">
         {/* Header - Always visible */}
-        <div className="text-center mb-8 sm:mb-12">
-          
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-4">
-            Find Best Cards by Category
+        <div className="text-center mb-6 sm:mb-8 md:mb-12">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-2 sm:mb-3 md:mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent px-2">
+            Find India's Best Credit Cards for Your Spending Style
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            Tell us where you spend, and we'll find the best credit card for you in 30 seconds
+          <p className="text-xs sm:text-sm md:text-base text-muted-foreground max-w-2xl sm:max-w-4xl mx-auto px-4 text-center leading-relaxed">
+            Pick a category, answer a few questions, and see how much you could save each month
           </p>
         </div>
 
         {/* Category Selection - Always visible */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-8 sm:mb-12">
-          {categories.map(category => <button key={category.id} onClick={() => handleCategorySelect(category.id)} className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-card shadow-md hover:shadow-xl transition-all text-center group relative overflow-hidden touch-target ${selectedCategory === category.id ? 'ring-2 ring-primary shadow-glow' : ''}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <category.icon className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 mx-auto mb-2 sm:mb-3 ${category.color} group-hover:scale-110 transition-transform relative z-10`} />
-              <p className="text-xs sm:text-sm font-semibold relative z-10">{category.name}</p>
-            </button>)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8 md:mb-12">
+          {categories.map(category => {
+            const isSelected = selectedCategories.includes(category.id);
+            return (
+              <button 
+                key={category.id} 
+                onClick={() => handleCategorySelect(category.id)} 
+                className={`p-3 sm:p-4 md:p-6 rounded-lg sm:rounded-xl md:rounded-2xl bg-card shadow-md hover:shadow-xl transition-all text-center group relative overflow-hidden touch-target min-h-[100px] sm:min-h-[110px] md:min-h-[130px] flex flex-col items-center justify-center ${isSelected ? 'ring-2 ring-primary shadow-glow bg-primary/5' : ''}`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {isSelected && (
+                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center shadow-md">
+                    <span className="text-white text-[10px] sm:text-xs md:text-sm font-bold">✓</span>
+                  </div>
+                )}
+                <category.icon className={`w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 mx-auto mb-1.5 sm:mb-2 md:mb-3 ${category.color} group-hover:scale-110 transition-transform relative z-10`} />
+                <p className="text-[10px] sm:text-xs md:text-sm font-semibold relative z-10 leading-tight px-1 mb-0.5 sm:mb-1">{category.name}</p>
+                {category.examples && (
+                  <p className="text-[8px] sm:text-[9px] md:text-[10px] text-muted-foreground relative z-10 leading-tight px-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                    {category.examples}
+                  </p>
+                )}
+              </button>
+            );
+          })}
         </div>
+        {selectedCategories.length > 0 && (
+          <div className="mb-4 sm:mb-6 md:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              <span className="text-xs sm:text-sm md:text-base font-semibold text-muted-foreground whitespace-nowrap flex-shrink-0">Selected:</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                {selectedCategories.map(catId => {
+                  const category = categories.find(c => c.id === catId);
+                  return category ? (
+                    <Badge key={catId} variant="secondary" className="px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs md:text-sm whitespace-nowrap flex-shrink-0">
+                      {category.name}
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={resetCalculator}
+                className="text-[10px] sm:text-xs md:text-sm whitespace-nowrap flex-shrink-0 h-7 sm:h-8 px-2 sm:px-3"
+              >
+                Clear All
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* How It Works - Moved below categories, lighter design */}
+        {!showQuestions && results.length === 0 && (
+          <div className="max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
+            <div className="bg-muted/30 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-5 border border-border/50">
+              <h3 className="text-xs sm:text-sm font-semibold text-foreground mb-2 sm:mb-3 text-center">
+                How it works
+              </h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs lg:text-sm text-muted-foreground text-center whitespace-nowrap overflow-x-auto scrollbar-hide">
+                1️⃣ Choose category → 2️⃣ Answer questions → 3️⃣ See top cards
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Results Section */}
         {results && results.length > 0 ? <div ref={resultsRef} className="animate-fade-in scroll-mt-20">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-6 py-3 rounded-full mb-4 border border-green-200">
-                <TrendingUp className="w-5 h-5" />
-                <span className="font-bold">Your Personalized Results</span>
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-green-50 text-green-700 px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full mb-3 sm:mb-4 border border-green-200">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="font-bold text-xs sm:text-sm md:text-base">Your Personalized Results</span>
               </div>
-              <h3 className="text-3xl font-bold mb-3">Top 3 Cards Just For You</h3>
-              <p className="text-lg text-muted-foreground">
-                Based on your ₹{getTotalSpending().toLocaleString()} monthly {selectedCategoryData?.name.toLowerCase()} spending
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 sm:mb-3">Top 3 Cards Just For You</h3>
+              <p className="text-sm sm:text-base md:text-lg text-muted-foreground px-2">
+                Based on your ₹{getTotalSpending().toLocaleString()} monthly spending across {selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'}
               </p>
             </div>
 
-            <div className="cards-grid mb-8 sm:mb-12">
-              {results.map((card: any, index: number) => <div key={card.id || index} className="bg-card rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 relative">
-                  {index === 0 && <div className="absolute top-4 right-4 z-10">
-                      <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 px-3 py-1 text-xs font-bold shadow-lg">
+            <div className="cards-grid mb-6 sm:mb-8 md:mb-12 gap-4 sm:gap-6">
+              {results.map((card: any, index: number) => <div key={card.id || index} className="bg-card rounded-xl sm:rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 relative">
+                  {index === 0 && <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
+                      <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold shadow-lg">
                         🏆 Best Match
                       </Badge>
                     </div>}
                   
                   {/* Card Image */}
-                  <div className="relative h-64 overflow-hidden bg-gradient-to-br from-muted to-muted/50">
-                    <img src={card.card_bg_image} alt={card.card_name} className="w-full h-full object-contain p-8 hover:scale-105 transition-transform duration-500" />
+                  <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+                    <img src={card.card_bg_image} alt={card.card_name} className="w-full h-full object-contain p-4 sm:p-6 md:p-8 hover:scale-105 transition-transform duration-500" />
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-4 sm:p-5 md:p-6">
                     {/* Card Name */}
-                    <h3 className="text-xl font-bold mb-4 min-h-[3rem] line-clamp-2">{card.card_name}</h3>
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 min-h-[2.5rem] sm:min-h-[3rem] line-clamp-2">{card.card_name}</h3>
 
                     {/* Savings Highlight - Prominent */}
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-300 dark:border-green-700 rounded-xl p-5 mb-4 shadow-md">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-green-600" />
-                          <span className="text-sm font-bold text-green-800 dark:text-green-300">You'll Save</span>
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-300 dark:border-green-700 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-5 mb-3 sm:mb-4 shadow-md">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                          <span className="text-xs sm:text-sm font-bold text-green-800 dark:text-green-300">You'll Save</span>
                         </div>
-                        <Badge variant="secondary" className="text-xs">Per Year</Badge>
+                        <Badge variant="secondary" className="text-[10px] sm:text-xs">Per Year</Badge>
                       </div>
-                      <p className="text-4xl font-black text-green-600 dark:text-green-400 mb-2">
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-black text-green-600 dark:text-green-400 mb-1.5 sm:mb-2">
                         ₹{card.net_savings?.toLocaleString() || "0"}
                       </p>
-                      <div className="space-y-1 text-xs text-green-700 dark:text-green-300 font-medium">
-                        {card.total_savings_yearly ? (
+                      <div className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs text-green-700 dark:text-green-300 font-medium">
+                        {card.total_savings_yearly && card.total_savings_yearly > 0 ? (
                           <p>Base savings: ₹{card.total_savings_yearly.toLocaleString()}</p>
                         ) : null}
-                        {card.total_extra_benefits ? <p>Milestones: +₹{card.total_extra_benefits.toLocaleString()}</p> : null}
+                        {card.total_extra_benefits && card.total_extra_benefits > 0 ? <p>Milestones: +₹{card.total_extra_benefits.toLocaleString()}</p> : null}
                         {card.airport_lounge_value && card.airport_lounge_value > 0 && (
                           <>
                             {card.domestic_lounge_value > 0 && (
@@ -522,21 +656,21 @@ const CategoryCardGenius = () => {
                             )}
                           </>
                         )}
-                        {card.joining_fees ? <p>Fees deducted: -₹{card.joining_fees.toLocaleString()}</p> : null}
+                        {card.joining_fees && card.joining_fees !== 0 ? <p>Fees deducted: -₹{card.joining_fees.toLocaleString()}</p> : null}
                       </div>
                     </div>
 
                     {/* Fees */}
-                    <div className="grid grid-cols-2 gap-3 p-4 bg-muted/50 rounded-lg mb-4">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 p-3 sm:p-4 bg-muted/50 rounded-lg mb-3 sm:mb-4">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Joining Fee</p>
-                        <p className="font-bold text-sm">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Joining Fee</p>
+                        <p className="font-bold text-xs sm:text-sm">
                           {card.joining_fees === 0 ? <span className="text-green-600">FREE</span> : `₹${card.joining_fees?.toLocaleString()}`}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Annual Fee</p>
-                        <p className="font-bold text-sm">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Annual Fee</p>
+                        <p className="font-bold text-xs sm:text-sm">
                           {card.annual_fees === 0 ? <span className="text-green-600">FREE</span> : `₹${card.annual_fees?.toLocaleString()}`}
                         </p>
                       </div>
@@ -555,14 +689,14 @@ const CategoryCardGenius = () => {
                           const savingsValue = Number(data?.savings ?? data?.total_savings ?? 0);
                           const spendValue = Number(data?.spend ?? data?.spending ?? 0);
                           if (!savingsValue && !spendValue) return null;
-
+                          
                           // Always format category name nicely (API may return underscored keys)
                           const rawName =
                             typeof data?.on === "string" && data.on.trim().length > 0
                               ? data.on
                               : key;
                           const categoryName = formatCategoryName(rawName);
-
+                          
                           return (
                             <div key={key} className="bg-white dark:bg-muted/50 rounded-lg p-4 border border-border shadow-sm hover:shadow-md transition-shadow">
                               <div className="flex justify-between items-start mb-2">
@@ -585,10 +719,40 @@ const CategoryCardGenius = () => {
                               
                               {(() => {
                                 if (!Array.isArray(data?.explanation)) return null;
+                                
+                                // Check if this is a lounge category (exclude from monthly addition)
+                                const categoryLower = categoryName.toLowerCase();
+                                const keyLower = key.toLowerCase();
+                                const isLounge = 
+                                  categoryLower.includes('lounge') ||
+                                  keyLower.includes('lounge');
+                                
                                 const meaningfulBlocks = data.explanation
-                                  .filter((block: any) => typeof block === 'string' && block.trim() !== '' && block.trim() !== '0');
+                                  .filter((block: any) => {
+                                    if (typeof block !== 'string') return false;
+                                    const trimmed = block.trim();
+                                    // Filter out empty strings, "0", "zero", and any string that's just whitespace or numbers
+                                    return trimmed !== '' && 
+                                           trimmed !== '0' && 
+                                           trimmed.toLowerCase() !== 'zero' &&
+                                           !/^\d+$/.test(trimmed); // Filter out strings that are just numbers
+                                  });
                                 if (!meaningfulBlocks.length) return null;
-                                const combinedHtml = meaningfulBlocks
+                                
+                                // Process blocks to add "monthly" if not lounge category
+                                const processedBlocks = meaningfulBlocks.map((block: string) => {
+                                  if (isLounge) {
+                                    return block; // Don't modify lounge explanations
+                                  }
+                                  // Add "monthly" before "spend" or "spending" for all other categories (including flight & hotel)
+                                  return block
+                                    .replace(/On spend of/gi, 'On monthly spend of')
+                                    .replace(/On spending of/gi, 'On monthly spending of')
+                                    .replace(/on spend of/gi, 'on monthly spend of')
+                                    .replace(/on spending of/gi, 'on monthly spending of');
+                                });
+                                
+                                const combinedHtml = processedBlocks
                                   .map(block => `<p>${block}</p>`)
                                   .join('');
                                 return (
@@ -681,10 +845,10 @@ const CategoryCardGenius = () => {
 
                     {/* CTA Buttons */}
                     <div className="space-y-2">
-                      <Button className="w-full shadow-lg" size="lg" onClick={() => handleApplyNow(card)}>
+                      <Button className="w-full shadow-lg text-sm sm:text-base" size="lg" onClick={() => handleApplyNow(card)}>
                         Apply Now
                       </Button>
-                      <Button variant="outline" className="w-full" size="sm" onClick={() => handleViewDetails(card)}>
+                      <Button variant="outline" className="w-full text-xs sm:text-sm" size="sm" onClick={() => handleViewDetails(card)}>
                         View Details
                       </Button>
                     </div>
@@ -692,36 +856,43 @@ const CategoryCardGenius = () => {
                 </div>)}
             </div>
           </div> : loading ? (/* Loading State with Fun Facts */
-      <div className="max-w-2xl mx-auto text-center animate-fade-in">
-            <div className="bg-card rounded-3xl p-12 shadow-2xl border-2 border-primary/20">
-              <div className="mb-8">
-                <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
+      <div className="max-w-2xl mx-auto text-center animate-fade-in px-4">
+            <div className="bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-2xl border-2 border-primary/20">
+              <div className="mb-4 sm:mb-6 md:mb-8">
+                <Loader2 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto text-primary animate-spin" />
               </div>
-              <h3 className="text-2xl font-bold mb-4">Crunching the numbers...</h3>
-              <p className="text-muted-foreground mb-8">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">Crunching the numbers...</h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 md:mb-8 px-2">
                 Our AI is analyzing thousands of card combinations to find your perfect match
               </p>
-              <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-6 min-h-[100px] flex items-center justify-center">
-                <p className="text-lg font-medium text-foreground animate-fade-in">
+              <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 min-h-[80px] sm:min-h-[100px] flex items-center justify-center">
+                <p className="text-sm sm:text-base md:text-lg font-medium text-foreground animate-fade-in px-2">
                   {creditCardFacts[currentFactIndex]}
                 </p>
               </div>
             </div>
-          </div>) : showQuestions && selectedCategoryData && currentQuestion ? (/* Questions Section */
-      <div className="max-w-3xl mx-auto animate-fade-in">
+          </div>) : showQuestions && selectedCategories.length > 0 && currentQuestion ? (/* Questions Section */
+      <div className="max-w-3xl mx-auto animate-fade-in px-4">
             {/* Progress */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-muted-foreground">
-                  Question {currentQuestionIndex + 1} of {selectedCategoryData.questions.length}
-                </span>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    Question {currentQuestionIndex + 1} of {allQuestions.length}
+                  </span>
+                  {currentQuestionData && (
+                    <Badge variant="outline" className="text-xs">
+                      {currentQuestionData.categoryName}
+                    </Badge>
+                  )}
+                </div>
                 <span className="text-sm font-bold text-primary">
-                  {Math.round((currentQuestionIndex + 1) / selectedCategoryData.questions.length * 100)}% Complete
+                  {Math.round((currentQuestionIndex + 1) / allQuestions.length * 100)}% Complete
                 </span>
               </div>
               <div className="w-full h-3 bg-muted rounded-full overflow-hidden shadow-inner">
                 <div className="h-full bg-gradient-to-r from-primary via-secondary to-accent transition-all duration-500 shadow-lg" style={{
-              width: `${(currentQuestionIndex + 1) / selectedCategoryData.questions.length * 100}%`
+              width: `${(currentQuestionIndex + 1) / allQuestions.length * 100}%`
             }} />
               </div>
             </div>
@@ -733,44 +904,25 @@ const CategoryCardGenius = () => {
         }))} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency ?? true} showRupee={currentQuestion.showRupee ?? true} suffix={currentQuestion.suffix || ""} />
 
             {/* Navigation */}
-            <div className="flex gap-4 mt-8">
-              <Button variant="outline" size="lg" onClick={handlePrev} disabled={currentQuestionIndex === 0} className="flex-1">
+            <div className="flex gap-2 sm:gap-3 md:gap-4 mt-6 sm:mt-8">
+              <Button variant="outline" size="lg" onClick={handlePrev} disabled={currentQuestionIndex === 0} className="flex-1 text-sm sm:text-base h-11 sm:h-12">
                 Previous
               </Button>
-              <Button size="lg" onClick={handleNext} disabled={loading} className="flex-1 shadow-lg">
-                {currentQuestionIndex === selectedCategoryData.questions.length - 1 ? <>
-                    Show My Results
+              <Button size="lg" onClick={handleNext} disabled={loading} className="flex-1 shadow-lg text-sm sm:text-base h-11 sm:h-12">
+                {currentQuestionIndex === allQuestions.length - 1 ? <>
+                    <span className="hidden sm:inline">Show My Results</span>
+                    <span className="sm:hidden">Results</span>
                     <Sparkles className="ml-2 w-4 h-4" />
                   </> : 'Next'}
               </Button>
             </div>
 
-            <div className="text-center mt-6">
-              <button onClick={resetCalculator} className="text-muted-foreground hover:text-primary font-medium transition-colors text-sm">
-                ← Choose Different Category
+            <div className="text-center mt-4 sm:mt-6">
+              <button onClick={resetCalculator} className="text-muted-foreground hover:text-primary font-medium transition-colors text-xs sm:text-sm">
+                ← Change Categories
               </button>
             </div>
-          </div>) : (/* Initial State - Instructions */
-      <div className="max-w-2xl mx-auto text-center bg-card rounded-2xl p-8 shadow-lg">
-            <p className="text-lg text-muted-foreground mb-6">
-              💡 <strong>How it works:</strong> Pick a category above, answer quick questions about your spending, 
-              and instantly see the top 3 cards that'll save you the most money
-            </p>
-            <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground flex-wrap">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg">1</div>
-                <span className="font-medium">Choose Category</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg">2</div>
-                <span className="font-medium">Answer Questions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-lg">3</div>
-                <span className="font-medium">Get Top 3 Cards</span>
-              </div>
-            </div>
-          </div>)}
+          </div>) : null}
       </div>
     </section>;
 };

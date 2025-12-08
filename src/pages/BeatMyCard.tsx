@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SpendingInput } from "@/components/ui/spending-input";
-import { ArrowLeft, ArrowRight, Loader2, Trophy, TrendingUp, Award, Sparkles, ChevronDown, Shield, CheckCircle2, Zap, Home } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Trophy, TrendingUp, Award, Sparkles, ChevronDown, Shield, CheckCircle2, Zap, ArrowUp, ArrowDown, Percent, CreditCard, Info, ExternalLink } from "lucide-react";
 import { cardService, SpendingData } from "@/services/cardService";
 import { toast } from "sonner";
 import { CardSearchDropdown } from "@/components/CardSearchDropdown";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { redirectToCardApplication } from "@/utils/redirectHandler";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 interface CategorySavings {
@@ -542,7 +543,7 @@ const BeatMyCard = () => {
     // Sort by the higher saving value between the two cards
     return categories.sort((a, b) => Math.max(b.userSaving, b.geniusSaving) - Math.max(a.userSaving, a.geniusSaving));
   };
-  const isUserWinner = userCardData && geniusCardData && userCardData.annual_saving >= geniusCardData.annual_saving;
+  // Edge case handling: Determine if user's card is better or equal (calculated in results section)
 
   // Render card selection
   if (step === 'select') {
@@ -561,27 +562,81 @@ const BeatMyCard = () => {
                 Beat My Card
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
-                Select your current card and see if Card Genius can find a better match
+                See if your current credit card is costing you money. Compare it with 100+ cards based on your real spending habits.
               </p>
               
               {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
-                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-secondary/10 text-secondary border-secondary/20 hover:bg-secondary/20 transition-colors">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  AI-Powered
+              <div className="flex items-center justify-center gap-1.5 sm:gap-3 mb-6 sm:mb-8 flex-nowrap overflow-x-auto pb-2 scrollbar-hide">
+                <Badge variant="secondary" className="px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-medium bg-secondary/10 text-secondary border-secondary/20 hover:bg-secondary/20 transition-colors whitespace-nowrap flex-shrink-0">
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  AI-Powered Evaluation
                 </Badge>
-                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors">
-                  <Shield className="w-4 h-4 mr-2" />
+                <Badge variant="secondary" className="px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap flex-shrink-0">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   Unbiased Results
                 </Badge>
-                <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 transition-colors">
-                  <Zap className="w-4 h-4 mr-2" />
-                  Instant Comparison
+                <Badge variant="secondary" className="px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 transition-colors whitespace-nowrap flex-shrink-0">
+                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Accurate Comparison
                 </Badge>
+              </div>
+
+              {/* 3-Step Flow Explanation */}
+              <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 border border-border/50">
+                <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-foreground">How Beat My Card Works</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-left">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg sm:text-xl">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground">Select your current card</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Choose the credit card you're currently using</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg sm:text-xl">
+                      2
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground">Answer a few simple spending questions</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Takes less than 2 minutes</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg sm:text-xl">
+                      3
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground">Discover if a better card can save you more</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Get personalized recommendations</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reassurance Note */}
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8 border border-blue-200/50 dark:border-blue-800/50">
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  <span className="font-semibold text-foreground">We ask 19 quick questions</span> to accurately match a card to your lifestyle. Takes less than 2 minutes.
+                </p>
               </div>
             </div>
 
-            <CardSearchDropdown cards={filteredCards} selectedCard={selectedCard} onCardSelect={handleCardSelect} onClearSelection={() => setSelectedCard(null)} isLoading={isLoading} />
+            {/* Card Search Section */}
+            <div className="px-4">
+              <CardSearchDropdown 
+                cards={filteredCards} 
+                selectedCard={selectedCard} 
+                onCardSelect={handleCardSelect} 
+                onClearSelection={() => setSelectedCard(null)} 
+                isLoading={isLoading}
+                placeholder="Search your credit card..."
+              />
+              <p className="text-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
+                Select your card to begin. Takes less than 2 minutes.
+              </p>
+            </div>
           </div>
         </div>
         </div>
@@ -598,12 +653,7 @@ const BeatMyCard = () => {
         <div className="min-h-screen bg-background pt-24 pb-16">
         <div className="container mx-auto px-4 py-8">
           {/* Header with Navigation */}
-          <div className="flex items-center justify-between mb-8">
-            <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 hover:bg-primary/10">
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Home</span>
-            </Button>
-            
+          <div className="flex items-center justify-end mb-8">
             <Button variant="ghost" onClick={() => setStep('select')} className="gap-2">
               <ArrowLeft className="h-4 w-4" />
               Card Selection
@@ -671,26 +721,47 @@ const BeatMyCard = () => {
 
   // Render results
   if (step === 'results' && userCardData && geniusCardData) {
-    const savingsDifference = Math.abs(geniusCardData.annual_saving - userCardData.annual_saving);
+    // Edge case handling: Safe calculation with fallbacks
+    const userSavings = userCardData?.annual_saving || 0;
+    const geniusSavings = geniusCardData?.annual_saving || 0;
+    const savingsDifference = Math.abs(geniusSavings - userSavings);
     const monthlySavings = Math.max(Math.round(savingsDifference / 12), 0);
-    const maxSavings = Math.max(userCardData.annual_saving, geniusCardData.annual_saving);
-    const userAnnualText = userCardData.annual_saving?.toLocaleString('en-IN') || '0';
-    const geniusAnnualText = geniusCardData.annual_saving?.toLocaleString('en-IN') || '0';
-    const savingsPercent = userCardData.annual_saving > 0 ? ((geniusCardData.annual_saving - userCardData.annual_saving) / userCardData.annual_saving) * 100 : 100;
+    const maxSavings = Math.max(userSavings, geniusSavings);
+    const userAnnualText = userSavings.toLocaleString('en-IN');
+    const geniusAnnualText = geniusSavings.toLocaleString('en-IN');
+    const savingsPercent = userSavings > 0 ? ((geniusSavings - userSavings) / userSavings) * 100 : (geniusSavings > 0 ? 100 : 0);
+    
+    // Edge case handling: Determine if user's card is better or equal
+    const isUserWinner = userSavings >= geniusSavings;
+    
+    // Edge case: Check if savings are equal (tie scenario - within ₹100)
+    const isTie = Math.abs(userSavings - geniusSavings) < 100;
+    
+    // Edge case: Check if difference is negligible (< 1% or < ₹100)
+    const isNegligibleDifference = savingsDifference < 100 || 
+      (userSavings > 0 && savingsDifference / userSavings < 0.01);
+    
+    // Edge case: Determine hero content based on winner status
     const heroGradient = isUserWinner ? 'from-emerald-500 via-emerald-600 to-emerald-700' : 'from-blue-600 via-indigo-600 to-purple-600';
-    const heroTitle = isUserWinner ? 'You’re already winning!' : 'We Found Your Upgrade!';
+    const heroTitle = isUserWinner 
+      ? (isTie ? 'Great Choice! Your Card is Already Optimal' : 'You Are Already Winning!')
+      : (isNegligibleDifference ? 'Your Card is Nearly Optimal' : 'We Found Your Upgrade!');
     const heroSubtitle = isUserWinner
-      ? `Your ${userCardData.name} already earns ₹${userAnnualText} every year.`
-      : `Switch to ${geniusCardData.name} and unlock ₹${savingsDifference.toLocaleString('en-IN')} more annually.`;
+      ? (isTie 
+          ? `Your ${userCardData.name} performs equally well, earning ₹${userAnnualText} annually.`
+          : `Your ${userCardData.name} already earns ₹${userAnnualText} every year - that's the best match for your spending!`)
+      : (isNegligibleDifference
+          ? `The difference is minimal. Your current card earns ₹${userAnnualText} vs ₹${geniusAnnualText} - both are great options.`
+          : `Switch to ${geniusCardData.name} and unlock ₹${savingsDifference.toLocaleString('en-IN')} more annually.`);
     const comparisonBars = [
       {
         label: 'Your Card',
-        value: userCardData.annual_saving || 0,
+        value: userSavings,
         accent: 'from-rose-400 to-rose-500'
       },
       {
         label: 'Recommended Card',
-        value: geniusCardData.annual_saving || 0,
+        value: geniusSavings,
         accent: 'from-blue-500 to-blue-600'
       }
     ];
@@ -809,7 +880,10 @@ const BeatMyCard = () => {
                 <div className="flex-1 space-y-4">
                   <div className="inline-flex items-center gap-3 border border-white/30 rounded-full px-4 py-2 text-sm font-semibold">
                     <Trophy className="w-5 h-5 text-yellow-300 animate-bounce" />
-                    {isUserWinner ? 'Perfect Match' : 'Card Genius Recommendation'}
+                    {isUserWinner 
+                      ? (isTie ? 'Excellent Choice - Cards Are Equal' : 'Perfect Match - Your Card Wins!')
+                      : (isNegligibleDifference ? 'Both Cards Are Great Options' : 'Card Genius Recommendation')
+                    }
                   </div>
                   <h1 className="text-3xl sm:text-4xl font-black">{heroTitle}</h1>
                   <p className="text-lg text-white/80 max-w-2xl">{heroSubtitle}</p>
@@ -820,46 +894,113 @@ const BeatMyCard = () => {
                   </p>
                   <div className="flex items-end gap-4">
                     <p className="text-4xl font-black">
-                      ₹{(isUserWinner ? userCardData.annual_saving : savingsDifference).toLocaleString('en-IN')}
+                      ₹{(isUserWinner ? userSavings : savingsDifference).toLocaleString('en-IN')}
                     </p>
-                    {!isUserWinner && (
+                    {!isUserWinner && !isNegligibleDifference && (
                       <span className="text-white/70 text-sm mb-2">≈ ₹{monthlySavings.toLocaleString('en-IN')}/mo</span>
                     )}
+                    {isUserWinner && (
+                      <span className="text-white/70 text-sm mb-2">Your annual savings</span>
+                    )}
                   </div>
-                  {!isUserWinner && (
+                  {!isUserWinner && !isNegligibleDifference && (
                     <div className="mt-4 inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold">
                       <TrendingUp className="w-4 h-4" />
-                      {savingsPercent.toFixed(1)}% higher than your current card
+                      {savingsPercent > 0 ? `${savingsPercent.toFixed(1)}% higher than your current card` : 'Better option available'}
+                    </div>
+                  )}
+                  {isUserWinner && (
+                    <div className="mt-4 inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                      <Award className="w-4 h-4" />
+                      {isTie ? 'Your card matches the best option!' : 'You already have the optimal card for your spending!'}
+                    </div>
+                  )}
+                  {isNegligibleDifference && (
+                    <div className="mt-4 inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                      <Shield className="w-4 h-4" />
+                      Both cards offer similar value - choose based on other features
                     </div>
                   )}
                 </div>
               </div>
             </section>
 
-            {/* Comparison */}
+            {/* Annual Savings Comparison - Side by Side Cards */}
             <section className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6">
               <h2 className="text-2xl font-bold text-slate-900">Annual Savings Comparison</h2>
-              <div className="space-y-6">
-                {comparisonBars.map((bar, idx) => {
-                  const percent = maxSavings > 0 ? Math.max((bar.value / maxSavings) * 100, 12) : 12;
-                  return (
-                    <div key={bar.label} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm font-semibold text-slate-600">
-                        <span>{bar.label}</span>
-                        <span className="text-base text-slate-900">₹{bar.value.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="h-12 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full bg-gradient-to-r ${bar.accent} flex items-center justify-end pr-4 text-white font-bold`}
-                          style={{ width: `${percent}%` }}
-                        >
-                          {idx === 0 && maxSavings > 0 ? `${Math.round((bar.value / maxSavings) * 100)}%` : idx === 1 ? '100%' : ''}
-                        </div>
-                      </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Current Card Savings */}
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border-2 border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">Your Current Card</span>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500 uppercase tracking-[0.3em]">Annual Savings</p>
+                    <p className="text-4xl font-black text-slate-900">₹{userCardData.annual_saving?.toLocaleString('en-IN') || '0'}</p>
+                    <p className="text-sm text-slate-500">≈ ₹{Math.round((userCardData.annual_saving || 0) / 12).toLocaleString('en-IN')}/month</p>
+                  </div>
+                </div>
+                {/* Recommended Card Savings */}
+                <div className={`bg-gradient-to-br rounded-2xl p-6 border-2 relative ${
+                  isUserWinner 
+                    ? 'from-slate-50 to-slate-100 border-slate-200' 
+                    : isNegligibleDifference
+                    ? 'from-amber-50 to-orange-50 border-amber-200'
+                    : 'from-blue-50 to-indigo-50 border-blue-200'
+                }`}>
+                  {!isUserWinner && !isNegligibleDifference && (
+                    <div className="absolute -top-3 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                      <TrendingUp className="w-3 h-3" />
+                      Better Option
                     </div>
-                  );
-                })}
+                  )}
+                  {isNegligibleDifference && (
+                    <div className="absolute -top-3 right-4 bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                      <Award className="w-3 h-3" />
+                      Similar
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`text-sm font-semibold uppercase tracking-wide whitespace-nowrap ${
+                      isUserWinner ? 'text-slate-600' : isNegligibleDifference ? 'text-amber-700' : 'text-blue-700'
+                    }`}>
+                      {isUserWinner ? 'Alternative Card' : 'Recommended Card'}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <p className={`text-xs uppercase tracking-[0.3em] ${
+                      isUserWinner ? 'text-slate-500' : isNegligibleDifference ? 'text-amber-600' : 'text-blue-600'
+                    }`}>
+                      Annual Savings
+                    </p>
+                    <p className={`text-4xl font-black ${
+                      isUserWinner ? 'text-slate-900' : isNegligibleDifference ? 'text-amber-900' : 'text-blue-900'
+                    }`}>
+                      ₹{geniusSavings.toLocaleString('en-IN')}
+                    </p>
+                    <p className={`text-sm ${
+                      isUserWinner ? 'text-slate-500' : isNegligibleDifference ? 'text-amber-600' : 'text-blue-600'
+                    }`}>
+                      ≈ ₹{Math.round(geniusSavings / 12).toLocaleString('en-IN')}/month
+                    </p>
+                  </div>
+                </div>
               </div>
+              {/* Gain Display - Only show if there's a meaningful difference */}
+              {!isUserWinner && !isNegligibleDifference && savingsDifference >= 100 && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-green-700 uppercase tracking-wide mb-1">You Gain</p>
+                      <p className="text-3xl font-black text-green-900">+₹{savingsDifference.toLocaleString('en-IN')} / year</p>
+                      <p className="text-sm text-green-600 mt-1">≈ +₹{monthlySavings.toLocaleString('en-IN')}/month extra savings</p>
+                    </div>
+                    <div className="hidden sm:flex items-center justify-center w-16 h-16 bg-green-500 rounded-full">
+                      <ArrowUp className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Card Comparison */}
@@ -889,11 +1030,11 @@ const BeatMyCard = () => {
                         }}
                       />
                     </div>
-                    <div className="space-y-1 text-center mb-6">
-                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{card.banks?.name || 'Credit Card'}</p>
-                      <h3 className="text-2xl font-bold text-slate-900">{card.name}</h3>
+                    <div className="space-y-2 text-center mb-6">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap truncate">{card.banks?.name || 'Credit Card'}</p>
+                      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 line-clamp-2 leading-tight px-2">{card.name}</h3>
                       {card.card_type && (
-                        <span className="inline-flex items-center px-3 py-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-600">
+                        <span className="inline-flex items-center px-3 py-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-600 whitespace-nowrap">
                           {card.card_type}
                         </span>
                       )}
@@ -903,25 +1044,35 @@ const BeatMyCard = () => {
                       <p className="text-4xl font-black text-slate-900">₹{card.annual_saving?.toLocaleString('en-IN') || '0'}</p>
                       <p className="text-sm text-slate-500">≈ ₹{Math.round((card.annual_saving || 0) / 12).toLocaleString('en-IN')}/month</p>
                     </div>
-                    <div className="space-y-3 text-sm text-slate-700">
-                      {card.joining_fees && (
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                          <span>Joining Fee</span>
-                          <strong>₹{card.joining_fees}</strong>
+                    {/* Icon-based Highlights */}
+                    <div className="space-y-3">
+                      {card.reward_rate && (
+                        <div className="bg-blue-50 rounded-lg p-3 flex items-start gap-2">
+                          <Percent className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0 flex-1 overflow-hidden">
+                            <p className="text-xs text-slate-500 mb-1">Cashback Rate</p>
+                            <p className="text-sm font-bold text-slate-900 break-words">{card.reward_rate}</p>
+                          </div>
                         </div>
                       )}
-                      {card.annual_fee && (
-                        <div className="flex justify-between border-b border-slate-100 pb-2">
-                          <span>Annual Fee</span>
-                          <strong>₹{card.annual_fee}</strong>
-                        </div>
-                      )}
-                      {card.welcome_bonus && (
-                        <div className="flex justify-between">
-                          <span>Welcome Bonus</span>
-                          <strong>{card.welcome_bonus}</strong>
-                        </div>
-                      )}
+                      {card.spending_breakdown_array && card.spending_breakdown_array.length > 0 && (() => {
+                        const topCategories = card.spending_breakdown_array
+                          .filter(item => item.savings > 0)
+                          .sort((a, b) => b.savings - a.savings)
+                          .slice(0, 2);
+                        const categoriesText = topCategories.map(cat => cat.on?.replace(/_/g, ' ')).join(', ');
+                        return topCategories.length > 0 ? (
+                          <div className="bg-green-50 rounded-lg p-3 flex items-start gap-2">
+                            <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <p className="text-xs text-slate-500 mb-1">Top Categories</p>
+                              <p className="text-sm font-bold text-slate-900 truncate" title={categoriesText}>
+                                {categoriesText}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 );
@@ -930,28 +1081,82 @@ const BeatMyCard = () => {
 
             {/* Data-backed highlights */}
             {comparisonRows.length > 0 && (
-              <section className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+              <section className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 shadow-sm space-y-6 overflow-hidden">
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-2xl font-bold">{isUserWinner ? 'How your card stacks up' : 'Why switch to this card'}</h3>
-                  <p className="text-sm text-slate-500">Pulled directly from each card’s actual fees, waivers, and milestone benefits.</p>
+                  <h3 className="text-xl sm:text-2xl font-bold">{isUserWinner ? 'How your card stacks up' : 'Why switch to this card'}</h3>
+                  <p className="text-sm text-slate-500">Pulled directly from each card's actual fees, waivers, and milestone benefits.</p>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-slate-100">
-                  <div className="grid grid-cols-[1.2fr,1fr,1fr] bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-[0.25em]">
-                    <div className="px-4 py-3">Metric</div>
-                    <div className="px-4 py-3 text-center">Your Card</div>
-                    <div className="px-4 py-3 text-center">Recommended Card</div>
-                  </div>
-                  {comparisonRows.map(row => (
-                    <div key={row.label} className="grid grid-cols-[1.2fr,1fr,1fr] border-t border-slate-100">
-                      <div className="px-4 py-4">
-                        <p className="font-semibold text-slate-900">{row.label}</p>
-                        {row.helper && <p className="text-sm text-slate-500 mt-1">{row.helper}</p>}
-                      </div>
-                      <div className="px-4 py-4 text-center font-medium text-slate-900">{row.user}</div>
-                      <div className="px-4 py-4 text-center font-medium text-slate-900">{row.genius}</div>
+                <TooltipProvider>
+                  <div className="w-full overflow-hidden flex justify-center">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm max-w-2xl w-full">
+                    <div className="grid grid-cols-3 bg-gradient-to-r from-slate-50 to-slate-100 text-xs font-bold text-slate-700 uppercase tracking-wide border-b-2 border-slate-200">
+                      <div className="px-4 sm:px-6 py-4 sm:py-5 border-r border-slate-300 text-left">Metric</div>
+                      <div className="px-4 sm:px-6 py-4 sm:py-5 text-center border-r border-slate-300">Your Card</div>
+                      <div className="px-4 sm:px-6 py-4 sm:py-5 text-center">Recommended Card</div>
                     </div>
-                  ))}
-                </div>
+                    {comparisonRows.map((row, index) => {
+                      // Determine which value is better (lower is better for fees, higher is better for benefits)
+                      const isFeeRelated = row.label.toLowerCase().includes('fee');
+                      const userStr = String(row.user || '');
+                      const geniusStr = String(row.genius || '');
+                      const userNum = extractNumeric(userStr);
+                      const geniusNum = extractNumeric(geniusStr);
+                      
+                      // Handle special cases (Free = 0, Not available = not comparable)
+                      const userFree = userStr.toLowerCase().includes('free');
+                      const geniusFree = geniusStr.toLowerCase().includes('free');
+                      const userNotAvail = userStr.toLowerCase().includes('not available') || userStr.toLowerCase().includes('n/a');
+                      const geniusNotAvail = geniusStr.toLowerCase().includes('not available') || geniusStr.toLowerCase().includes('n/a');
+                      
+                      let userIsBetter = null;
+                      let geniusIsBetter = null;
+                      
+                      if (!userNotAvail && !geniusNotAvail) {
+                        if (userFree && !geniusFree) {
+                          userIsBetter = isFeeRelated;
+                          geniusIsBetter = !isFeeRelated;
+                        } else if (!userFree && geniusFree) {
+                          userIsBetter = !isFeeRelated;
+                          geniusIsBetter = isFeeRelated;
+                        } else if (!isNaN(userNum) && !isNaN(geniusNum) && userNum > 0 && geniusNum > 0) {
+                          userIsBetter = isFeeRelated ? userNum <= geniusNum : userNum >= geniusNum;
+                          geniusIsBetter = isFeeRelated ? geniusNum < userNum : geniusNum > userNum;
+                        }
+                      }
+
+                      return (
+                        <div key={row.label} className={`grid grid-cols-3 border-t border-slate-200 hover:bg-slate-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
+                          <div className="px-4 sm:px-6 py-4 sm:py-5 border-r border-slate-200">
+                            <div className="flex items-start gap-1.5 sm:gap-2">
+                              <p className="font-semibold text-slate-900 text-sm leading-tight">{row.label}</p>
+                              {row.helper && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="w-4 h-4 text-slate-400 hover:text-blue-600 cursor-help mt-0.5 flex-shrink-0 transition-colors" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="text-sm">{row.helper}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </div>
+                          <div className="px-4 sm:px-6 py-4 sm:py-5 border-r border-slate-200">
+                            <div className="flex items-center justify-center min-w-0">
+                              <span className="text-sm break-words leading-tight text-center text-slate-900">{row.user}</span>
+                            </div>
+                          </div>
+                          <div className="px-4 sm:px-6 py-4 sm:py-5">
+                            <div className="flex items-center justify-center min-w-0">
+                              <span className="text-sm break-words leading-tight text-center text-slate-900">{row.genius}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    </div>
+                  </div>
+                </TooltipProvider>
               </section>
             )}
 
@@ -1014,16 +1219,17 @@ const BeatMyCard = () => {
               <div className="flex flex-col md:flex-row gap-4 items-center">
                 <Button
                   size="lg"
-                  className="w-full md:flex-1 text-lg font-semibold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500 hover:shadow-xl hover:scale-[1.01] transition"
+                  className="w-full md:flex-1 text-sm sm:text-base md:text-lg font-semibold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500 hover:shadow-xl hover:scale-[1.01] transition px-3 sm:px-6"
                   onClick={() => handleApplyNow(isUserWinner ? userCardData : geniusCardData)}
                 >
-                  Apply for {isUserWinner ? 'This Card' : 'Better Card'}
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <span className="hidden sm:inline">Apply for the Recommended Card – Fast & Paperless</span>
+                  <span className="sm:hidden">Apply Now – Fast & Paperless</span>
+                  <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 ml-1.5 sm:ml-2 flex-shrink-0" />
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full md:w-auto text-lg"
+                  className="w-full md:w-auto text-sm sm:text-base md:text-lg px-3 sm:px-6"
                   onClick={() => {
                     setStep('select');
                     setCurrentStep(0);
@@ -1034,10 +1240,43 @@ const BeatMyCard = () => {
                     setCategorySavings([]);
                   }}
                 >
-                  Try Another Card
+                  <span className="hidden sm:inline">Edit My Spending Inputs</span>
+                  <span className="sm:hidden">Edit Spending</span>
                 </Button>
               </div>
             </section>
+            
+            {/* Sticky Bottom CTA - Mobile Only */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-md border-t-2 border-slate-200 p-3 sm:p-4 z-50 shadow-2xl md:hidden safe-area-inset-bottom">
+              <div className="flex gap-2 sm:gap-3">
+                <Button
+                  size="lg"
+                  className="flex-1 font-semibold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500 text-xs sm:text-sm px-2 sm:px-4"
+                  onClick={() => handleApplyNow(isUserWinner ? userCardData : geniusCardData)}
+                >
+                  <span className="truncate">
+                    {isUserWinner ? 'Keep Current' : isNegligibleDifference ? 'Compare' : 'Apply Now'}
+                  </span>
+                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 ml-1.5 sm:ml-2 flex-shrink-0" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="px-3 sm:px-4 text-xs sm:text-sm font-semibold whitespace-nowrap"
+                  onClick={() => {
+                    setStep('select');
+                    setCurrentStep(0);
+                    setResponses({});
+                    setSelectedCard(null);
+                    setUserCardData(null);
+                    setGeniusCardData(null);
+                    setCategorySavings([]);
+                  }}
+                >
+                  Edit Spending
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
         <Footer />

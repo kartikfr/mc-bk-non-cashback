@@ -13,6 +13,7 @@ interface SpendingInputProps {
   showCurrency?: boolean;
   showRupee?: boolean;
   suffix?: string;
+  context?: string; // Why this question matters
 }
 
 export const SpendingInput = ({
@@ -27,9 +28,11 @@ export const SpendingInput = ({
   showCurrency = true,
   showRupee = true,
   suffix = "",
+  context,
 }: SpendingInputProps) => {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
+  const [isSliderHovered, setIsSliderHovered] = useState(false);
 
   useEffect(() => {
     setLocalValue(value);
@@ -47,15 +50,43 @@ export const SpendingInput = ({
     onChange(val);
   };
 
+  const handlePresetClick = (presetValue: number) => {
+    const clampedValue = Math.max(min, Math.min(max, presetValue));
+    setLocalValue(clampedValue);
+    onChange(clampedValue);
+  };
+
   const percentage = ((localValue - min) / (max - min)) * 100;
+
+  // Generate presets based on max value
+  const getPresets = () => {
+    if (max <= 10000) {
+      return [0, Math.floor(max * 0.2), Math.floor(max * 0.5), Math.floor(max * 0.7), max];
+    } else if (max <= 50000) {
+      return [0, 2000, 5000, 10000, 20000];
+    } else if (max <= 100000) {
+      return [0, 2000, 5000, 10000, 20000];
+    } else {
+      return [0, 20000, 50000, 100000, 200000];
+    }
+  };
+
+  const presets = getPresets().filter(p => p <= max);
 
   return (
     <div className={cn("mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-card transition-all duration-300", isFocused && "shadow-card-hover ring-2 ring-primary/20", className)}>
-      <label className="block mb-3 sm:mb-4">
+      <label className="block mb-2 sm:mb-3">
         <span className="text-base sm:text-lg font-medium text-charcoal-800">
           {question} <span className="text-xl sm:text-2xl ml-1 sm:ml-2">{emoji}</span>
         </span>
       </label>
+      
+      {/* Context/Subtext */}
+      {context && (
+        <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 leading-relaxed">
+          {context}
+        </p>
+      )}
 
       <div className="relative mb-4 sm:mb-6">
         {showRupee && showCurrency && (
@@ -84,6 +115,32 @@ export const SpendingInput = ({
         )}
       </div>
 
+      {/* Slider Label */}
+      <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 font-medium">
+        Drag the slider or type the amount
+      </p>
+
+      {/* Quick-tap Presets */}
+      {presets.length > 0 && showCurrency && (
+        <div className="flex gap-1.5 sm:gap-2 md:gap-3 mb-3 sm:mb-4 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+          {presets.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => handlePresetClick(preset)}
+              className={cn(
+                "px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm font-medium rounded-lg transition-all duration-200 touch-target flex-shrink-0 whitespace-nowrap",
+                localValue === preset
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "bg-muted text-foreground hover:bg-muted/80 border border-border"
+              )}
+            >
+              {showRupee && showCurrency ? '₹' : ''}{preset.toLocaleString('en-IN')}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="relative pt-2">
         <input
           type="range"
@@ -92,33 +149,40 @@ export const SpendingInput = ({
           step={step}
           value={localValue}
           onChange={handleSliderChange}
+          onMouseEnter={() => setIsSliderHovered(true)}
+          onMouseLeave={() => setIsSliderHovered(false)}
           style={{
             background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${percentage}%, hsl(var(--charcoal-200)) ${percentage}%, hsl(var(--charcoal-200)) 100%)`
           }}
-          className="w-full h-2.5 sm:h-2 rounded-full appearance-none cursor-pointer touch-target
-                   [&::-webkit-slider-thumb]:appearance-none
-                   [&::-webkit-slider-thumb]:w-7
-                   [&::-webkit-slider-thumb]:h-7
-                   sm:[&::-webkit-slider-thumb]:w-6
-                   sm:[&::-webkit-slider-thumb]:h-6
-                   [&::-webkit-slider-thumb]:rounded-full
-                   [&::-webkit-slider-thumb]:bg-white
-                   [&::-webkit-slider-thumb]:border-3
-                   [&::-webkit-slider-thumb]:border-primary
-                   [&::-webkit-slider-thumb]:cursor-pointer
-                   [&::-webkit-slider-thumb]:shadow-lg
-                   [&::-webkit-slider-thumb]:transition-transform
-                   [&::-webkit-slider-thumb]:active:scale-110
-                   [&::-moz-range-thumb]:w-7
-                   [&::-moz-range-thumb]:h-7
-                   sm:[&::-moz-range-thumb]:w-6
-                   sm:[&::-moz-range-thumb]:h-6
-                   [&::-moz-range-thumb]:rounded-full
-                   [&::-moz-range-thumb]:bg-white
-                   [&::-moz-range-thumb]:border-3
-                   [&::-moz-range-thumb]:border-primary
-                   [&::-moz-range-thumb]:cursor-pointer
-                   [&::-moz-range-thumb]:shadow-lg"
+          className={cn(
+            "w-full h-2.5 sm:h-2 rounded-full appearance-none cursor-pointer touch-target transition-all",
+            isSliderHovered && "h-3 sm:h-2.5",
+            "[&::-webkit-slider-thumb]:appearance-none",
+            "[&::-webkit-slider-thumb]:w-7",
+            "[&::-webkit-slider-thumb]:h-7",
+            "sm:[&::-webkit-slider-thumb]:w-6",
+            "sm:[&::-webkit-slider-thumb]:h-6",
+            "[&::-webkit-slider-thumb]:rounded-full",
+            "[&::-webkit-slider-thumb]:bg-white",
+            "[&::-webkit-slider-thumb]:border-3",
+            "[&::-webkit-slider-thumb]:border-primary",
+            "[&::-webkit-slider-thumb]:cursor-pointer",
+            "[&::-webkit-slider-thumb]:shadow-lg",
+            "[&::-webkit-slider-thumb]:transition-all",
+            isSliderHovered && "[&::-webkit-slider-thumb]:scale-125 [&::-webkit-slider-thumb]:shadow-xl",
+            "[&::-webkit-slider-thumb]:active:scale-110",
+            "[&::-moz-range-thumb]:w-7",
+            "[&::-moz-range-thumb]:h-7",
+            "sm:[&::-moz-range-thumb]:w-6",
+            "sm:[&::-moz-range-thumb]:h-6",
+            "[&::-moz-range-thumb]:rounded-full",
+            "[&::-moz-range-thumb]:bg-white",
+            "[&::-moz-range-thumb]:border-3",
+            "[&::-moz-range-thumb]:border-primary",
+            "[&::-moz-range-thumb]:cursor-pointer",
+            "[&::-moz-range-thumb]:shadow-lg",
+            "[&::-moz-range-thumb]:transition-all"
+          )}
         />
         <div className="flex justify-between mt-2 sm:mt-3 text-xs sm:text-sm text-charcoal-500">
           <span>{(showRupee && showCurrency) ? '₹' : ''}{min.toLocaleString('en-IN')}{suffix}</span>

@@ -21,7 +21,7 @@ export function CompareToggleIcon({ card, className }: CompareToggleIconProps) {
         toggleCard(card);
       }}
       className={cn(
-        "group flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-xs font-medium shadow-md hover:shadow-lg",
+        "group flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1 py-0.5 sm:px-1.5 sm:py-0.5 md:px-2.5 md:py-1 rounded-md md:rounded-lg transition-all duration-200 text-[8px] sm:text-[9px] md:text-xs font-medium shadow-sm md:shadow-md hover:shadow-md md:hover:shadow-lg",
         selected 
           ? "bg-primary text-primary-foreground" 
           : "bg-card text-foreground border border-border hover:border-primary hover:bg-primary/10",
@@ -31,12 +31,12 @@ export function CompareToggleIcon({ card, className }: CompareToggleIconProps) {
     >
       {selected ? (
         <>
-          <Check className="w-3.5 h-3.5" />
+          <Check className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3" />
           <span>Added</span>
         </>
       ) : (
         <>
-          <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform duration-200" />
+          <Plus className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 group-hover:rotate-90 transition-transform duration-200" />
           <span>Compare</span>
         </>
       )}
