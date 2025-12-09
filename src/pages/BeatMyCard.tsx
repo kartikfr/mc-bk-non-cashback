@@ -59,92 +59,159 @@ interface SpendingQuestion {
   max: number;
   step: number;
   isCount?: boolean;
+  presets?: number[]; // Custom presets for quick selection
 }
+
+// Helper function to get personalized steps and presets based on question field
+// Returns only 5 presets (excluding 0) for better UX
+const getQuestionConfig = (field: keyof SpendingData, max?: number): { step: number; presets: number[] } => {
+  const configs: Record<string, { step: number; presets: number[] }> = {
+    // Shopping - Amazon/Flipkart: For ranges up to 30k, use smaller increments
+    amazon_spends: { 
+      step: 100, 
+      presets: max && max <= 30000 
+        ? [1000, 5000, 10000, 20000, 30000] 
+        : [1000, 5000, 10000, 20000, 50000] 
+    },
+    flipkart_spends: { 
+      step: 100, 
+      presets: max && max <= 30000 
+        ? [1000, 5000, 10000, 20000, 30000] 
+        : [1000, 5000, 10000, 20000, 50000] 
+    },
+    other_online_spends: { step: 200, presets: [500, 2000, 5000, 10000, 20000] },
+    other_offline_spends: { step: 500, presets: [1000, 5000, 10000, 20000, 50000] },
+    
+    // Grocery: 200, 500, 1000 increments
+    grocery_spends_online: { step: 200, presets: [1000, 3000, 5000, 10000, 20000] },
+    
+    // Food Delivery: 100, 200, 500 increments
+    online_food_ordering: { step: 100, presets: [500, 2000, 5000, 10000, 20000] },
+    
+    // Fuel: 100, 200, 500 increments
+    fuel: { step: 100, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Dining: 200, 500, 1000 increments
+    dining_or_going_out: { step: 200, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Travel - Annual: 1000, 2000, 5000 increments
+    flights_annual: { step: 1000, presets: [10000, 50000, 100000, 200000, 300000] },
+    hotels_annual: { step: 1000, presets: [10000, 50000, 100000, 150000, 200000] },
+    
+    // Bills - Mobile/Water: 50, 100, 200 increments
+    mobile_phone_bills: { step: 50, presets: [500, 1000, 2000, 5000, 10000] },
+    water_bills: { step: 50, presets: [500, 1000, 2000, 3000, 5000] },
+    
+    // Electricity: 100, 200, 500 increments
+    electricity_bills: { step: 100, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Insurance - Annual: 1000, 5000, 10000 increments
+    insurance_health_annual: { step: 1000, presets: [10000, 25000, 50000, 75000, 100000] },
+    insurance_car_or_bike_annual: { step: 1000, presets: [5000, 10000, 25000, 35000, 50000] },
+    
+    // Rent: 1000, 2000, 5000 increments
+    rent: { step: 1000, presets: [5000, 15000, 25000, 40000, 60000] },
+    
+    // School Fees: 1000, 2000, 5000 increments
+    school_fees: { step: 1000, presets: [5000, 10000, 20000, 30000, 50000] },
+    
+    // Lounge visits: 2, 4, 6, 8, 10 options
+    domestic_lounge_usage_quarterly: { step: 1, presets: [2, 4, 6, 8, 10] },
+    international_lounge_usage_quarterly: { step: 1, presets: [2, 4, 6, 8, 10] },
+  };
+  
+  const config = configs[field as string] || { step: 500, presets: [1000, 5000, 10000, 20000, 50000] };
+  
+  // Filter presets to max value and ensure exactly 5 presets (excluding 0)
+  const filteredPresets = config.presets.filter(p => p <= (max || 1000000)).slice(0, 5);
+  
+  return { step: config.step, presets: filteredPresets };
+};
 const questions: SpendingQuestion[] = [{
   field: 'amazon_spends',
   question: 'How much do you spend on Amazon in a month?',
   emoji: '🛍️',
   min: 0,
-  max: 100000,
-  step: 500
+  max: 30000,
+  ...getQuestionConfig('amazon_spends', 30000)
 }, {
   field: 'flipkart_spends',
   question: 'How much do you spend on Flipkart in a month?',
   emoji: '📦',
   min: 0,
-  max: 100000,
-  step: 500
+  max: 30000,
+  ...getQuestionConfig('flipkart_spends', 30000)
 }, {
   field: 'other_online_spends',
   question: 'How much do you spend on other online shopping?',
   emoji: '💸',
   min: 0,
   max: 50000,
-  step: 500
+  ...getQuestionConfig('other_online_spends', 50000)
 }, {
   field: 'other_offline_spends',
   question: 'How much do you spend at local shops or offline stores monthly?',
   emoji: '🏪',
   min: 0,
-  max: 100000,
-  step: 1000
+  max: 50000,
+  ...getQuestionConfig('other_offline_spends', 50000)
 }, {
   field: 'grocery_spends_online',
   question: 'How much do you spend on groceries (Blinkit, Zepto etc.) every month?',
   emoji: '🥦',
   min: 0,
   max: 50000,
-  step: 500
+  ...getQuestionConfig('grocery_spends_online', 50000)
 }, {
   field: 'online_food_ordering',
   question: 'How much do you spend on food delivery apps in a month?',
   emoji: '🛵🍜',
   min: 0,
   max: 30000,
-  step: 500
+  ...getQuestionConfig('online_food_ordering', 30000)
 }, {
   field: 'fuel',
   question: 'How much do you spend on fuel in a month?',
   emoji: '⛽',
   min: 0,
   max: 20000,
-  step: 500
+  ...getQuestionConfig('fuel', 20000)
 }, {
   field: 'dining_or_going_out',
   question: 'How much do you spend on dining out in a month?',
   emoji: '🥗',
   min: 0,
   max: 30000,
-  step: 500
+  ...getQuestionConfig('dining_or_going_out', 30000)
 }, {
   field: 'flights_annual',
   question: 'How much do you spend on flights in a year?',
   emoji: '✈️',
   min: 0,
   max: 500000,
-  step: 5000
+  ...getQuestionConfig('flights_annual', 500000)
 }, {
   field: 'hotels_annual',
   question: 'How much do you spend on hotel stays in a year?',
   emoji: '🛌',
   min: 0,
   max: 300000,
-  step: 5000
+  ...getQuestionConfig('hotels_annual', 300000)
 }, {
   field: 'domestic_lounge_usage_quarterly',
   question: 'How often do you visit domestic airport lounges in a year?',
   emoji: '🇮🇳',
   min: 0,
-  max: 50,
-  step: 1,
+  max: 20,
+  ...getQuestionConfig('domestic_lounge_usage_quarterly', 20),
   isCount: true
 }, {
   field: 'international_lounge_usage_quarterly',
   question: 'Plus, what about international airport lounges?',
   emoji: '🌎',
   min: 0,
-  max: 50,
-  step: 1,
+  max: 20,
+  ...getQuestionConfig('international_lounge_usage_quarterly', 20),
   isCount: true
 }, {
   field: 'mobile_phone_bills',
@@ -152,49 +219,49 @@ const questions: SpendingQuestion[] = [{
   emoji: '📱',
   min: 0,
   max: 10000,
-  step: 100
+  ...getQuestionConfig('mobile_phone_bills', 10000)
 }, {
   field: 'electricity_bills',
   question: "What's your average monthly electricity bill?",
   emoji: '⚡️',
   min: 0,
   max: 20000,
-  step: 500
+  ...getQuestionConfig('electricity_bills', 20000)
 }, {
   field: 'water_bills',
   question: 'And what about your monthly water bill?',
   emoji: '💧',
   min: 0,
   max: 5000,
-  step: 100
+  ...getQuestionConfig('water_bills', 5000)
 }, {
   field: 'insurance_health_annual',
   question: 'How much do you pay for health or term insurance annually?',
   emoji: '🛡️',
   min: 0,
   max: 100000,
-  step: 1000
+  ...getQuestionConfig('insurance_health_annual', 100000)
 }, {
   field: 'insurance_car_or_bike_annual',
   question: 'How much do you pay for car or bike insurance annually?',
   emoji: '🚗',
   min: 0,
   max: 50000,
-  step: 1000
+  ...getQuestionConfig('insurance_car_or_bike_annual', 50000)
 }, {
   field: 'rent',
   question: 'How much do you pay for house rent every month?',
   emoji: '🏠',
   min: 0,
   max: 100000,
-  step: 1000
+  ...getQuestionConfig('rent', 100000)
 }, {
   field: 'school_fees',
   question: 'How much do you pay in school fees monthly?',
   emoji: '🎓',
   min: 0,
   max: 50000,
-  step: 1000
+  ...getQuestionConfig('school_fees', 50000)
 }];
 const BeatMyCard = () => {
   const navigate = useNavigate();
@@ -556,86 +623,52 @@ const BeatMyCard = () => {
             
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8 sm:mb-10 px-4">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-5 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-6 sm:mb-8 px-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
                 Beat My Card
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
-                See if your current credit card is costing you money. Compare it with 100+ cards based on your real spending habits.
+              <p className="text-xs sm:text-sm md:text-base text-muted-foreground mb-4 sm:mb-6 max-w-2xl mx-auto leading-tight">
+                Is your card costing you money? Compare with 100+ cards instantly.
               </p>
               
               {/* Trust Indicators */}
-              <div className="flex items-center justify-center gap-1.5 sm:gap-3 mb-6 sm:mb-8 flex-nowrap overflow-x-auto pb-2 scrollbar-hide">
-                <Badge variant="secondary" className="px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-medium bg-secondary/10 text-secondary border-secondary/20 hover:bg-secondary/20 transition-colors whitespace-nowrap flex-shrink-0">
-                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 mb-8 sm:mb-10 flex-nowrap overflow-x-auto pb-2 scrollbar-hide">
+                <Badge variant="secondary" className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium bg-secondary/10 text-secondary border-secondary/20 hover:bg-secondary/20 transition-colors whitespace-nowrap flex-shrink-0">
+                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
                   AI-Powered Evaluation
                 </Badge>
-                <Badge variant="secondary" className="px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap flex-shrink-0">
-                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <Badge variant="secondary" className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap flex-shrink-0">
+                  <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
                   Unbiased Results
                 </Badge>
-                <Badge variant="secondary" className="px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-sm font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 transition-colors whitespace-nowrap flex-shrink-0">
-                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <Badge variant="secondary" className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 transition-colors whitespace-nowrap flex-shrink-0">
+                  <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
                   Accurate Comparison
                 </Badge>
               </div>
-
-              {/* 3-Step Flow Explanation */}
-              <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 border border-border/50">
-                <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-foreground">How Beat My Card Works</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-left">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg sm:text-xl">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground">Select your current card</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Choose the credit card you're currently using</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg sm:text-xl">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground">Answer a few simple spending questions</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Takes less than 2 minutes</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg sm:text-xl">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground">Discover if a better card can save you more</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Get personalized recommendations</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reassurance Note */}
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 rounded-lg p-3 sm:p-4 mb-6 sm:mb-8 border border-blue-200/50 dark:border-blue-800/50">
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  <span className="font-semibold text-foreground">We ask 19 quick questions</span> to accurately match a card to your lifestyle. Takes less than 2 minutes.
-                </p>
-              </div>
             </div>
 
-            {/* Card Search Section */}
-            <div className="px-4">
-              <CardSearchDropdown 
-                cards={filteredCards} 
-                selectedCard={selectedCard} 
-                onCardSelect={handleCardSelect} 
-                onClearSelection={() => setSelectedCard(null)} 
-                isLoading={isLoading}
-                placeholder="Search your credit card..."
-              />
-              <p className="text-center text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
-                Select your card to begin. Takes less than 2 minutes.
-              </p>
+            {/* Centered Search Section */}
+            <div className="max-w-2xl mx-auto px-4 sm:px-6">
+              {/* Reassurance Text - Above Search */}
+              <div className="text-center mb-5 sm:mb-6">
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  We ask <span className="font-semibold text-foreground">19 quick questions</span> to match a card to your lifestyle. Takes less than 2 minutes.
+                </p>
+              </div>
+
+              {/* Card Search - Centered and Enhanced */}
+              <div className="relative">
+                <CardSearchDropdown 
+                  cards={filteredCards} 
+                  selectedCard={selectedCard} 
+                  onCardSelect={handleCardSelect} 
+                  onClearSelection={() => setSelectedCard(null)} 
+                  isLoading={isLoading}
+                  placeholder="Search for your credit card (e.g., HDFC Millennia, SBI Cashback…)"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -679,7 +712,7 @@ const BeatMyCard = () => {
               <SpendingInput question={question.question} emoji={question.emoji} value={responses[question.field] || 0} onChange={value => setResponses({
                 ...responses,
                 [question.field]: value
-              })} min={question.min} max={question.max} step={question.step} showRupee={!question.isCount} />
+              })} min={question.min} max={question.max} step={question.step} showRupee={!question.isCount} presets={question.presets} />
             </div>
 
             {/* Navigation buttons */}
@@ -688,10 +721,6 @@ const BeatMyCard = () => {
                 <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0} className="rounded-full border-2 border-muted-foreground/20 bg-background hover:bg-muted/50 text-muted-foreground px-8 h-12 transition-all duration-200">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Previous
-                </Button>
-                
-                <Button variant="ghost" onClick={handleSkipAll} disabled={isCalculating} className="text-foreground hover:text-foreground/80 font-semibold text-base px-0">
-                  {isCalculating ? "Calculating..." : "Skip All"}
                 </Button>
 
                 <Button onClick={handleNext} disabled={isCalculating} className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground px-8 h-12 shadow-md hover:shadow-lg transition-all duration-200">
@@ -708,9 +737,17 @@ const BeatMyCard = () => {
                 </Button>
               </div>
 
+              {/* Skip this question - Moved above Skip All */}
               <Button variant="ghost" onClick={handleSkip} className="text-sm text-muted-foreground hover:text-muted-foreground/80 px-0 h-auto">
                 Skip this question →
               </Button>
+
+              {/* Skip All - Moved below */}
+              {currentStep !== questions.length - 1 && (
+                <Button variant="ghost" onClick={handleSkipAll} disabled={isCalculating} className="text-xs text-muted-foreground hover:text-muted-foreground/80 px-0 h-auto">
+                  {isCalculating ? "Calculating..." : "Skip all (not recommended)"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -933,13 +970,13 @@ const BeatMyCard = () => {
                 <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border-2 border-slate-200">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">Your Current Card</span>
-                  </div>
+                      </div>
                   <div className="space-y-2">
                     <p className="text-xs text-slate-500 uppercase tracking-[0.3em]">Annual Savings</p>
                     <p className="text-4xl font-black text-slate-900">₹{userCardData.annual_saving?.toLocaleString('en-IN') || '0'}</p>
                     <p className="text-sm text-slate-500">≈ ₹{Math.round((userCardData.annual_saving || 0) / 12).toLocaleString('en-IN')}/month</p>
-                  </div>
-                </div>
+                        </div>
+                      </div>
                 {/* Recommended Card Savings */}
                 <div className={`bg-gradient-to-br rounded-2xl p-6 border-2 relative ${
                   isUserWinner 
@@ -958,7 +995,7 @@ const BeatMyCard = () => {
                     <div className="absolute -top-3 right-4 bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
                       <Award className="w-3 h-3" />
                       Similar
-                    </div>
+              </div>
                   )}
                   <div className="flex items-center justify-between mb-4">
                     <span className={`text-sm font-semibold uppercase tracking-wide whitespace-nowrap ${
@@ -1052,7 +1089,7 @@ const BeatMyCard = () => {
                           <div className="min-w-0 flex-1 overflow-hidden">
                             <p className="text-xs text-slate-500 mb-1">Cashback Rate</p>
                             <p className="text-sm font-bold text-slate-900 break-words">{card.reward_rate}</p>
-                          </div>
+                        </div>
                         </div>
                       )}
                       {card.spending_breakdown_array && card.spending_breakdown_array.length > 0 && (() => {
@@ -1069,7 +1106,7 @@ const BeatMyCard = () => {
                               <p className="text-sm font-bold text-slate-900 truncate" title={categoriesText}>
                                 {categoriesText}
                               </p>
-                            </div>
+                        </div>
                           </div>
                         ) : null;
                       })()}
@@ -1093,7 +1130,7 @@ const BeatMyCard = () => {
                       <div className="px-4 sm:px-6 py-4 sm:py-5 border-r border-slate-300 text-left">Metric</div>
                       <div className="px-4 sm:px-6 py-4 sm:py-5 text-center border-r border-slate-300">Your Card</div>
                       <div className="px-4 sm:px-6 py-4 sm:py-5 text-center">Recommended Card</div>
-                    </div>
+                  </div>
                     {comparisonRows.map((row, index) => {
                       // Determine which value is better (lower is better for fees, higher is better for benefits)
                       const isFeeRelated = row.label.toLowerCase().includes('fee');
@@ -1139,12 +1176,12 @@ const BeatMyCard = () => {
                                   </TooltipContent>
                                 </Tooltip>
                               )}
-                            </div>
-                          </div>
+                      </div>
+                    </div>
                           <div className="px-4 sm:px-6 py-4 sm:py-5 border-r border-slate-200">
                             <div className="flex items-center justify-center min-w-0">
                               <span className="text-sm break-words leading-tight text-center text-slate-900">{row.user}</span>
-                            </div>
+                </div>
                           </div>
                           <div className="px-4 sm:px-6 py-4 sm:py-5">
                             <div className="flex items-center justify-center min-w-0">

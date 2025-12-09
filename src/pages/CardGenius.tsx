@@ -28,22 +28,89 @@ interface SpendingQuestion {
   showCurrency?: boolean;
   suffix?: string;
   context?: string; // Why this question matters
+  presets?: number[]; // Custom presets for quick selection
 }
+
+// Helper function to get personalized steps and presets based on question field
+// Returns only 5 presets (excluding 0) for better UX
+const getQuestionConfig = (field: string, max?: number): { step: number; presets: number[] } => {
+  const configs: Record<string, { step: number; presets: number[] }> = {
+    // Shopping - Amazon/Flipkart: For ranges up to 30k, use smaller increments
+    amazon_spends: { 
+      step: 100, 
+      presets: max && max <= 30000 
+        ? [1000, 5000, 10000, 20000, 30000] 
+        : [1000, 5000, 10000, 20000, 50000] 
+    },
+    flipkart_spends: { 
+      step: 100, 
+      presets: max && max <= 30000 
+        ? [1000, 5000, 10000, 20000, 30000] 
+        : [1000, 5000, 10000, 20000, 50000] 
+    },
+    other_online_spends: { step: 200, presets: [500, 2000, 5000, 10000, 20000] },
+    other_offline_spends: { step: 500, presets: [1000, 5000, 10000, 20000, 50000] },
+    
+    // Grocery: 200, 500, 1000 increments
+    grocery_spends_online: { step: 200, presets: [1000, 3000, 5000, 10000, 20000] },
+    
+    // Food Delivery: 100, 200, 500 increments
+    online_food_ordering: { step: 100, presets: [500, 2000, 5000, 10000, 20000] },
+    
+    // Fuel: 100, 200, 500 increments
+    fuel: { step: 100, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Dining: 200, 500, 1000 increments
+    dining_or_going_out: { step: 200, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Travel - Annual: 1000, 2000, 5000 increments
+    flights_annual: { step: 1000, presets: [10000, 50000, 100000, 200000, 300000] },
+    hotels_annual: { step: 1000, presets: [10000, 50000, 100000, 150000, 200000] },
+    
+    // Bills - Mobile/Water: 50, 100, 200 increments
+    mobile_phone_bills: { step: 50, presets: [500, 1000, 2000, 5000, 10000] },
+    water_bills: { step: 50, presets: [500, 1000, 2000, 3000, 5000] },
+    
+    // Electricity: 100, 200, 500 increments
+    electricity_bills: { step: 100, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Insurance - Annual: 1000, 5000, 10000 increments
+    insurance_health_annual: { step: 1000, presets: [10000, 25000, 50000, 75000, 100000] },
+    insurance_car_or_bike_annual: { step: 1000, presets: [5000, 10000, 25000, 35000, 50000] },
+    
+    // Rent: 1000, 2000, 5000 increments
+    rent: { step: 1000, presets: [5000, 15000, 25000, 40000, 60000] },
+    
+    // School Fees: 1000, 2000, 5000 increments
+    school_fees: { step: 1000, presets: [5000, 10000, 20000, 30000, 50000] },
+    
+    // Lounge visits: 2, 4, 6, 8, 10 options
+    domestic_lounge_usage_quarterly: { step: 1, presets: [2, 4, 6, 8, 10] },
+    international_lounge_usage_quarterly: { step: 1, presets: [2, 4, 6, 8, 10] },
+  };
+  
+  const config = configs[field] || { step: 500, presets: [1000, 5000, 10000, 20000, 50000] };
+  
+  // Filter presets to max value and ensure exactly 5 presets (excluding 0)
+  const filteredPresets = config.presets.filter(p => p <= (max || 1000000)).slice(0, 5);
+  
+  return { step: config.step, presets: filteredPresets };
+};
 const questions: SpendingQuestion[] = [{
   field: 'amazon_spends',
   question: 'How much do you spend on Amazon in a month?',
   emoji: '🛍️',
   min: 0,
-  max: 100000,
-  step: 500,
+  max: 30000,
+  ...getQuestionConfig('amazon_spends', 30000),
   context: 'This helps us calculate your cashback on Amazon and compare it with other cards.'
 }, {
   field: 'flipkart_spends',
   question: 'How much do you spend on Flipkart in a month?',
   emoji: '📦',
   min: 0,
-  max: 100000,
-  step: 500,
+  max: 30000,
+  ...getQuestionConfig('flipkart_spends', 30000),
   context: 'We use this to find cards that offer the best rewards on Flipkart purchases.'
 }, {
   field: 'other_online_spends',
@@ -51,15 +118,15 @@ const questions: SpendingQuestion[] = [{
   emoji: '💸',
   min: 0,
   max: 50000,
-  step: 500,
+  ...getQuestionConfig('other_online_spends', 50000),
   context: 'This helps us identify cards with the best general online shopping rewards.'
 }, {
   field: 'other_offline_spends',
   question: 'How much do you spend at local shops or offline stores monthly?',
   emoji: '🏪',
   min: 0,
-  max: 100000,
-  step: 1000,
+  max: 50000,
+  ...getQuestionConfig('other_offline_spends', 50000),
   context: 'We match you with cards that offer rewards on offline purchases.'
 }, {
   field: 'grocery_spends_online',
@@ -67,7 +134,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🥦',
   min: 0,
   max: 50000,
-  step: 500,
+  ...getQuestionConfig('grocery_spends_online', 50000),
   context: 'This helps us find cards with the highest cashback on grocery purchases.'
 }, {
   field: 'online_food_ordering',
@@ -75,7 +142,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🛵🍜',
   min: 0,
   max: 30000,
-  step: 500,
+  ...getQuestionConfig('online_food_ordering', 30000),
   context: 'We calculate which cards offer the best rewards on food delivery.'
 }, {
   field: 'fuel',
@@ -83,7 +150,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '⛽',
   min: 0,
   max: 20000,
-  step: 500,
+  ...getQuestionConfig('fuel', 20000),
   context: 'This helps us find cards with the best fuel surcharge waivers and rewards.'
 }, {
   field: 'dining_or_going_out',
@@ -91,7 +158,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🥗',
   min: 0,
   max: 30000,
-  step: 500,
+  ...getQuestionConfig('dining_or_going_out', 30000),
   context: 'We match you with cards that offer the highest rewards on dining.'
 }, {
   field: 'flights_annual',
@@ -99,7 +166,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '✈️',
   min: 0,
   max: 500000,
-  step: 5000,
+  ...getQuestionConfig('flights_annual', 500000),
   context: 'This helps us recommend travel cards with the best air miles and discounts.'
 }, {
   field: 'hotels_annual',
@@ -107,15 +174,15 @@ const questions: SpendingQuestion[] = [{
   emoji: '🛌',
   min: 0,
   max: 300000,
-  step: 5000,
+  ...getQuestionConfig('hotels_annual', 300000),
   context: 'We find cards that offer the best hotel booking rewards and discounts.'
 }, {
   field: 'domestic_lounge_usage_quarterly',
   question: 'How often do you visit domestic airport lounges in a year?',
   emoji: '🇮🇳',
   min: 0,
-  max: 50,
-  step: 1,
+  max: 20,
+  ...getQuestionConfig('domestic_lounge_usage_quarterly', 20),
   showCurrency: false,
   suffix: ' visits',
   context: 'This helps us calculate the value of complimentary lounge access.'
@@ -124,8 +191,8 @@ const questions: SpendingQuestion[] = [{
   question: 'Plus, what about international airport lounges?',
   emoji: '🌎',
   min: 0,
-  max: 50,
-  step: 1,
+  max: 20,
+  ...getQuestionConfig('international_lounge_usage_quarterly', 20),
   showCurrency: false,
   suffix: ' visits',
   context: 'We factor in international lounge access value for travel cards.'
@@ -135,7 +202,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '📱',
   min: 0,
   max: 10000,
-  step: 100,
+  ...getQuestionConfig('mobile_phone_bills', 10000),
   context: 'This helps us find cards with the best rewards on utility bill payments.'
 }, {
   field: 'electricity_bills',
@@ -143,7 +210,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '⚡️',
   min: 0,
   max: 20000,
-  step: 500,
+  ...getQuestionConfig('electricity_bills', 20000),
   context: 'We match you with cards that offer rewards on electricity bill payments.'
 }, {
   field: 'water_bills',
@@ -151,7 +218,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '💧',
   min: 0,
   max: 5000,
-  step: 100,
+  ...getQuestionConfig('water_bills', 5000),
   context: 'This helps us calculate total utility rewards across all bills.'
 }, {
   field: 'insurance_health_annual',
@@ -159,7 +226,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🛡️',
   min: 0,
   max: 100000,
-  step: 1000,
+  ...getQuestionConfig('insurance_health_annual', 100000),
   context: 'We find cards that offer rewards on insurance premium payments.'
 }, {
   field: 'insurance_car_or_bike_annual',
@@ -167,7 +234,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🚗',
   min: 0,
   max: 50000,
-  step: 1000,
+  ...getQuestionConfig('insurance_car_or_bike_annual', 50000),
   context: 'This helps us calculate rewards on vehicle insurance payments.'
 }, {
   field: 'rent',
@@ -175,7 +242,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🏠',
   min: 0,
   max: 100000,
-  step: 1000,
+  ...getQuestionConfig('rent', 100000),
   context: 'We find cards that offer rewards on rent payments (where available).'
 }, {
   field: 'school_fees',
@@ -183,7 +250,7 @@ const questions: SpendingQuestion[] = [{
   emoji: '🎓',
   min: 0,
   max: 50000,
-  step: 1000,
+  ...getQuestionConfig('school_fees', 50000),
   context: 'This helps us calculate rewards on education-related expenses.'
 }];
 const funFacts = ["Credit cards were first introduced in India in 1980!", "Indians saved over ₹2,000 crores in credit card rewards last year!", "Premium cards often pay for themselves through lounge access alone.", "The average Indian has 2-3 cards but maximizes only one!", "Reward points can be worth 3x more than instant cashback!", "Your credit score improves by 50+ points in 6 months with smart usage.", "Travel cards can get you business class at economy prices!", "You can negotiate annual fees—most people don't know this!", "5% cashback vs 1%? That's ₹40,000 saved on ₹10L spending!", "Airport lounges aren't just for the rich—many cards offer them free."];
@@ -233,7 +300,7 @@ const CardGenius = () => {
   const [selectedCard, setSelectedCard] = useState<CardGeniusResult | null>(null);
   const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('yearly');
+  const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('monthly');
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -247,10 +314,15 @@ const CardGenius = () => {
   const [eligibilityApplied, setEligibilityApplied] = useState(false);
   const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>([]);
 
-  // Scroll states
+  // Scroll states for results table
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftScroll, setShowLeftScroll] = useState(false);
   const [showRightScroll, setShowRightScroll] = useState(true);
+  
+  // Scroll states for category navigation
+  const categoryNavRef = useRef<HTMLDivElement>(null);
+  const [showLeftCategoryScroll, setShowLeftCategoryScroll] = useState(false);
+  const [showRightCategoryScroll, setShowRightCategoryScroll] = useState(true);
 
   // Question refs for IntersectionObserver
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -262,7 +334,16 @@ const CardGenius = () => {
       const firstActiveCategory = Object.entries(selectedCard.spending_breakdown)
         .find(([, details]) => details && (details as any).spend > 0);
       setSelectedCategory(firstActiveCategory ? firstActiveCategory[0] : null);
-      setBreakdownView('yearly');
+      setBreakdownView('monthly');
+      
+      // Check category navigation scroll state after render
+      setTimeout(() => {
+        if (categoryNavRef.current) {
+          const { scrollLeft, scrollWidth, clientWidth } = categoryNavRef.current;
+          setShowLeftCategoryScroll(scrollLeft > 0);
+          setShowRightCategoryScroll(scrollLeft < scrollWidth - clientWidth - 10);
+        }
+      }, 100);
     } else if (!selectedCard) {
       setSelectedCategory(null);
     }
@@ -606,18 +687,18 @@ const CardGenius = () => {
               </div>
               
               <div className="space-y-3 sm:space-y-4">
-                {/* Cashback Earned */}
+                {/* Total Annual Savings */}
                 <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-100">
-                  <span className="text-sm sm:text-base text-muted-foreground font-medium">Cashback Earned:</span>
+                  <span className="text-sm sm:text-base text-muted-foreground font-medium">Total Annual Savings:</span>
                   <span className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">₹{selectedCard.total_savings_yearly.toLocaleString()}</span>
-                </div>
+                  </div>
                 
                 {/* Milestone Rewards */}
                 {milestoneValue > 0 && (
                   <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-100">
                     <span className="text-sm sm:text-base text-muted-foreground font-medium">Milestone Rewards:</span>
                     <span className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">₹{milestoneValue.toLocaleString()}</span>
-                  </div>
+                    </div>
                 )}
                 
                 {/* Airport Lounge Value */}
@@ -625,7 +706,7 @@ const CardGenius = () => {
                   <div className="flex items-center justify-between py-2 sm:py-2.5 border-b border-slate-100">
                     <span className="text-sm sm:text-base text-muted-foreground font-medium">Airport Lounge Value:</span>
                     <span className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">₹{totalLoungeValue.toLocaleString()}</span>
-                  </div>
+                    </div>
                 )}
                 
                 {/* Fees Paid */}
@@ -634,7 +715,7 @@ const CardGenius = () => {
                   <span className={`text-lg sm:text-xl md:text-2xl font-bold ${joiningFeeValue > 0 ? 'text-red-600' : 'text-slate-600'}`}>
                     {joiningFeeValue > 0 ? `-₹${joiningFeeValue.toLocaleString()}` : '₹0'}
                   </span>
-                </div>
+                    </div>
                 
                 {/* Net Savings */}
                 <div className="rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-200 px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between mt-4 sm:mt-5">
@@ -661,20 +742,68 @@ const CardGenius = () => {
             }] : [];
             const display = list.length > 0 ? list : fallbackItem;
             if (!display || display.length === 0) return null;
+            
+            // Helper function to calculate cash value from reward points
+            const getCashValue = (benefit: any) => {
+              if (benefit.cash_value) {
+                return parseInt(benefit.cash_value);
+              }
+              if (benefit.rp_bonus && benefit.cash_conversion) {
+                const rpBonus = parseInt(benefit.rp_bonus) || 0;
+                const conversionRate = parseFloat(benefit.cash_conversion) || 0;
+                return Math.round(rpBonus * conversionRate);
+              }
+              if (benefit.voucher_bonus) {
+                return parseInt(benefit.voucher_bonus);
+              }
+              return 0;
+            };
+            
             return <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-4">
                   <div>
                     <p className="text-xs uppercase tracking-wide text-primary">Extra benefits</p>
                     <h2 className="text-xl font-semibold text-foreground">Welcome bonuses curated for you</h2>
                   </div>
                   <div className="space-y-3">
-                    {display.map((benefit: any, idx: number) => <div key={idx} className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-                        <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-foreground">
-                            On card activation you get a {benefit.voucher_of || 'benefit'}
-                          {benefit.voucher_bonus && ` worth ₹${parseInt(benefit.voucher_bonus).toLocaleString()}`}
-                          {benefit.minimum_spend && benefit.minimum_spend !== "0" && <span className="text-muted-foreground">{' '} (Min spend ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>}
-                          </p>
-                      </div>)}
+                    {display.map((benefit: any, idx: number) => {
+                      const cashValue = getCashValue(benefit);
+                      const rpBonus = benefit.rp_bonus ? parseInt(benefit.rp_bonus) : null;
+                      const conversionRate = benefit.cash_conversion ? parseFloat(benefit.cash_conversion) : null;
+                      const maxDays = benefit.maximum_days ? parseInt(benefit.maximum_days) : null;
+                      
+                      return (
+                        <div key={idx} className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                          <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm text-foreground">
+                              {benefit.voucher_of ? (
+                                <>
+                                  On card activation you get a {benefit.voucher_of}
+                                  {cashValue > 0 && ` worth ₹${cashValue.toLocaleString()}`}
+                                </>
+                              ) : rpBonus ? (
+                                <>
+                                  On card activation you get {rpBonus.toLocaleString()} Reward Points
+                                  {cashValue > 0 && ` (worth ₹${cashValue.toLocaleString()})`}
+                                  {conversionRate && ` at ₹${conversionRate.toFixed(2)} per point`}
+                                </>
+                              ) : (
+                                <>
+                                  On card activation you get a welcome benefit
+                                  {cashValue > 0 && ` worth ₹${cashValue.toLocaleString()}`}
+                                </>
+                              )}
+                              {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
+                                <span className="text-muted-foreground"> (Min spend ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>
+                              )}
+                              {maxDays && maxDays > 0 && (
+                                <span className="text-muted-foreground"> (Valid for {maxDays} days)</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>;
           })()}
@@ -685,21 +814,64 @@ const CardGenius = () => {
                 <h2 className="text-xl font-bold text-foreground">See how each category contributes</h2>
               </div>
 
-              <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-2 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory">
-                    {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
-                    if (!details || !details.spend || details.spend === 0) return null;
-                const isActive = selectedCategory === category || (!selectedCategory && details.spend > 0);
-                const label = category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-                  return (
-                    <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                      className={`px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors border shadow-sm inline-flex items-center justify-center whitespace-nowrap flex-shrink-0 snap-center min-w-fit ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200 hover:border-primary/40'}`}
+              {/* Category Navigation with Scroll Arrows */}
+              <div className="relative">
+                {/* Left Arrow */}
+                {showLeftCategoryScroll && (
+                  <button
+                    onClick={() => {
+                      if (categoryNavRef.current) {
+                        categoryNavRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+                      }
+                    }}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white border border-slate-200 rounded-full p-2 shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+                    aria-label="Scroll left"
+                  >
+                    <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                  </button>
+                )}
+                
+                {/* Right Arrow */}
+                {showRightCategoryScroll && (
+                  <button
+                    onClick={() => {
+                      if (categoryNavRef.current) {
+                        categoryNavRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+                      }
+                    }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white border border-slate-200 rounded-full p-2 shadow-md hover:shadow-lg transition-all flex items-center justify-center"
+                    aria-label="Scroll right"
+                  >
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+                  </button>
+                )}
+                
+                <div 
+                  ref={categoryNavRef}
+                  className="flex overflow-x-auto gap-2 sm:gap-3 pb-2 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory scroll-smooth"
+                  onScroll={() => {
+                    if (categoryNavRef.current) {
+                      const { scrollLeft, scrollWidth, clientWidth } = categoryNavRef.current;
+                      setShowLeftCategoryScroll(scrollLeft > 0);
+                      setShowRightCategoryScroll(scrollLeft < scrollWidth - clientWidth - 10);
+                    }
+                  }}
                 >
-                      {label}
-                    </button>
-                  );
+                  {Object.entries(selectedCard.spending_breakdown || {}).map(([category, details]) => {
+                    if (!details || !details.spend || details.spend === 0) return null;
+                    const isActive = selectedCategory === category || (!selectedCategory && details.spend > 0);
+                    const label = category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedCategory(category)}
+                        className={`px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors border shadow-sm inline-flex items-center justify-center whitespace-nowrap flex-shrink-0 snap-center min-w-fit ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200 hover:border-primary/40'}`}
+                      >
+                        {label}
+                      </button>
+                    );
                   })}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
@@ -771,10 +943,10 @@ const CardGenius = () => {
             </section>
 
             <div className="space-y-4">
-              <Button className="w-full h-12 text-base font-semibold shadow-xl" size="lg" onClick={handleApplyFromDetail}>
-                Apply Now
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+            <Button className="w-full h-12 text-base font-semibold shadow-xl" size="lg" onClick={handleApplyFromDetail}>
+              Apply Now
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
               
               {/* Trust Indicators */}
               <div className="flex flex-row items-center justify-center gap-2 sm:gap-3 md:gap-4 text-[10px] sm:text-xs md:text-sm text-muted-foreground pt-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
@@ -857,21 +1029,30 @@ const CardGenius = () => {
               {/* Title and Badge Section */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground whitespace-nowrap">Your Spending Profile</h2>
-                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-100 text-emerald-700 text-[10px] sm:text-xs font-semibold rounded-full border border-emerald-300 whitespace-nowrap flex-shrink-0">
-                  <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                  <span className="hidden xs:inline">Personalized using your {questions.length} answers</span>
-                  <span className="xs:hidden">{questions.length} answers</span>
-                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-100 text-emerald-700 text-[10px] sm:text-xs font-semibold rounded-full border border-emerald-300 whitespace-nowrap flex-shrink-0 cursor-help">
+                        <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                        <span className="hidden xs:inline">Personalized using your {Object.keys(responses).filter(key => responses[key] > 0).length}/{questions.length} answers</span>
+                        <span className="xs:hidden">{Object.keys(responses).filter(key => responses[key] > 0).length}/{questions.length}</span>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">Try to answer maximum questions so we can suggest you the best credit card personalized according to your spend.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               {/* Edit Button */}
               <button 
                 onClick={() => {
-                  setShowResults(false);
-                  setCurrentStep(0);
+              setShowResults(false);
+              setCurrentStep(0);
                 }} 
                 className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-emerald-600 bg-white px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors shadow-sm hover:shadow-md whitespace-nowrap self-start sm:self-auto flex-shrink-0"
               >
-                Edit Spends
+              Edit Spends
                 <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
@@ -1704,7 +1885,7 @@ const CardGenius = () => {
               questionRefs.current[currentStep] = el;
             }
           }} className="animate-fade-in">
-            <SpendingInput question={currentQuestion.question} emoji={currentQuestion.emoji} value={responses[currentQuestion.field] || 0} onChange={handleValueChange} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency} suffix={currentQuestion.suffix} context={currentQuestion.context} />
+            <SpendingInput question={currentQuestion.question} emoji={currentQuestion.emoji} value={responses[currentQuestion.field] || 0} onChange={handleValueChange} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency} suffix={currentQuestion.suffix} context={currentQuestion.context} presets={currentQuestion.presets} />
           </div>
 
           {/* Navigation Buttons */}
@@ -1737,9 +1918,20 @@ const CardGenius = () => {
             </Button>
           </div>
 
+          {/* Skip Option - Moved above Skip All */}
+          <div className="text-center mt-6 mb-4">
+            <button
+              onClick={handleNext}
+              className="text-charcoal-500 hover:text-primary font-medium transition-colors cg-skip-question-link"
+              aria-label="Skip this question"
+            >
+              Skip this question →
+            </button>
+          </div>
+
           {/* Skip All Button - Moved below, less prominent */}
           {currentStep !== questions.length - 1 && (
-            <div className="mt-4 flex justify-center">
+            <div className="flex justify-center mb-12 sm:mb-16 md:mb-20">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1758,17 +1950,6 @@ const CardGenius = () => {
               </TooltipProvider>
             </div>
           )}
-
-          {/* Skip Option */}
-          <div className="text-center mt-6 mb-12 sm:mb-16 md:mb-20">
-            <button
-              onClick={handleNext}
-              className="text-charcoal-500 hover:text-primary font-medium transition-colors cg-skip-question-link"
-              aria-label="Skip this question"
-            >
-              Skip this question →
-            </button>
-          </div>
         </div>
       </main>
       </div>

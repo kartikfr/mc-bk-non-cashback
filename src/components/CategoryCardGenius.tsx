@@ -35,7 +35,67 @@ interface CategoryQuestion {
   showRupee?: boolean;
   suffix?: string;
   optional?: boolean;
+  presets?: number[]; // Custom presets for quick selection
 }
+
+// Helper function to get personalized steps and presets based on question field
+// Returns only 5 presets (excluding 0) for better UX
+const getQuestionConfig = (field: keyof SpendingData, max?: number): { step: number; presets: number[] } => {
+  const configs: Record<string, { step: number; presets: number[] }> = {
+    // Shopping - Amazon/Flipkart: For ranges up to 30k, use smaller increments
+    amazon_spends: { 
+      step: 100, 
+      presets: max && max <= 30000 
+        ? [1000, 5000, 10000, 20000, 30000] 
+        : [1000, 5000, 10000, 20000, 50000] 
+    },
+    flipkart_spends: { 
+      step: 100, 
+      presets: max && max <= 30000 
+        ? [1000, 5000, 10000, 20000, 30000] 
+        : [1000, 5000, 10000, 20000, 50000] 
+    },
+    other_online_spends: { step: 200, presets: [500, 2000, 5000, 10000, 20000] },
+    other_offline_spends: { step: 500, presets: [1000, 5000, 10000, 20000, 50000] },
+    
+    // Grocery: 200, 500, 1000 increments
+    grocery_spends_online: { step: 200, presets: [1000, 3000, 5000, 10000, 20000] },
+    
+    // Food Delivery: 100, 200, 500 increments
+    online_food_ordering: { step: 100, presets: [500, 2000, 5000, 10000, 20000] },
+    
+    // Fuel: 100, 200, 500 increments
+    fuel: { step: 100, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Dining: 200, 500, 1000 increments
+    dining_or_going_out: { step: 200, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Travel - Annual: 1000, 2000, 5000 increments
+    flights_annual: { step: 1000, presets: [10000, 50000, 100000, 200000, 300000] },
+    hotels_annual: { step: 1000, presets: [10000, 50000, 100000, 150000, 200000] },
+    
+    // Bills - Mobile/Water: 50, 100, 200 increments
+    mobile_phone_bills: { step: 50, presets: [500, 1000, 2000, 5000, 10000] },
+    water_bills: { step: 50, presets: [500, 1000, 2000, 3000, 5000] },
+    
+    // Electricity: 100, 200, 500 increments
+    electricity_bills: { step: 100, presets: [1000, 3000, 5000, 10000, 15000] },
+    
+    // Insurance - Annual: 1000, 5000, 10000 increments
+    insurance_health_annual: { step: 1000, presets: [10000, 25000, 50000, 75000, 100000] },
+    
+    // Lounge visits: 2, 4, 6, 8, 10 options
+    domestic_lounge_usage_quarterly: { step: 1, presets: [2, 4, 6, 8, 10] },
+    international_lounge_usage_quarterly: { step: 1, presets: [2, 4, 6, 8, 10] },
+  };
+  
+  const config = configs[field as string] || { step: 500, presets: [1000, 5000, 10000, 20000, 50000] };
+  
+  // Filter presets to max value and ensure exactly 5 presets (excluding 0)
+  const filteredPresets = config.presets.filter(p => p <= (max || 1000000)).slice(0, 5);
+  
+  return { step: config.step, presets: filteredPresets };
+};
 
 interface CategoryConfig {
   id: string;
@@ -57,29 +117,29 @@ const categories: CategoryConfig[] = [{
     question: 'How much do you spend on Amazon in a month?',
     emoji: '🛍️',
     min: 0,
-    max: 100000,
-    step: 500
+    max: 30000,
+    ...getQuestionConfig('amazon_spends', 30000)
   }, {
     field: 'flipkart_spends',
     question: 'How much do you spend on Flipkart in a month?',
     emoji: '📦',
     min: 0,
-    max: 100000,
-    step: 500
+    max: 30000,
+    ...getQuestionConfig('flipkart_spends', 30000)
   }, {
     field: 'other_online_spends',
     question: 'How much do you spend on other online shopping?',
     emoji: '💸',
     min: 0,
     max: 50000,
-    step: 500
+    ...getQuestionConfig('other_online_spends', 50000)
   }, {
     field: 'other_offline_spends',
     question: 'How much do you spend at local shops or offline stores monthly?',
     emoji: '🏪',
     min: 0,
-    max: 100000,
-    step: 1000
+    max: 50000,
+    ...getQuestionConfig('other_offline_spends', 50000)
   }]
 }, {
   id: 'bills',
@@ -93,28 +153,28 @@ const categories: CategoryConfig[] = [{
     emoji: '📱',
     min: 0,
     max: 10000,
-    step: 100
+    ...getQuestionConfig('mobile_phone_bills', 10000)
   }, {
     field: 'electricity_bills',
     question: "What's your average monthly electricity bill?",
     emoji: '⚡️',
     min: 0,
     max: 10000,
-    step: 100
+    ...getQuestionConfig('electricity_bills', 10000)
   }, {
     field: 'water_bills',
     question: 'And what about your monthly water bill?',
     emoji: '💧',
     min: 0,
     max: 5000,
-    step: 100
+    ...getQuestionConfig('water_bills', 5000)
   }, {
     field: 'insurance_health_annual',
     question: 'How much do you pay for health or term insurance annually?',
     emoji: '🛡️',
     min: 0,
     max: 100000,
-    step: 5000
+    ...getQuestionConfig('insurance_health_annual', 100000)
   }]
 }, {
   id: 'fuel',
@@ -128,7 +188,7 @@ const categories: CategoryConfig[] = [{
     emoji: '⛽',
     min: 0,
     max: 20000,
-    step: 500
+    ...getQuestionConfig('fuel', 20000)
   }]
 }, {
   id: 'travel',
@@ -142,21 +202,21 @@ const categories: CategoryConfig[] = [{
     emoji: '✈️',
     min: 0,
     max: 500000,
-    step: 5000
+    ...getQuestionConfig('flights_annual', 500000)
   }, {
     field: 'hotels_annual',
     question: 'How much do you spend on hotel stays in a year?',
     emoji: '🛌',
     min: 0,
     max: 300000,
-    step: 5000
+    ...getQuestionConfig('hotels_annual', 300000)
   }, {
     field: 'domestic_lounge_usage_quarterly',
     question: 'How often do you visit domestic airport lounges in a year?',
     emoji: '🇮🇳',
     min: 0,
-    max: 50,
-    step: 1,
+    max: 20,
+    ...getQuestionConfig('domestic_lounge_usage_quarterly', 20),
     showCurrency: false,
     suffix: ' visits',
     optional: true
@@ -165,8 +225,8 @@ const categories: CategoryConfig[] = [{
     question: 'Plus, what about international airport lounges?',
     emoji: '🌎',
     min: 0,
-    max: 50,
-    step: 1,
+    max: 20,
+    ...getQuestionConfig('international_lounge_usage_quarterly', 20),
     showCurrency: false,
     suffix: ' visits',
     optional: true
@@ -183,7 +243,7 @@ const categories: CategoryConfig[] = [{
     emoji: '🛵🍜',
     min: 0,
     max: 30000,
-    step: 500
+    ...getQuestionConfig('online_food_ordering', 30000)
   }]
 }, {
   id: 'grocery',
@@ -197,7 +257,7 @@ const categories: CategoryConfig[] = [{
     emoji: '🥦',
     min: 0,
     max: 50000,
-    step: 500
+    ...getQuestionConfig('grocery_spends_online', 50000)
   }]
 }, {
   id: 'dining',
@@ -211,7 +271,7 @@ const categories: CategoryConfig[] = [{
     emoji: '🥗',
     min: 0,
     max: 30000,
-    step: 500
+    ...getQuestionConfig('dining_or_going_out', 30000)
   }]
 }];
 const CategoryCardGenius = () => {
@@ -901,7 +961,7 @@ const CategoryCardGenius = () => {
             <SpendingInput question={currentQuestion.question} emoji={currentQuestion.emoji} value={responses[currentQuestion.field] || 0} onChange={value => setResponses(prev => ({
           ...prev,
           [currentQuestion.field]: value
-        }))} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency ?? true} showRupee={currentQuestion.showRupee ?? true} suffix={currentQuestion.suffix || ""} />
+        }))} min={currentQuestion.min} max={currentQuestion.max} step={currentQuestion.step} showCurrency={currentQuestion.showCurrency ?? true} showRupee={currentQuestion.showRupee ?? true} suffix={currentQuestion.suffix || ""} presets={currentQuestion.presets} />
 
             {/* Navigation */}
             <div className="flex gap-2 sm:gap-3 md:gap-4 mt-6 sm:mt-8">

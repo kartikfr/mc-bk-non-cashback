@@ -92,6 +92,7 @@ export default function CardDetails() {
   const [isComparePanelOpen, setIsComparePanelOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [showAllBenefits, setShowAllBenefits] = useState(false);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<number>>(new Set());
   const { toggleCard, isSelected, startComparisonWith } = useComparison();
   const heroRef = useRef<HTMLDivElement>(null);
   const feesRef = useRef<HTMLDivElement>(null);
@@ -256,7 +257,16 @@ export default function CardDetails() {
     if (!value) return true;
     if (typeof value === 'string') {
       const trimmed = value.trim();
-      return trimmed === '' || trimmed === 'N/A' || trimmed === 'n/a' || trimmed.toLowerCase() === 'not available';
+      // Strip HTML tags and check content
+      const textContent = trimmed.replace(/<[^>]*>/g, '').trim();
+      return trimmed === '' || 
+             trimmed === 'N/A' || 
+             trimmed === 'n/a' || 
+             trimmed.toLowerCase() === 'not available' ||
+             textContent === '' ||
+             textContent === 'N/A' ||
+             textContent === 'n/a' ||
+             textContent.toLowerCase() === 'not available';
     }
     return false;
   };
@@ -267,22 +277,35 @@ export default function CardDetails() {
     : null;
 
   // Group benefits by type for horizontal scroll - exclude "All Benefits" and "all" variations
+  // Also filter out categories that only have N/A or empty content
   const benefitTypes = card.product_benefits 
     ? Array.from(new Set(card.product_benefits
+        .filter(b => {
+          // Only include benefits with actual content (not N/A or empty)
+          const hasContent = b.html_text && !isEmptyOrNA(b.html_text);
+          return hasContent && 
+                 b.benefit_type && 
+                 b.benefit_type.toLowerCase() !== 'all' && 
+                 b.benefit_type.toLowerCase() !== 'all benefits';
+        })
         .map(b => b.benefit_type)
-        .filter(type => type && type.toLowerCase() !== 'all' && type.toLowerCase() !== 'all benefits')
       ))
     : [];
   
   const benefitCategories = ['All', ...benefitTypes];
 
+  // Filter benefits to only show those with actual content (not N/A or empty)
   const filteredBenefits = selectedBenefitCategory === 'All' 
     ? card.product_benefits?.filter(b => 
+        b.html_text && !isEmptyOrNA(b.html_text) &&
         b.benefit_type && 
         b.benefit_type.toLowerCase() !== 'all' && 
         b.benefit_type.toLowerCase() !== 'all benefits'
       )
-    : card.product_benefits?.filter(b => b.benefit_type === selectedBenefitCategory);
+    : card.product_benefits?.filter(b => 
+        b.html_text && !isEmptyOrNA(b.html_text) &&
+        b.benefit_type === selectedBenefitCategory
+      );
 
   return (
     <div className="min-h-screen bg-background pt-24 md:pt-28">
@@ -322,7 +345,7 @@ export default function CardDetails() {
         }}
       >
         <div className="section-shell">
-          <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-8 items-center">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 items-center">
             {/* Card Image */}
             <div className="relative animate-fade-in">
               <div className="relative w-full max-w-md mx-auto">
@@ -499,12 +522,36 @@ export default function CardDetails() {
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-2">Joining Fee</p>
                     <p className="text-3xl sm:text-4xl font-bold text-foreground">₹{card.joining_fee_text}</p>
+                    {card.joining_fee_offset && !isEmptyOrNA(card.joining_fee_offset) && (
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.joining_fee_offset) }}
+                          className="prose prose-sm max-w-none text-sm text-muted-foreground leading-relaxed
+                            [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 
+                            [&>li]:text-muted-foreground [&>li]:leading-relaxed
+                            [&>p]:mb-2 [&>p]:leading-relaxed
+                            [&>strong]:text-foreground [&>strong]:font-semibold"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground mb-2">Annual Fee</p>
                     <p className="text-3xl sm:text-4xl font-bold text-foreground">₹{card.annual_fee_text}</p>
+                    {card.annual_fee_waiver && !isEmptyOrNA(card.annual_fee_waiver) && (
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.annual_fee_waiver) }}
+                          className="prose prose-sm max-w-none text-sm text-muted-foreground leading-relaxed
+                            [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 
+                            [&>li]:text-muted-foreground [&>li]:leading-relaxed
+                            [&>p]:mb-2 [&>p]:leading-relaxed
+                            [&>strong]:text-foreground [&>strong]:font-semibold"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -593,11 +640,30 @@ export default function CardDetails() {
                                   usp.header.toLowerCase().includes('discount') ? 'discount' :
                                   usp.header.toLowerCase().includes('fee') ? 'fee' : 'benefit';
                 
+                const isDescriptionExpanded = expandedDescriptions.has(index);
+                const descriptionLength = usp.description?.length || 0;
+                const shouldShowReadMore = descriptionLength > 120; // Show read more if description exceeds 120 characters
+                const displayDescription = isDescriptionExpanded || !shouldShowReadMore 
+                  ? usp.description 
+                  : usp.description?.substring(0, 120) + '...';
+                
+                const toggleDescription = () => {
+                  setExpandedDescriptions(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(index)) {
+                      newSet.delete(index);
+                    } else {
+                      newSet.add(index);
+                    }
+                    return newSet;
+                  });
+                };
+                
                 return (
                   <div 
                     key={index}
                     className={cn(
-                      "bg-gradient-to-br rounded-xl p-5 sm:p-6 border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl",
+                      "bg-gradient-to-br rounded-xl p-5 sm:p-6 border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl flex flex-col h-full",
                       benefitType === 'cashback' && "from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800",
                       benefitType === 'rewards' && "from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800",
                       benefitType === 'discount' && "from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800",
@@ -605,8 +671,8 @@ export default function CardDetails() {
                       benefitType === 'benefit' && "from-primary/5 to-secondary/5 border-primary/20"
                     )}
                   >
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
+                    <div className="flex flex-col h-full space-y-3">
+                      <div className="flex items-start gap-3 flex-1">
                         <div className={cn(
                           "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md",
                           benefitType === 'cashback' && "bg-green-500 text-white",
@@ -621,9 +687,31 @@ export default function CardDetails() {
                             <Award className="w-6 h-6" />
                           )}
                         </div>
-                        <div className="space-y-1.5 flex-1">
-                          <h3 className="font-bold text-base sm:text-lg text-foreground leading-tight line-clamp-2">{usp.header}</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">{usp.description}</p>
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <h3 className="font-bold text-sm sm:text-base text-foreground leading-tight">{usp.header}</h3>
+                          <div className="space-y-1">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                              {displayDescription}
+                            </p>
+                            {shouldShowReadMore && (
+                              <button
+                                onClick={toggleDescription}
+                                className="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                              >
+                                {isDescriptionExpanded ? (
+                                  <>
+                                    Read Less
+                                    <ChevronUp className="w-3 h-3" />
+                                  </>
+                                ) : (
+                                  <>
+                                    Read More
+                                    <ChevronDown className="w-3 h-3" />
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -822,7 +910,7 @@ export default function CardDetails() {
           <section className="space-y-6">
             <div className="space-y-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Exclusions</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">Spending and earning categories excluded from rewards</p>
+              <p className="text-sm sm:text-base text-muted-foreground">Spending and earning categories excluded from rewards/cashback</p>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               {card.exclusion_earnings && !isEmptyOrNA(card.exclusion_earnings) && (
@@ -862,7 +950,8 @@ export default function CardDetails() {
         )}
 
         {/* All Card Benefits - Enhanced with better UI */}
-        {card.product_benefits && card.product_benefits.length > 0 && (
+        {card.product_benefits && card.product_benefits.length > 0 && 
+         card.product_benefits.some(b => b.html_text && !isEmptyOrNA(b.html_text)) && (
           <section className="animate-fade-in space-y-6 sm:space-y-8" ref={allBenefitsRef} id="all-benefits">
             <div className="space-y-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">All Card Benefits</h2>
@@ -875,9 +964,18 @@ export default function CardDetails() {
                 <div className="flex gap-2 sm:gap-3 min-w-max">
                   {benefitCategories.map((category) => {
                     const isActive = selectedBenefitCategory === category;
+                    // Only count benefits with actual content (not N/A or empty)
                     const categoryCount = category === 'All' 
-                      ? card.product_benefits?.length 
-                      : card.product_benefits?.filter(b => b.benefit_type === category).length;
+                      ? card.product_benefits?.filter(b => 
+                          b.html_text && !isEmptyOrNA(b.html_text) &&
+                          b.benefit_type && 
+                          b.benefit_type.toLowerCase() !== 'all' && 
+                          b.benefit_type.toLowerCase() !== 'all benefits'
+                        ).length 
+                      : card.product_benefits?.filter(b => 
+                          b.benefit_type === category && 
+                          b.html_text && !isEmptyOrNA(b.html_text)
+                        ).length;
                     
                     // Format category name: replace underscores and title case
                     const formattedCategory = category
@@ -962,7 +1060,7 @@ export default function CardDetails() {
                 1
               </div>
               <div className="text-left md:text-center">
-                <p className="font-semibold text-foreground mb-1 text-base sm:text-lg">Click Apply Now</p>
+                <p className="font-semibold text-foreground mb-1 text-base sm:text-lg">Click Apply Online</p>
               <p className="text-sm text-muted-foreground">Start your application</p>
             </div>
             </div>
@@ -984,13 +1082,6 @@ export default function CardDetails() {
               <p className="text-sm text-muted-foreground">Bank will process your application shortly</p>
               </div>
             </div>
-          </div>
-          <div className="text-center">
-            <Button size="lg" onClick={handleApply} className="w-full sm:w-auto px-4 sm:px-8 text-sm sm:text-base shadow-lg hover:shadow-xl transition-all touch-target">
-              <span className="hidden sm:inline">Apply Online – Quick, Paperless Process</span>
-              <span className="sm:hidden">Apply Online</span>
-              <ExternalLink className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
           </div>
         </section>
 

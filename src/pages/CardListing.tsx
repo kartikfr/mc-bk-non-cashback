@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -58,10 +58,14 @@ const formatAnnualFee = (feeText: string | null | undefined): string => {
 
 const CardListing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [displayCount, setDisplayCount] = useState(12);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
   const [eligibilitySubmitted, setEligibilitySubmitted] = useState(false);
@@ -296,7 +300,34 @@ const CardListing = () => {
   const handleSearch = () => {
     // Search is handled on frontend only
     setDisplayCount(12);
+    setShowSearchDropdown(false);
   };
+
+  const handleCardSelect = (card: any) => {
+    const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias || card.id;
+    navigate(`/cards/${alias}`);
+    setSearchQuery("");
+    setShowSearchDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchDropdownRef.current &&
+        !searchDropdownRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const parsePriorityValue = (value: any): number => {
     if (value === null || value === undefined) return Number.POSITIVE_INFINITY;
@@ -339,6 +370,21 @@ const CardListing = () => {
     if (!Array.isArray(cards)) return [];
     return [...cards].sort(compareCardsByPriority);
   }, [cards, filters.category]);
+
+  // Search results for dropdown (limited to 8 results)
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return sortedCards
+      .filter(card => {
+        const cardName = (card.name || '').toLowerCase();
+        const bankName = (card.banks?.name || '').toLowerCase();
+        const cardType = (card.card_type || '').toLowerCase();
+        const benefits = (card.benefits || '').toLowerCase();
+        return cardName.includes(query) || bankName.includes(query) || cardType.includes(query) || benefits.includes(query);
+      })
+      .slice(0, 8); // Limit to 8 results for dropdown
+  }, [sortedCards, searchQuery]);
 
   const filteredCards = useMemo(() => {
     // 1) Apply search filter
@@ -735,22 +781,109 @@ const CardListing = () => {
           <div className="max-w-2xl mx-auto px-4 sm:px-0 hero-card-listing-body">
             <div className="hero-card-listing-actions flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                  <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 sm:w-5 sm:h-5" />
+                  <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 sm:w-5 sm:h-5 z-10" />
                   <Input 
+                    ref={searchInputRef}
                     type="text" 
                     placeholder="Search by card name..." 
                     value={searchQuery} 
-                    onChange={e => setSearchQuery(e.target.value)} 
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()} 
+                    onChange={e => {
+                      setSearchQuery(e.target.value);
+                      if (e.target.value.trim()) {
+                        setShowSearchDropdown(true);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (searchQuery.trim() && searchResults.length > 0) {
+                        setShowSearchDropdown(true);
+                      }
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
+                      } else if (e.key === 'Escape') {
+                        setShowSearchDropdown(false);
+                      }
+                    }}
                     className="hero-card-listing-input pl-10 sm:pl-12 pr-10 sm:pr-12 h-12 sm:h-14 text-sm sm:text-base md:text-lg rounded-xl touch-target" 
                   />
                   {searchQuery && (
                     <button onClick={() => {
-                setSearchQuery("");
-                handleSearch();
-                    }} className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground touch-target p-1">
+                      setSearchQuery("");
+                      setShowSearchDropdown(false);
+                      handleSearch();
+                    }} className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground touch-target p-1 z-10">
                       <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
+                  )}
+                  
+                  {/* Search Dropdown */}
+                  {showSearchDropdown && searchResults.length > 0 && (
+                    <div 
+                      ref={searchDropdownRef}
+                      className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[400px] sm:max-h-[500px] overflow-y-auto"
+                    >
+                      <div className="p-2 sm:p-3 space-y-1">
+                        {searchResults.map((card, index) => {
+                          const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias || card.id;
+                          return (
+                            <button
+                              key={card.id || index}
+                              onClick={() => handleCardSelect(card)}
+                              className="w-full flex items-center gap-3 p-2 sm:p-3 rounded-lg hover:bg-muted transition-colors text-left touch-target group"
+                            >
+                              {/* Card Image */}
+                              <div className="flex-shrink-0 w-12 h-9 sm:w-16 sm:h-12 bg-gradient-to-br from-primary/10 to-primary/5 rounded-md flex items-center justify-center p-1">
+                                <img 
+                                  src={card.card_bg_image || card.image || '/placeholder.svg'} 
+                                  alt={card.name}
+                                  className="max-h-full max-w-full object-contain"
+                                  onError={e => {
+                                    e.currentTarget.src = '/placeholder.svg';
+                                  }}
+                                />
+                              </div>
+                              
+                              {/* Card Info */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-xs sm:text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                                  {card.name}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {card.banks?.name && (
+                                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                                      {card.banks.name}
+                                    </p>
+                                  )}
+                                  {card.card_type && (
+                                    <span className="text-[10px] sm:text-xs text-muted-foreground">
+                                      • {card.card_type}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Arrow Icon */}
+                              <div className="flex-shrink-0 text-muted-foreground group-hover:text-primary transition-colors">
+                                <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* No Results Message */}
+                  {showSearchDropdown && searchQuery.trim() && searchResults.length === 0 && (
+                    <div 
+                      ref={searchDropdownRef}
+                      className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl z-50 p-4 sm:p-6"
+                    >
+                      <p className="text-sm sm:text-base text-muted-foreground text-center">
+                        No cards found matching "{searchQuery}"
+                      </p>
+                    </div>
                   )}
               </div>
                 <Button

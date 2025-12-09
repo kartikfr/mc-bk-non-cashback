@@ -14,6 +14,7 @@ interface SpendingInputProps {
   showRupee?: boolean;
   suffix?: string;
   context?: string; // Why this question matters
+  presets?: number[]; // Custom presets for quick selection
 }
 
 export const SpendingInput = ({
@@ -29,6 +30,7 @@ export const SpendingInput = ({
   showRupee = true,
   suffix = "",
   context,
+  presets,
 }: SpendingInputProps) => {
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
@@ -58,8 +60,8 @@ export const SpendingInput = ({
 
   const percentage = ((localValue - min) / (max - min)) * 100;
 
-  // Generate presets based on max value
-  const getPresets = () => {
+  // Generate presets based on max value if custom presets not provided
+  const getDefaultPresets = () => {
     if (max <= 10000) {
       return [0, Math.floor(max * 0.2), Math.floor(max * 0.5), Math.floor(max * 0.7), max];
     } else if (max <= 50000) {
@@ -71,13 +73,13 @@ export const SpendingInput = ({
     }
   };
 
-  const presets = getPresets().filter(p => p <= max);
+  const finalPresets = (presets || getDefaultPresets()).filter(p => p <= max);
 
   return (
-    <div className={cn("mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-card transition-all duration-300", isFocused && "shadow-card-hover ring-2 ring-primary/20", className)}>
+    <div className={cn("mb-4 sm:mb-5 p-4 sm:p-5 bg-white rounded-xl sm:rounded-2xl shadow-card transition-all duration-300", isFocused && "shadow-card-hover ring-2 ring-primary/20", className)}>
       <label className="block mb-2 sm:mb-3">
-        <span className="text-base sm:text-lg font-medium text-charcoal-800">
-          {question} <span className="text-xl sm:text-2xl ml-1 sm:ml-2">{emoji}</span>
+        <span className="text-lg sm:text-xl md:text-2xl font-semibold text-charcoal-800">
+          {question} <span className="text-2xl sm:text-3xl md:text-4xl ml-1 sm:ml-2">{emoji}</span>
         </span>
       </label>
       
@@ -121,9 +123,9 @@ export const SpendingInput = ({
       </p>
 
       {/* Quick-tap Presets */}
-      {presets.length > 0 && showCurrency && (
+      {finalPresets.length > 0 && (
         <div className="flex gap-1.5 sm:gap-2 md:gap-3 mb-3 sm:mb-4 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-          {presets.map((preset) => (
+          {finalPresets.map((preset) => (
             <button
               key={preset}
               type="button"
@@ -135,7 +137,7 @@ export const SpendingInput = ({
                   : "bg-muted text-foreground hover:bg-muted/80 border border-border"
               )}
             >
-              {showRupee && showCurrency ? '₹' : ''}{preset.toLocaleString('en-IN')}
+              {showRupee && showCurrency ? '₹' : ''}{preset.toLocaleString('en-IN')}{suffix}
             </button>
           ))}
         </div>

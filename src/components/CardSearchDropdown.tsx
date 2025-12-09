@@ -84,23 +84,33 @@ export const CardSearchDropdown = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   return <div className="relative w-full" ref={dropdownRef}>
-      {selectedCard ? <div className="flex items-center gap-3 p-4 bg-card border border-primary rounded-lg">
-          <img src={selectedCard.image} alt={selectedCard.name} className="w-16 h-10 object-contain" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{selectedCard.name}</h3>
-            <p className="text-sm text-muted-foreground">{selectedCard.banks?.name || 'Credit Card'}</p>
+      {selectedCard ? <div className="flex items-center gap-3 p-4 sm:p-5 bg-card border-2 border-primary rounded-xl shadow-sm">
+          <img src={selectedCard.image} alt={selectedCard.name} className="w-16 h-10 sm:w-20 sm:h-12 object-contain flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{selectedCard.name}</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">{selectedCard.banks?.name || 'Credit Card'}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Check className="w-5 h-5 text-primary" />
-            <Button variant="outline" size="sm" onClick={onClearSelection}>
+            <Button variant="outline" size="sm" onClick={onClearSelection} className="text-xs sm:text-sm">
               <X className="w-4 h-4 mr-1" />
               Change
             </Button>
           </div>
         </div> : <>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input ref={inputRef} type="text" placeholder={placeholder} value={query} onChange={e => setQuery(e.target.value)} onFocus={() => setIsOpen(true)} onKeyDown={handleKeyDown} disabled={isLoading} className="pl-10 h-12 text-base sm:text-lg my-0 placeholder:text-sm sm:placeholder:text-base" />
+            <Search className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground z-10" />
+            <Input 
+              ref={inputRef} 
+              type="text" 
+              placeholder={placeholder} 
+              value={query} 
+              onChange={e => setQuery(e.target.value)} 
+              onFocus={() => setIsOpen(true)} 
+              onKeyDown={handleKeyDown} 
+              disabled={isLoading} 
+              className="pl-11 sm:pl-14 pr-4 sm:pr-5 h-12 sm:h-14 text-sm sm:text-base border-2 border-border focus:border-primary rounded-xl shadow-sm hover:shadow-md transition-all duration-200 bg-background placeholder:text-muted-foreground/70" 
+            />
           </div>
 
           {isOpen && <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-lg shadow-lg max-h-80 overflow-y-auto">
