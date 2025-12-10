@@ -1918,17 +1918,6 @@ const CardGenius = () => {
             </Button>
           </div>
 
-          {/* Skip Option - Moved above Skip All */}
-          <div className="text-center mt-6 mb-4">
-            <button
-              onClick={handleNext}
-              className="text-charcoal-500 hover:text-primary font-medium transition-colors cg-skip-question-link"
-              aria-label="Skip this question"
-            >
-              Skip this question →
-            </button>
-          </div>
-
           {/* Skip All Button - Moved below, less prominent */}
           {currentStep !== questions.length - 1 && (
             <div className="flex justify-center mb-12 sm:mb-16 md:mb-20">
