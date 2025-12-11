@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Target, ArrowRight, Clock, Shield, Star } from "lucide-react";
+import { Target, ArrowRight, Clock, Star } from "lucide-react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -119,18 +119,6 @@ const FourKeyUSPs = () => {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3">
             Find Your Perfect Card
           </h2>
-        </div>
-
-        {/* Trust Signal - Compact Single Line */}
-        <div className="flex items-center justify-center gap-4 mb-10 sm:mb-12 px-4">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Shield className="w-3.5 h-3.5 text-[hsl(145,100%,33%)]" />
-            <span>Powered by Moneycontrol</span>
-          </div>
-          <div className="w-px h-3 bg-border" />
-          <div className="text-xs text-muted-foreground">
-            Verified Fees · No Sponsored Rankings
-          </div>
         </div>
 
         {/* Feature Cards Grid */}
