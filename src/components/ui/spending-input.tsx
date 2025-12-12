@@ -75,6 +75,47 @@ export const SpendingInput = ({
 
   const finalPresets = (presets || getDefaultPresets()).filter(p => p <= max);
 
+  // Generate intermediate markers for the slider
+  const generateMarkers = () => {
+    const range = max - min;
+    const markers: number[] = [];
+    
+    // Determine interval based on range
+    let interval: number;
+    if (range <= 10000) {
+      // For ranges up to 10k, use 2k intervals
+      interval = 2000;
+    } else if (range <= 50000) {
+      // For ranges up to 50k, use 10k intervals
+      interval = 10000;
+    } else if (range <= 100000) {
+      // For ranges up to 100k, use 20k intervals
+      interval = 20000;
+    } else if (range <= 500000) {
+      // For ranges up to 500k, use 100k intervals
+      interval = 100000;
+    } else {
+      // For larger ranges, use 200k intervals
+      interval = 200000;
+    }
+    
+    // Generate markers
+    let current = min;
+    while (current <= max) {
+      markers.push(current);
+      current += interval;
+    }
+    
+    // Ensure max is included
+    if (markers[markers.length - 1] !== max) {
+      markers.push(max);
+    }
+    
+    return markers;
+  };
+  
+  const markers = generateMarkers();
+
   return (
     <div className={cn("mb-4 sm:mb-5 p-4 sm:p-5 bg-white rounded-xl sm:rounded-2xl shadow-card transition-all duration-300", isFocused && "shadow-card-hover ring-2 ring-primary/20", className)}>
       <label className="block mb-2 sm:mb-3">
@@ -144,51 +185,87 @@ export const SpendingInput = ({
       )}
 
       <div className="relative pt-2">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={localValue}
-          onChange={handleSliderChange}
-          onMouseEnter={() => setIsSliderHovered(true)}
-          onMouseLeave={() => setIsSliderHovered(false)}
-          style={{
-            background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${percentage}%, hsl(var(--charcoal-200)) ${percentage}%, hsl(var(--charcoal-200)) 100%)`
-          }}
-          className={cn(
-            "w-full h-2.5 sm:h-2 rounded-full appearance-none cursor-pointer touch-target transition-all",
-            isSliderHovered && "h-3 sm:h-2.5",
-            "[&::-webkit-slider-thumb]:appearance-none",
-            "[&::-webkit-slider-thumb]:w-7",
-            "[&::-webkit-slider-thumb]:h-7",
-            "sm:[&::-webkit-slider-thumb]:w-6",
-            "sm:[&::-webkit-slider-thumb]:h-6",
-            "[&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-white",
-            "[&::-webkit-slider-thumb]:border-3",
-            "[&::-webkit-slider-thumb]:border-primary",
-            "[&::-webkit-slider-thumb]:cursor-pointer",
-            "[&::-webkit-slider-thumb]:shadow-lg",
-            "[&::-webkit-slider-thumb]:transition-all",
-            isSliderHovered && "[&::-webkit-slider-thumb]:scale-125 [&::-webkit-slider-thumb]:shadow-xl",
-            "[&::-webkit-slider-thumb]:active:scale-110",
-            "[&::-moz-range-thumb]:w-7",
-            "[&::-moz-range-thumb]:h-7",
-            "sm:[&::-moz-range-thumb]:w-6",
-            "sm:[&::-moz-range-thumb]:h-6",
-            "[&::-moz-range-thumb]:rounded-full",
-            "[&::-moz-range-thumb]:bg-white",
-            "[&::-moz-range-thumb]:border-3",
-            "[&::-moz-range-thumb]:border-primary",
-            "[&::-moz-range-thumb]:cursor-pointer",
-            "[&::-moz-range-thumb]:shadow-lg",
-            "[&::-moz-range-thumb]:transition-all"
-          )}
-        />
-        <div className="flex justify-between mt-2 sm:mt-3 text-xs sm:text-sm text-charcoal-500">
-          <span>{(showRupee && showCurrency) ? '₹' : ''}{min.toLocaleString('en-IN')}{suffix}</span>
-          <span>{(showRupee && showCurrency) ? '₹' : ''}{max.toLocaleString('en-IN')}{suffix}</span>
+        <div className="relative">
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={localValue}
+            onChange={handleSliderChange}
+            onMouseEnter={() => setIsSliderHovered(true)}
+            onMouseLeave={() => setIsSliderHovered(false)}
+            style={{
+              background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${percentage}%, hsl(var(--charcoal-200)) ${percentage}%, hsl(var(--charcoal-200)) 100%)`
+            }}
+            className={cn(
+              "w-full h-2.5 sm:h-2 rounded-full appearance-none cursor-pointer touch-target transition-all relative z-10",
+              isSliderHovered && "h-3 sm:h-2.5",
+              "[&::-webkit-slider-thumb]:appearance-none",
+              "[&::-webkit-slider-thumb]:w-7",
+              "[&::-webkit-slider-thumb]:h-7",
+              "sm:[&::-webkit-slider-thumb]:w-6",
+              "sm:[&::-webkit-slider-thumb]:h-6",
+              "[&::-webkit-slider-thumb]:rounded-full",
+              "[&::-webkit-slider-thumb]:bg-white",
+              "[&::-webkit-slider-thumb]:border-3",
+              "[&::-webkit-slider-thumb]:border-primary",
+              "[&::-webkit-slider-thumb]:cursor-pointer",
+              "[&::-webkit-slider-thumb]:shadow-lg",
+              "[&::-webkit-slider-thumb]:transition-all",
+              isSliderHovered && "[&::-webkit-slider-thumb]:scale-125 [&::-webkit-slider-thumb]:shadow-xl",
+              "[&::-webkit-slider-thumb]:active:scale-110",
+              "[&::-moz-range-thumb]:w-7",
+              "[&::-moz-range-thumb]:h-7",
+              "sm:[&::-moz-range-thumb]:w-6",
+              "sm:[&::-moz-range-thumb]:h-6",
+              "[&::-moz-range-thumb]:rounded-full",
+              "[&::-moz-range-thumb]:bg-white",
+              "[&::-moz-range-thumb]:border-3",
+              "[&::-moz-range-thumb]:border-primary",
+              "[&::-moz-range-thumb]:cursor-pointer",
+              "[&::-moz-range-thumb]:shadow-lg",
+              "[&::-moz-range-thumb]:transition-all"
+            )}
+          />
+          
+          {/* Intermediate markers */}
+          <div className="absolute top-0 left-0 right-0 h-2.5 sm:h-2 pointer-events-none flex justify-between items-start">
+            {markers.map((marker, index) => {
+              const position = ((marker - min) / (max - min)) * 100;
+              return (
+                <div
+                  key={marker}
+                  className="absolute flex flex-col items-center"
+                  style={{ 
+                    left: `${position}%`,
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  <div className="w-0.5 h-2.5 sm:h-2 bg-charcoal-300 rounded-full" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Marker labels */}
+        <div className="relative mt-1 sm:mt-2 flex justify-between text-[10px] sm:text-xs text-charcoal-500">
+          {markers.map((marker, index) => {
+            const position = ((marker - min) / (max - min)) * 100;
+            return (
+              <span
+                key={marker}
+                className="absolute flex-shrink-0"
+                style={{
+                  left: `${position}%`,
+                  transform: index === 0 ? 'translateX(0)' : index === markers.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)'
+                }}
+              >
+                {(showRupee && showCurrency) ? '₹' : ''}{marker.toLocaleString('en-IN')}
+              </span>
+            );
+          })}
         </div>
       </div>
     </div>

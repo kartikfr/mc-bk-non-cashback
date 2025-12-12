@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowUpDown, CheckCircle2, Sparkles, ShoppingBag, Utensils, Fuel, Plane, Coffee, ShoppingCart, CreditCard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cardService, SpendingData } from "@/services/cardService";
 import { Badge } from "@/components/ui/badge";
 import GeniusDialog from "@/components/GeniusDialog";
@@ -68,8 +69,6 @@ const CardListing = () => {
   const searchDropdownRef = useRef<HTMLDivElement>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
-  const [eligibilitySubmitted, setEligibilitySubmitted] = useState(false);
-  const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>([]);
   const [showGeniusDialog, setShowGeniusDialog] = useState(false);
   const [geniusSpendingData, setGeniusSpendingData] = useState<SpendingData | null>(null);
   const [cardSavings, setCardSavings] = useState<Record<string, Record<string, number>>>({});
@@ -85,16 +84,56 @@ const CardListing = () => {
   // Get category from URL params, default to "all"
   const initialCategory = normalizeCategory(searchParams.get('category'));
 
+  // Helper function to parse filters from URL params
+  const parseFiltersFromURL = () => {
+    const banksIds = searchParams.get('banks')?.split(',').filter(Boolean).map(Number).filter(n => !isNaN(n)) || [];
+    const cardNetworks = searchParams.get('networks')?.split(',').filter(Boolean) || [];
+    const annualFees = searchParams.get('annualFees') || "";
+    const creditScore = searchParams.get('creditScore') || "";
+    const sortBy = searchParams.get('sortBy') || "Recommended";
+    const freeCards = searchParams.get('freeCards') === 'true';
+    const category = normalizeCategory(searchParams.get('category'));
+
+    return {
+      banks_ids: banksIds,
+      card_networks: cardNetworks,
+      annualFees,
+      credit_score: creditScore,
+      sort_by: sortBy,
+      free_cards: freeCards,
+      category
+    };
+  };
+
+  // Helper function to parse eligibility from URL params
+  const parseEligibilityFromURL = () => {
+    const pincode = searchParams.get('pincode') || "";
+    const inhandIncome = searchParams.get('income') || "";
+    const empStatus = searchParams.get('empStatus') || "salaried";
+    const eligibilitySubmitted = searchParams.get('eligibilitySubmitted') === 'true';
+    const eligibleAliases = searchParams.get('eligibleCards')?.split(',').filter(Boolean) || [];
+
+    return {
+      eligibility: { pincode, inhandIncome, empStatus },
+      eligibilitySubmitted,
+      eligibleCardAliases: eligibleAliases
+    };
+  };
+
+  // Initialize filters from URL params
+  const initialFilters = parseFiltersFromURL();
+  const initialEligibilityData = parseEligibilityFromURL();
+
   // Filters - sort_by will be sent to API
   const [filters, setFilters] = useState({
-    banks_ids: [] as number[],
-    card_networks: [] as string[],
-    annualFees: "",
-    credit_score: "",
-    sort_by: "Recommended",
+    banks_ids: initialFilters.banks_ids,
+    card_networks: initialFilters.card_networks,
+    annualFees: initialFilters.annualFees,
+    credit_score: initialFilters.credit_score,
+    sort_by: initialFilters.sort_by || "Recommended",
     // Default is "Recommended", can be "recommended", "annual_savings", or "annual_fees"
-    free_cards: false,
-    category: initialCategory // all, fuel, shopping, online-food, dining, grocery, travel, utility
+    free_cards: initialFilters.free_cards,
+    category: initialFilters.category // all, fuel, shopping, online-food, dining, grocery, travel, utility
   });
 
   // Category to slug mapping
@@ -109,14 +148,92 @@ const CardListing = () => {
     'utility': 'best-utility-credit-card'
   };
 
-  // Eligibility payload
-  const [eligibility, setEligibility] = useState({
-    pincode: "",
-    inhandIncome: "",
-    empStatus: "salaried"
-  });
+  // Eligibility payload - initialize from URL params
+  const [eligibility, setEligibility] = useState(initialEligibilityData.eligibility);
+  const [eligibilitySubmitted, setEligibilitySubmitted] = useState(initialEligibilityData.eligibilitySubmitted);
+  const [eligibleCardAliases, setEligibleCardAliases] = useState<string[]>(initialEligibilityData.eligibleCardAliases);
   const abortControllerRef = useRef<AbortController | null>(null);
   
+  // Helper function to update URL params with current filters and eligibility
+  const updateURLParams = (newFilters?: typeof filters, newEligibility?: typeof eligibility, newEligibilitySubmitted?: boolean, newEligibleAliases?: string[]) => {
+    const params = new URLSearchParams(searchParams);
+    const filtersToUse = newFilters || filters;
+    const eligibilityToUse = newEligibility || eligibility;
+    const eligibilitySubmittedToUse = newEligibilitySubmitted !== undefined ? newEligibilitySubmitted : eligibilitySubmitted;
+    const eligibleAliasesToUse = newEligibleAliases || eligibleCardAliases;
+
+    // Update category
+    if (filtersToUse.category && filtersToUse.category !== 'all') {
+      params.set('category', filtersToUse.category);
+    } else {
+      params.delete('category');
+    }
+
+    // Update banks
+    if (filtersToUse.banks_ids.length > 0) {
+      params.set('banks', filtersToUse.banks_ids.join(','));
+    } else {
+      params.delete('banks');
+    }
+
+    // Update card networks
+    if (filtersToUse.card_networks.length > 0) {
+      params.set('networks', filtersToUse.card_networks.join(','));
+    } else {
+      params.delete('networks');
+    }
+
+    // Update annual fees
+    if (filtersToUse.annualFees) {
+      params.set('annualFees', filtersToUse.annualFees);
+    } else {
+      params.delete('annualFees');
+    }
+
+    // Update credit score
+    if (filtersToUse.credit_score) {
+      params.set('creditScore', filtersToUse.credit_score);
+    } else {
+      params.delete('creditScore');
+    }
+
+    // Update sort by
+    if (filtersToUse.sort_by && filtersToUse.sort_by !== "Recommended") {
+      params.set('sortBy', filtersToUse.sort_by);
+    } else {
+      params.delete('sortBy');
+    }
+
+    // Update free cards
+    if (filtersToUse.free_cards) {
+      params.set('freeCards', 'true');
+    } else {
+      params.delete('freeCards');
+    }
+
+    // Update eligibility
+    if (eligibilitySubmittedToUse && eligibilityToUse.pincode && eligibilityToUse.inhandIncome) {
+      params.set('pincode', eligibilityToUse.pincode);
+      params.set('income', eligibilityToUse.inhandIncome);
+      params.set('empStatus', eligibilityToUse.empStatus);
+      params.set('eligibilitySubmitted', 'true');
+      if (eligibleAliasesToUse.length > 0) {
+        params.set('eligibleCards', eligibleAliasesToUse.join(','));
+      } else {
+        params.delete('eligibleCards');
+      }
+    } else {
+      params.delete('pincode');
+      params.delete('income');
+      params.delete('empStatus');
+      params.delete('eligibilitySubmitted');
+      params.delete('eligibleCards');
+    }
+
+    // Update URL params using React Router
+    setSearchParams(params, { replace: true });
+  };
+
   // Ensure default sort_by filter is applied on initial load
   useEffect(() => {
     // Set default sort_by if not already set
@@ -124,6 +241,49 @@ const CardListing = () => {
       setFilters(prev => ({ ...prev, sort_by: "Recommended" }));
     }
   }, []);
+
+  // Restore eligibility state from URL params on mount and when URL params change
+  useEffect(() => {
+    const eligibilityData = parseEligibilityFromURL();
+    
+    // Update eligibility state if URL params indicate eligibility was submitted
+    if (eligibilityData.eligibilitySubmitted && eligibilityData.eligibleCardAliases.length > 0) {
+      // Only update if state differs to avoid unnecessary re-renders
+      if (eligibilitySubmitted !== eligibilityData.eligibilitySubmitted ||
+          JSON.stringify(eligibleCardAliases) !== JSON.stringify(eligibilityData.eligibleCardAliases) ||
+          eligibility.pincode !== eligibilityData.eligibility.pincode ||
+          eligibility.inhandIncome !== eligibilityData.eligibility.inhandIncome ||
+          eligibility.empStatus !== eligibilityData.eligibility.empStatus) {
+        setEligibilitySubmitted(eligibilityData.eligibilitySubmitted);
+        setEligibleCardAliases(eligibilityData.eligibleCardAliases);
+        setEligibility(eligibilityData.eligibility);
+      }
+    } else if (eligibilitySubmitted && !eligibilityData.eligibilitySubmitted) {
+      // URL params indicate eligibility was cleared
+      setEligibilitySubmitted(false);
+      setEligibleCardAliases([]);
+      setEligibility({
+        pincode: "",
+        inhandIncome: "",
+        empStatus: "salaried"
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Update URL params when filters change
+  useEffect(() => {
+    updateURLParams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  // Update URL params when eligibility changes
+  useEffect(() => {
+    if (eligibilitySubmitted) {
+      updateURLParams(undefined, eligibility, eligibilitySubmitted, eligibleCardAliases);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eligibilitySubmitted, eligibleCardAliases, eligibility]);
 
   useEffect(() => {
     fetchCards();
@@ -305,7 +465,9 @@ const CardListing = () => {
 
   const handleCardSelect = (card: any) => {
     const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias || card.id;
-    navigate(`/cards/${alias}`);
+    // Preserve current URL params when navigating to card detail
+    const currentParams = new URLSearchParams(searchParams);
+    navigate(`/cards/${alias}?${currentParams.toString()}`);
     setSearchQuery("");
     setShowSearchDropdown(false);
   };
@@ -417,13 +579,11 @@ const CardListing = () => {
     }, 500);
   };
   const syncCategoryParam = (categoryValue: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (categoryValue === 'all') {
-      params.delete('category');
-    } else {
-      params.set('category', categoryValue);
-    }
-    setSearchParams(params, { replace: true });
+    // Update filters first, then URL params will be updated by useEffect
+    setFilters((prev: any) => ({
+      ...prev,
+      category: categoryValue
+    }));
   };
 
   const handleFilterChange = (filterType: string, value: string | boolean) => {
@@ -444,8 +604,10 @@ const CardListing = () => {
     }));
   };
 
+  // Sync category from URL params (for back button and direct links)
   useEffect(() => {
     const categoryParam = normalizeCategory(searchParams.get('category'));
+    // Only update if URL param differs from current filter to prevent loops
     if (categoryParam !== filters.category) {
       setFilters((prev: any) => ({
         ...prev,
@@ -453,29 +615,34 @@ const CardListing = () => {
       }));
       setDisplayCount(12);
     }
-  }, [searchParams, filters.category]);
+  }, [searchParams]);
   const clearFilters = () => {
     syncCategoryParam('all');
-    setFilters({
-      banks_ids: [],
-      card_networks: [],
+    const clearedFilters = {
+      banks_ids: [] as number[],
+      card_networks: [] as string[],
       annualFees: "",
       credit_score: "",
       sort_by: "Recommended",
       free_cards: false,
       category: "all"
-    });
+    };
+    setFilters(clearedFilters);
     setSearchQuery("");
     setDisplayCount(12);
 
     // Reset eligibility data
     setEligibilitySubmitted(false);
     setEligibleCardAliases([]);
-    setEligibility({
+    const clearedEligibility = {
       pincode: "",
       inhandIncome: "",
       empStatus: "salaried"
-    });
+    };
+    setEligibility(clearedEligibility);
+
+    // Update URL params to remove all filters and eligibility
+    updateURLParams(clearedFilters, clearedEligibility, false, []);
 
     // Trigger API call without eligibility
     fetchCards();
@@ -514,11 +681,14 @@ const CardListing = () => {
           .filter(Boolean);
 
         setEligibleCardAliases(aliases);
-    setEligibilitySubmitted(true);
-    setEligibilityOpen(false);
+        setEligibilitySubmitted(true);
+        setEligibilityOpen(false);
+
+        // Update URL params with eligibility data
+        updateURLParams(undefined, eligibility, true, aliases);
 
         // Refetch cards with eligibility criteria and other filters
-    await fetchCards();
+        await fetchCards();
 
         if (aliases.length > 0) {
     toast.success("Eligibility criteria applied!", {
@@ -849,7 +1019,7 @@ const CardListing = () => {
                                 <h3 className="font-semibold text-xs sm:text-sm text-foreground truncate group-hover:text-primary transition-colors">
                                   {card.name}
                                 </h3>
-                                <div className="flex items-center gap-2 mt-0.5">
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                   {card.banks?.name && (
                                     <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                                       {card.banks.name}
@@ -860,6 +1030,36 @@ const CardListing = () => {
                                       • {card.card_type}
                                     </span>
                                   )}
+                                  {/* LTF Badge in Search Dropdown */}
+                                  {(() => {
+                                    const joiningFeeRaw = card.joining_fee_text ?? card.joining_fee ?? card.joiningFee ?? '0';
+                                    const annualFeeRaw = card.annual_fee_text ?? card.annual_fee ?? card.annualFees ?? '0';
+                                    const joiningFee = parseInt(joiningFeeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+                                    const annualFee = parseInt(annualFeeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+                                    const joiningFeeNum = Number.isFinite(joiningFee) ? joiningFee : 0;
+                                    const annualFeeNum = Number.isFinite(annualFee) ? annualFee : 0;
+                                    const isLTF = joiningFeeNum === 0 && annualFeeNum === 0;
+                                    
+                                    if (!isLTF) return null;
+                                    
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge className="text-[9px] sm:text-[10px] bg-primary text-primary-foreground cursor-help px-1.5 py-0.5">
+                                              LTF
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-xs">
+                                            <p className="font-semibold mb-1">LTF - Lifetime Free</p>
+                                            <p className="text-sm">
+                                              This is a Lifetime Free credit card, meaning you pay ₹0 joining fee and ₹0 annual fee for the entire lifetime of the card. No charges ever!
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               
@@ -1292,24 +1492,6 @@ const CardListing = () => {
                             </Badge>
                           )}
 
-                          {/* LTF Badge - Only show when eligibility filter is NOT applied, or when card is not eligible */}
-                          {(() => {
-                      const categorySavings = cardSavings[filters.category] || {};
-                      const cardKey = getCardKey(card);
-                      const saving = categorySavings[String(card.id)] ?? categorySavings[cardKey];
-                      const isLTF = card.joining_fee_text === "0" || card.joining_fee_text?.toLowerCase?.() === "free";
-                      
-                      // Don't show LTF badge if eligibility filter is applied and card is eligible
-                      if (eligibilitySubmitted && eligibleCardAliases.length > 0) {
-                        const alias = getCardAlias(card) || card.seo_card_alias || card.card_alias;
-                        const isEligible = alias && eligibleCardAliases.includes(String(alias));
-                        if (isEligible) {
-                          return null; // Show "Eligible" badge instead
-                        }
-                      }
-                      
-                      return !saving && isLTF && <Badge className="absolute bottom-3 right-3 bg-primary z-10">LTF</Badge>;
-                    })()}
 
                           <img src={card.card_bg_image || card.image} alt={card.name} className="max-h-full max-w-full object-contain" onError={e => {
                       e.currentTarget.src = '/placeholder.svg';
@@ -1321,6 +1503,36 @@ const CardListing = () => {
                             <Badge variant="outline" className="text-xs">
                                 {card.card_type || 'Credit Card'}
                             </Badge>
+                            {/* LTF Badge - Next to card_type */}
+                            {(() => {
+                              const joiningFeeRaw = card.joining_fee_text ?? card.joining_fee ?? card.joiningFee ?? '0';
+                              const annualFeeRaw = card.annual_fee_text ?? card.annual_fee ?? card.annualFees ?? '0';
+                              const joiningFee = parseInt(joiningFeeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+                              const annualFee = parseInt(annualFeeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+                              const joiningFeeNum = Number.isFinite(joiningFee) ? joiningFee : 0;
+                              const annualFeeNum = Number.isFinite(annualFee) ? annualFee : 0;
+                              const isLTF = joiningFeeNum === 0 && annualFeeNum === 0;
+                              
+                              if (!isLTF) return null;
+                              
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="text-xs bg-primary text-primary-foreground cursor-help">
+                                        LTF
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="font-semibold mb-1">LTF - Lifetime Free</p>
+                                      <p className="text-sm">
+                                        This is a Lifetime Free credit card, meaning you pay ₹0 joining fee and ₹0 annual fee for the entire lifetime of the card. No charges ever!
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })()}
                             {card.banks?.name && (
                               <span className="text-xs text-muted-foreground">
                                 {card.banks.name}
@@ -1354,7 +1566,7 @@ const CardListing = () => {
                           </div>
 
                           <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 mt-auto pt-1 justify-center items-center">
-                            <Link to={`/cards/${getCardAlias(card) || card.id}`} className="w-full sm:w-auto sm:flex-1 max-w-[140px] sm:max-w-none">
+                            <Link to={`/cards/${getCardAlias(card) || card.id}${searchParams.toString() ? '?' + searchParams.toString() : ''}`} className="w-full sm:w-auto sm:flex-1 max-w-[140px] sm:max-w-none">
                               <Button variant="outline" className="w-full h-8 sm:h-9 md:h-10 text-[11px] sm:text-xs md:text-sm font-semibold border-2">
                                 Details
                               </Button>

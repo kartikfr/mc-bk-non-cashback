@@ -301,6 +301,12 @@ const CardGenius = () => {
   const [showLifetimeFreeOnly, setShowLifetimeFreeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [breakdownView, setBreakdownView] = useState<'yearly' | 'monthly'>('monthly');
+  // Track if category was set via handleCardSelect click
+  const categoryFromClickRef = useRef<string | null>(null);
+  // Track scroll target when navigating to card detail
+  const scrollTargetRef = useRef<'savings-summary' | 'top' | null>(null);
+  // Track if category breakdown should be scrolled to (only when category column is clicked)
+  const shouldScrollToCategoryRef = useRef<boolean>(false);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -321,6 +327,7 @@ const CardGenius = () => {
   
   // Scroll states for category navigation
   const categoryNavRef = useRef<HTMLDivElement>(null);
+  const categoryBreakdownRef = useRef<HTMLDivElement>(null);
   const [showLeftCategoryScroll, setShowLeftCategoryScroll] = useState(false);
   const [showRightCategoryScroll, setShowRightCategoryScroll] = useState(true);
 
@@ -331,10 +338,32 @@ const CardGenius = () => {
   }, []);
   useEffect(() => {
     if (selectedCard?.spending_breakdown) {
+      // If category was set via click, use it; otherwise find first active category
+      if (categoryFromClickRef.current) {
+        setSelectedCategory(categoryFromClickRef.current);
+        categoryFromClickRef.current = null; // Reset after use
+      } else if (!selectedCategory) {
       const firstActiveCategory = Object.entries(selectedCard.spending_breakdown)
         .find(([, details]) => details && (details as any).spend > 0);
       setSelectedCategory(firstActiveCategory ? firstActiveCategory[0] : null);
+      }
       setBreakdownView('monthly');
+      
+      // PRIORITY 1: Check if we need to scroll to savings summary section
+      if (scrollTargetRef.current === 'savings-summary') {
+        setTimeout(() => {
+          const savingsSection = document.getElementById('annual-savings-summary');
+          if (savingsSection) {
+            const sectionRect = savingsSection.getBoundingClientRect();
+            const sectionTop = sectionRect.top + window.pageYOffset;
+            window.scrollTo({
+              top: sectionTop - 20,
+              behavior: 'smooth'
+            });
+          }
+          scrollTargetRef.current = null; // Reset after use
+        }, 300);
+      }
       
       // Check category navigation scroll state after render
       setTimeout(() => {
@@ -343,11 +372,52 @@ const CardGenius = () => {
           setShowLeftCategoryScroll(scrollLeft > 0);
           setShowRightCategoryScroll(scrollLeft < scrollWidth - clientWidth - 10);
         }
+        
+        // Scroll to category breakdown section ONLY if category column was explicitly clicked
+        // Don't scroll if user clicked Credit Card column (shouldScrollToCategoryRef is false)
+        // Also ensure scrollTargetRef is not set (which would indicate savings summary scroll)
+        if (selectedCategory && categoryBreakdownRef.current && shouldScrollToCategoryRef.current && !scrollTargetRef.current) {
+          // First, ensure the category tab is visible and selected in navigation
+          if (categoryNavRef.current) {
+            const categoryButton = categoryNavRef.current.querySelector(`button[data-category="${selectedCategory}"]`) as HTMLElement;
+            if (categoryButton) {
+              // Scroll the category button into view horizontally
+              categoryButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+          }
+          
+          // Then scroll to the start of the category breakdown section
+          setTimeout(() => {
+            // Find the category breakdown section (the entire section container)
+            const categorySection = document.getElementById('category-breakdown-section');
+            if (categorySection) {
+              const sectionRect = categorySection.getBoundingClientRect();
+              const sectionTop = sectionRect.top + window.pageYOffset;
+              // Scroll to the start of the section with a small offset for better visibility
+              window.scrollTo({
+                top: sectionTop - 20, // 20px offset from top for better visibility
+                behavior: 'smooth'
+              });
+            } else if (categoryBreakdownRef.current) {
+              // Fallback: scroll to breakdown section if main section not found
+              const breakdownRect = categoryBreakdownRef.current.getBoundingClientRect();
+              const breakdownTop = breakdownRect.top + window.pageYOffset;
+              window.scrollTo({
+                top: breakdownTop - 20,
+                behavior: 'smooth'
+              });
+            }
+          }, 400);
+          shouldScrollToCategoryRef.current = false; // Reset after use
+        }
       }, 100);
     } else if (!selectedCard) {
       setSelectedCategory(null);
+      categoryFromClickRef.current = null;
+      scrollTargetRef.current = null;
+      shouldScrollToCategoryRef.current = false;
     }
-  }, [selectedCard]);
+  }, [selectedCard, selectedCategory]);
   useEffect(() => {
     const updateIsMobile = () => {
       if (typeof window !== 'undefined') {
@@ -442,6 +512,40 @@ const CardGenius = () => {
     if (currentStep < questions.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
+      // Validate: Check if user only answered lounge questions
+      const loungeFields = ['domestic_lounge_usage_quarterly', 'international_lounge_usage_quarterly'];
+      const hasLoungeAnswer = loungeFields.some(field => {
+        const value = responses[field];
+        return typeof value === 'number' && value > 0;
+      });
+      
+      // Check if user has answered any non-lounge questions
+      const nonLoungeFields = questions
+        .filter(q => !loungeFields.includes(q.field))
+        .map(q => q.field);
+      const hasNonLoungeAnswer = nonLoungeFields.some(field => {
+        const value = responses[field];
+        return typeof value === 'number' && value > 0;
+      });
+      
+      // If user only answered lounge questions, show error
+      if (hasLoungeAnswer && !hasNonLoungeAnswer) {
+        toast({
+          title: "More information needed",
+          description: "Please answer at least one more question besides lounge visits. We need your spending patterns to recommend the best card for you.",
+          variant: "destructive"
+        });
+        // Find first non-lounge question that hasn't been answered
+        const firstUnansweredNonLounge = questions.findIndex(q => 
+          !loungeFields.includes(q.field) && 
+          (!responses[q.field] || responses[q.field] === 0)
+        );
+        if (firstUnansweredNonLounge !== -1) {
+          setCurrentStep(firstUnansweredNonLounge);
+        }
+        return;
+      }
+      
       // Calculate and show results
       await calculateResults();
     }
@@ -525,13 +629,34 @@ const CardGenius = () => {
       });
     }
   };
-  const handleCardSelect = (card: any) => {
+  const handleCardSelect = (card: any, category?: string, scrollToSection?: 'savings-summary' | 'top') => {
+    if (category) {
+      categoryFromClickRef.current = category;
+      // When category is provided, it means category column was clicked
+      shouldScrollToCategoryRef.current = true;
+    } else {
+      // When no category, it means Credit Card column was clicked - ensure no category scroll
+      shouldScrollToCategoryRef.current = false;
+      categoryFromClickRef.current = null;
+    }
+    // Store scroll target if specified
+    if (scrollToSection) {
+      scrollTargetRef.current = scrollToSection;
+    } else {
+      // When Credit Card column is clicked (no scrollToSection), explicitly set to null
+      scrollTargetRef.current = null;
+    }
     setSelectedCard(card);
-    // Smooth scroll to top
+    
+    // If Credit Card column is clicked (no category, no scrollToSection), scroll to top immediately
+    if (!scrollToSection && !category) {
+      // Scroll to top immediately when Credit Card column is clicked
+      // Use both immediate scroll and delayed scroll for reliability
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
+    }
   };
   const handleApplyFromList = (card: CardGeniusResult, event?: React.MouseEvent<HTMLElement>) => {
     if (event) {
@@ -649,10 +774,14 @@ const CardGenius = () => {
               Back to all recommendations
                 </button>
                 
-            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1B1C3F] via-[#2D3E94] to-[#4C7DFE] text-white p-4 sm:p-6 md:p-8 shadow-2xl flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center">
-              <button onClick={() => setSelectedCard(null)} className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors z-10 touch-target">
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="relative">
+              <button 
+                onClick={() => setSelectedCard(null)} 
+                className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full bg-white shadow-lg hover:bg-white/90 hover:shadow-xl flex items-center justify-center transition-all z-20 touch-target border-2 border-slate-200"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700" />
               </button>
+            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1B1C3F] via-[#2D3E94] to-[#4C7DFE] text-white p-4 sm:p-6 md:p-8 shadow-2xl flex flex-col gap-4 sm:gap-6 sm:flex-row sm:items-center">
               <div className="space-y-1.5 sm:space-y-2 md:space-y-3 max-w-xl pr-10 sm:pr-0 flex-1 min-w-0">
                 {bankLabel && (
                   <p className="text-[9px] sm:text-[10px] md:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white/70 truncate">
@@ -678,9 +807,10 @@ const CardGenius = () => {
                   }}
                 />
               </div>
+              </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-4 sm:p-6 space-y-4 sm:space-y-5">
+            <div id="annual-savings-summary" className="bg-white rounded-3xl border border-slate-200 shadow-lg p-4 sm:p-6 space-y-4 sm:space-y-5">
               <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 <span className="text-xl sm:text-2xl">💰</span>
                 <h2 className="text-lg sm:text-xl font-bold text-foreground">Your Annual Savings Summary</h2>
@@ -733,89 +863,14 @@ const CardGenius = () => {
               </p>
             </div>
 
-            {(() => {
-            const list = Array.isArray(selectedCard.welcome_benefits) ? selectedCard.welcome_benefits : [];
-            const fallbackItem = (selectedCard as any).voucher_of || (selectedCard as any).voucher_bonus ? [{
-              voucher_of: (selectedCard as any).voucher_of,
-              voucher_bonus: (selectedCard as any).voucher_bonus,
-              minimum_spend: (selectedCard as any).minimum_spend
-            }] : [];
-            const display = list.length > 0 ? list : fallbackItem;
-            if (!display || display.length === 0) return null;
-            
-            // Helper function to calculate cash value from reward points
-            const getCashValue = (benefit: any) => {
-              if (benefit.cash_value) {
-                return parseInt(benefit.cash_value);
-              }
-              if (benefit.rp_bonus && benefit.cash_conversion) {
-                const rpBonus = parseInt(benefit.rp_bonus) || 0;
-                const conversionRate = parseFloat(benefit.cash_conversion) || 0;
-                return Math.round(rpBonus * conversionRate);
-              }
-              if (benefit.voucher_bonus) {
-                return parseInt(benefit.voucher_bonus);
-              }
-              return 0;
-            };
-            
-            return <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-primary">Extra benefits</p>
-                    <h2 className="text-xl font-semibold text-foreground">Welcome bonuses curated for you</h2>
-                  </div>
-                  <div className="space-y-3">
-                    {display.map((benefit: any, idx: number) => {
-                      const cashValue = getCashValue(benefit);
-                      const rpBonus = benefit.rp_bonus ? parseInt(benefit.rp_bonus) : null;
-                      const conversionRate = benefit.cash_conversion ? parseFloat(benefit.cash_conversion) : null;
-                      const maxDays = benefit.maximum_days ? parseInt(benefit.maximum_days) : null;
-                      
-                      return (
-                        <div key={idx} className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-                          <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm text-foreground">
-                              {benefit.voucher_of ? (
-                                <>
-                                  On card activation you get a {benefit.voucher_of}
-                                  {cashValue > 0 && ` worth ₹${cashValue.toLocaleString()}`}
-                                </>
-                              ) : rpBonus ? (
-                                <>
-                                  On card activation you get {rpBonus.toLocaleString()} Reward Points
-                                  {cashValue > 0 && ` (worth ₹${cashValue.toLocaleString()})`}
-                                  {conversionRate && ` at ₹${conversionRate.toFixed(2)} per point`}
-                                </>
-                              ) : (
-                                <>
-                                  On card activation you get a welcome benefit
-                                  {cashValue > 0 && ` worth ₹${cashValue.toLocaleString()}`}
-                                </>
-                              )}
-                              {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
-                                <span className="text-muted-foreground"> (Min spend ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>
-                              )}
-                              {maxDays && maxDays > 0 && (
-                                <span className="text-muted-foreground"> (Valid for {maxDays} days)</span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>;
-          })()}
-
-            <section className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-6">
+            <section id="category-breakdown-section" className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 space-y-6">
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Your Total Savings Breakdown</p>
                 <h2 className="text-xl font-bold text-foreground">See how each category contributes</h2>
               </div>
 
               {/* Category Navigation with Scroll Arrows */}
-              <div className="relative">
+              <div className="relative" id="category-navigation">
                 {/* Left Arrow */}
                 {showLeftCategoryScroll && (
                   <button
@@ -864,6 +919,7 @@ const CardGenius = () => {
                     return (
                       <button
                         key={category}
+                        data-category={category}
                         onClick={() => setSelectedCategory(category)}
                         className={`px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors border shadow-sm inline-flex items-center justify-center whitespace-nowrap flex-shrink-0 snap-center min-w-fit ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'bg-white text-muted-foreground border-slate-200 hover:border-primary/40'}`}
                       >
@@ -897,7 +953,7 @@ const CardGenius = () => {
               const pointsEarned = (details.points_earned || 0) * multiplier;
               const convRate = details.conv_rate || 0;
               const savings = (details.savings || 0) * multiplier;
-              return <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6 space-y-3 sm:space-y-4">
+              return <div ref={categoryBreakdownRef} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6 space-y-3 sm:space-y-4">
                     <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
                       <span>Total Spends</span>
                       <span className="font-semibold text-foreground">₹{spend.toLocaleString()}</span>
@@ -942,7 +998,83 @@ const CardGenius = () => {
             })()}
             </section>
 
-            <div className="space-y-4">
+            {/* Extra Benefits Section - Moved above Apply Now button */}
+            {(() => {
+            const list = Array.isArray(selectedCard.welcome_benefits) ? selectedCard.welcome_benefits : [];
+            const fallbackItem = (selectedCard as any).voucher_of || (selectedCard as any).voucher_bonus ? [{
+              voucher_of: (selectedCard as any).voucher_of,
+              voucher_bonus: (selectedCard as any).voucher_bonus,
+              minimum_spend: (selectedCard as any).minimum_spend
+            }] : [];
+            const display = list.length > 0 ? list : fallbackItem;
+            if (!display || display.length === 0) return null;
+            
+            // Helper function to calculate cash value from reward points
+            const getCashValue = (benefit: any) => {
+              if (benefit.cash_value) {
+                return parseInt(benefit.cash_value);
+              }
+              if (benefit.rp_bonus && benefit.cash_conversion) {
+                const rpBonus = parseInt(benefit.rp_bonus) || 0;
+                const conversionRate = parseFloat(benefit.cash_conversion) || 0;
+                return Math.round(rpBonus * conversionRate);
+              }
+              if (benefit.voucher_bonus) {
+                return parseInt(benefit.voucher_bonus);
+              }
+              return 0;
+            };
+            
+            return <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-4 sm:p-6 space-y-4 transition-all duration-300">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-primary">Extra benefits</p>
+                    <h2 className="text-lg sm:text-xl font-semibold text-foreground">Welcome bonuses curated for you</h2>
+                  </div>
+                  <div className="space-y-3">
+                    {display.map((benefit: any, idx: number) => {
+                      const cashValue = getCashValue(benefit);
+                      const rpBonus = benefit.rp_bonus ? parseInt(benefit.rp_bonus) : null;
+                      const conversionRate = benefit.cash_conversion ? parseFloat(benefit.cash_conversion) : null;
+                      const maxDays = benefit.maximum_days ? parseInt(benefit.maximum_days) : null;
+                      
+                      return (
+                        <div key={idx} className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-3 sm:p-4">
+                          <Check className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm text-foreground leading-relaxed break-words">
+                              {benefit.voucher_of ? (
+                                <>
+                                  On card activation you get a {benefit.voucher_of}
+                                  {cashValue > 0 && ` worth ₹${cashValue.toLocaleString()}`}
+                                </>
+                              ) : rpBonus ? (
+                                <>
+                                  On card activation you get {rpBonus.toLocaleString()} Reward Points
+                                  {cashValue > 0 && ` (worth ₹${cashValue.toLocaleString()})`}
+                                  {conversionRate && ` at ₹${conversionRate.toFixed(2)} per point`}
+                                </>
+                              ) : (
+                                <>
+                                  On card activation you get a welcome benefit
+                                  {cashValue > 0 && ` worth ₹${cashValue.toLocaleString()}`}
+                                </>
+                              )}
+                              {benefit.minimum_spend && benefit.minimum_spend !== "0" && (
+                                <span className="text-muted-foreground"> (Min spend ₹{parseInt(benefit.minimum_spend).toLocaleString()})</span>
+                              )}
+                              {maxDays && maxDays > 0 && (
+                                <span className="text-muted-foreground"> (Valid for {maxDays} days)</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>;
+          })()}
+
+            <div className="space-y-4 mt-6 sm:mt-8">
             <Button className="w-full h-12 text-base font-semibold shadow-xl" size="lg" onClick={handleApplyFromDetail}>
               Apply Now
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -1473,15 +1605,35 @@ const CardGenius = () => {
                           tooltip: 'Total yearly savings in this category'
                         };
                         return <React.Fragment key={category}>
-                                <th className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground min-w-[60px] sm:min-w-[90px] md:w-32">
+                                <th 
+                                  className="text-center p-1.5 sm:p-4 font-semibold text-[9px] sm:text-xs md:text-sm text-foreground min-w-[60px] sm:min-w-[90px] md:w-32 cursor-pointer hover:bg-muted/30 transition-colors group"
+                                  onClick={(e) => {
+                                    // Find the first card row in the table body
+                                    const tbody = e.currentTarget.closest('table')?.querySelector('tbody');
+                                    if (tbody) {
+                                      const firstRow = tbody.querySelector('tr');
+                                      if (firstRow) {
+                                        // Get card index from row
+                                        const rowIndex = Array.from(tbody.querySelectorAll('tr')).indexOf(firstRow);
+                                        if (rowIndex >= 0 && rowIndex < filteredResults.length) {
+                                          const cardData = filteredResults[rowIndex];
+                                          if (cardData) {
+                                            handleCardSelect(cardData, category);
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }}
+                                >
                                   <div className="flex items-center justify-center gap-0.5 sm:gap-1">
-                                    <span className="truncate">{info.name}</span>
+                                    <span className="truncate group-hover:text-primary transition-colors">{info.name}</span>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground cursor-help flex-shrink-0" />
                                       </TooltipTrigger>
                                       <TooltipContent className="max-w-xs">
                                         <p>{info.tooltip}</p>
+                                        <p className="text-xs mt-1 text-muted-foreground">Click to view details</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>
@@ -1617,8 +1769,15 @@ const CardGenius = () => {
                   </thead>
                   <tbody>
                     {filteredResults.map((card, index) => {
-                    return <tr key={index} className={`border-t border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer ${index === 0 ? 'bg-emerald-50/60' : 'bg-white'}`} onClick={() => handleCardSelect(card)}>
-                          <td className="p-2 sm:p-3 sticky left-0 bg-white z-20 min-w-[180px] sm:min-w-[260px] shadow-[4px_0_6px_-4px_rgba(15,23,42,0.08)]">
+                    return <tr key={index} className={`border-t border-slate-200 hover:bg-slate-50 transition-colors ${index === 0 ? 'bg-emerald-50/60' : 'bg-white'}`}>
+                          <td 
+                            className="p-2 sm:p-3 sticky left-0 bg-white z-20 min-w-[180px] sm:min-w-[260px] shadow-[4px_0_6px_-4px_rgba(15,23,42,0.08)] cursor-pointer"
+                            onClick={() => {
+                              // Explicitly ensure no category scroll when Credit Card column is clicked
+                              shouldScrollToCategoryRef.current = false;
+                              handleCardSelect(card);
+                            }}
+                          >
                             <div className="flex items-center gap-2 sm:gap-4">
                               <img src={card.card_bg_image} alt={card.card_name} className="w-12 h-9 sm:w-16 sm:h-12 object-contain flex-shrink-0 rounded-md border border-slate-100" onError={e => {
                             e.currentTarget.src = "/placeholder.svg";
@@ -1648,25 +1807,55 @@ const CardGenius = () => {
                           
                           {/* Quick Insights Tab - Show summary data */}
                           {activeTab === 'quick' && <>
-                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 w-[80px] sm:w-[100px] md:w-[140px]">
+                              <td 
+                                className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 w-[80px] sm:w-[100px] md:w-[140px] cursor-pointer hover:bg-green-50/50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardSelect(card, undefined, 'savings-summary');
+                                }}
+                              >
                                 ₹{card.total_savings_yearly.toLocaleString()}
                               </td>
                               <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
-                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-blue-600 w-[80px] sm:w-[100px] md:w-[140px]">
+                              <td 
+                                className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-blue-600 w-[80px] sm:w-[100px] md:w-[140px] cursor-pointer hover:bg-blue-50/50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardSelect(card, undefined, 'savings-summary');
+                                }}
+                              >
                                 ₹{card.total_extra_benefits.toLocaleString()}
                               </td>
                               <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
-                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-purple-600 w-[80px] sm:w-[100px] md:w-[140px]">
+                              <td 
+                                className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-purple-600 w-[80px] sm:w-[100px] md:w-[140px] cursor-pointer hover:bg-purple-50/50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardSelect(card, undefined, 'savings-summary');
+                                }}
+                              >
                                 {card.airport_lounge_value && card.airport_lounge_value > 0 
                                   ? `₹${card.airport_lounge_value.toLocaleString()}`
                                   : '—'}
                               </td>
                               <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
-                              <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-red-600 w-[75px] sm:w-[90px] md:w-[120px]">
+                              <td 
+                                className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-red-600 w-[75px] sm:w-[90px] md:w-[120px] cursor-pointer hover:bg-red-50/50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardSelect(card, undefined, 'savings-summary');
+                                }}
+                              >
                                 ₹{card.joining_fees.toLocaleString()}
                               </td>
                               <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>
-                              <td className="p-1.5 sm:p-4 text-center w-[85px] sm:w-[110px] md:w-[140px]">
+                              <td 
+                                className="p-1.5 sm:p-4 text-center w-[85px] sm:w-[110px] md:w-[140px] cursor-pointer hover:bg-green-50/50 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardSelect(card, undefined, 'savings-summary');
+                                }}
+                              >
                                 <span className="font-bold text-xs sm:text-base md:text-lg text-green-600">
                                   ₹{card.net_savings.toLocaleString()}
                                 </span>
@@ -1679,7 +1868,13 @@ const CardGenius = () => {
                           const breakdown = card.spending_breakdown[category];
                           const yearlySavings = breakdown?.savings ? breakdown.savings * 12 : 0;
                           return <React.Fragment key={category}>
-                                    <td className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 min-w-[60px] sm:min-w-[90px] md:w-32">
+                                    <td 
+                                      className="p-1.5 sm:p-4 text-center font-semibold text-[10px] sm:text-sm text-green-600 min-w-[60px] sm:min-w-[90px] md:w-32 cursor-pointer hover:bg-green-50/50 transition-colors"
+                                      onClick={() => {
+                                        shouldScrollToCategoryRef.current = true;
+                                        handleCardSelect(card, category);
+                                      }}
+                                    >
                                       ₹{yearlySavings.toLocaleString()}
                                     </td>
                                     {idx < spendingCategories.length - 1 && <td className="p-1 sm:p-4 w-4 sm:w-8 md:w-12"></td>}
@@ -1889,7 +2084,7 @@ const CardGenius = () => {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8 mb-6 sm:mb-8">
             <Button
               variant="outline"
               size="lg"
@@ -1920,16 +2115,20 @@ const CardGenius = () => {
 
           {/* Skip All Button - Moved below, less prominent */}
           {currentStep !== questions.length - 1 && (
-            <div className="flex justify-center mb-12 sm:mb-16 md:mb-20">
+            <div className="flex justify-center pt-2 sm:pt-3 mb-12 sm:mb-16 md:mb-20 pb-8 sm:pb-12 md:pb-16">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() => setCurrentStep(questions.length - 1)}
-                      className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      onClick={async () => {
+                        // Skip all remaining questions and calculate results directly (like Beat My Card)
+                        await calculateResults();
+                      }}
+                      disabled={isCalculating}
+                      className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       aria-label="Skip all remaining questions"
                     >
-                      Skip all <span className="text-[10px] sm:text-xs">(not recommended)</span>
+                      {isCalculating ? "Calculating..." : "Skip all (not recommended)"}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">

@@ -270,7 +270,7 @@ export default function EligibilityResultDialog({
               className="w-full"
               size="lg"
             >
-              See Recommended Cards
+              Discover All Cards
             </Button>
             <div className="flex gap-3">
               <Button 

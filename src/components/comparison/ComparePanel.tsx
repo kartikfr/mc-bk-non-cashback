@@ -170,7 +170,9 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
 
   // Use the utility function from cardAlias.ts
 
-  const slots = Array.from({ length: maxCompare }, (_, i) =>
+  // Always show 3 slots for comparison (or maxCompare if less than 3)
+  const totalSlots = Math.max(maxCompare, 3);
+  const slots = Array.from({ length: totalSlots }, (_, i) =>
     i === 0 &&
     preSelectedCard &&
     !selectedCards.find(
@@ -283,35 +285,57 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
       const cardKey = card ? getCardKey(card) : '';
       
       return (
-        <div className="space-y-1">
+        <div className="space-y-1.5 sm:space-y-1">
           {usps.map((usp: any, idx: number) => {
             const uspKey = `${cardKey}-${row.key}-${idx}`;
             const isExpanded = expandedUsps.has(uspKey);
+            const cleanDescription = usp.description ? usp.description.replace(/<[^>]*>/g, '').trim() : '';
+            const hasDescription = cleanDescription.length > 0;
             
             return (
               <div key={idx}>
-                {/* Mobile: Only heading, collapsible description */}
+                {/* Mobile: Enhanced compact design with better spacing and visual hierarchy */}
                 <div className="sm:hidden">
-                  <Collapsible open={isExpanded} onOpenChange={() => toggleUspExpansion(uspKey)}>
-                    <CollapsibleTrigger className="w-full text-left">
-                      <div className="pl-3 pr-2 py-1.5 bg-gradient-to-r from-muted/40 to-muted/30 rounded-md border-l-4 border-primary/40 flex items-center justify-between group hover:from-muted/60 hover:to-muted/50 active:scale-[0.98] transition-all duration-150 shadow-sm">
-                        <div className="font-semibold text-[11px] text-foreground line-clamp-1 flex-1 pr-1">{usp.header}</div>
-                        <ChevronDown className={cn("w-3 h-3 text-primary/60 ml-1 flex-shrink-0 transition-transform duration-200", isExpanded && "rotate-180")} />
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="pl-3 pr-2 pt-1.5 pb-1.5 ml-1 border-l-2 border-primary/20 bg-muted/20 rounded-b-md">
-                        <div className="text-[10px] text-muted-foreground leading-relaxed">{usp.description || ''}</div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                  {hasDescription ? (
+                    <Collapsible open={isExpanded} onOpenChange={() => toggleUspExpansion(uspKey)}>
+                      <CollapsibleTrigger className="w-full text-left touch-target">
+                        <div className="px-2.5 py-1.5 bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 rounded-lg border border-primary/30 shadow-sm flex items-start justify-between group active:scale-[0.97] transition-all duration-200 hover:from-primary/20 hover:via-primary/15 hover:to-primary/10">
+                          <div className="flex-1 pr-2 min-w-0">
+                            <div className="font-bold text-[10px] text-foreground leading-tight mb-0.5 line-clamp-2">{usp.header}</div>
+                            {!isExpanded && cleanDescription && (
+                              <div className="text-[8px] text-muted-foreground/80 leading-tight line-clamp-1 mt-0.5">
+                                {cleanDescription.substring(0, 40)}...
+                              </div>
+                            )}
+                          </div>
+                          <ChevronDown className={cn(
+                            "w-3 h-3 text-primary/80 flex-shrink-0 mt-0.5 transition-transform duration-200",
+                            isExpanded && "rotate-180"
+                          )} />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="animate-accordion-down">
+                        <div className="px-2.5 pt-1.5 pb-2 mt-1 ml-1 border-l-2 border-primary/40 bg-gradient-to-br from-muted/40 to-muted/20 rounded-r-lg">
+                          <div className="text-[9px] text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                            {cleanDescription}
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
+                    <div className="px-2.5 py-1.5 bg-gradient-to-br from-primary/15 via-primary/10 to-primary/5 rounded-lg border border-primary/30 shadow-sm">
+                      <div className="font-bold text-[10px] text-foreground leading-tight">{usp.header}</div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Desktop: Full content with heading and description */}
                 <div className="hidden sm:block">
-                  <div className="pl-3 pr-2 py-1.5 bg-gradient-to-r from-muted/50 to-muted/40 rounded-md border-l-4 border-primary/30 hover:from-muted/60 hover:to-muted/50 transition-colors shadow-sm">
-                    <div className="font-semibold text-[11px] mb-1 text-foreground">{usp.header}</div>
-                    <div className="text-[10px] text-muted-foreground leading-relaxed pl-0.5">{usp.description || ''}</div>
+                  <div className="pl-3 pr-2.5 py-1.5 bg-gradient-to-r from-muted/50 to-muted/40 rounded-md border-l-3 border-primary/30 hover:from-muted/60 hover:to-muted/50 transition-colors shadow-sm break-words overflow-wrap-anywhere">
+                    <div className="font-semibold text-[11px] mb-1 text-foreground leading-tight break-words">{usp.header}</div>
+                    {hasDescription && (
+                      <div className="text-[10px] text-muted-foreground leading-relaxed pl-0.5 line-clamp-2 break-words overflow-wrap-anywhere">{cleanDescription}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -324,9 +348,9 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
     if (row.type === 'list') {
       const items = value.split(',').map((item: string) => item.trim()).filter(Boolean);
       return (
-        <ul className="list-disc list-inside space-y-0.5 text-[10px] text-foreground leading-tight pl-2.5">
+        <ul className="list-disc list-inside space-y-0.5 text-[10px] text-foreground leading-tight pl-2.5 break-words overflow-wrap-anywhere">
           {items.map((item: string, idx: number) => (
-            <li key={idx} className="line-clamp-1 pl-0.5">{shortenText(item, 35)}</li>
+            <li key={idx} className="break-words overflow-wrap-anywhere word-break-break-word pl-0.5">{shortenText(item, 35)}</li>
           ))}
         </ul>
       );
@@ -379,163 +403,105 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
             <DialogTitle className="text-base sm:text-lg font-bold">Compare Credit Cards</DialogTitle>
           </DialogHeader>
           <ScrollArea className="h-full px-3 sm:px-6 pb-3 sm:pb-6">
-            {/* Mobile: Horizontal scrollable cards, Desktop: Grid */}
-            <div className="sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-4 mb-6 sm:mb-8">
-              {/* Mobile: Horizontal scroll - Compact cards side by side */}
-              <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 mb-3 -mx-3 px-3 scrollbar-hide snap-x snap-mandatory">
+            {/* Cards Selection - Single horizontal line for all screens with even spacing */}
+            <div className="mb-4 sm:mb-6">
+              <div className={cn(
+                "flex gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide snap-x snap-mandatory",
+                // Desktop: Use grid layout to show all cards evenly - always 3 columns
+                "sm:grid sm:overflow-x-visible sm:grid-cols-3"
+              )}>
                 {resolvedSlots.map((card, index) => (
-                  <div key={`mobile-${index}`} className="flex-shrink-0 w-[calc((100vw-1rem)/3)] min-w-[130px] max-w-[145px] snap-center border rounded-lg p-2 bg-card">
-                  {card ? (
-                    <div className="space-y-2 flex flex-col h-full">
-                      <div className="relative flex-shrink-0">
-                        <img
-                          src={card.image || '/placeholder.svg'}
-                          alt={card.name}
-                          className="w-full h-14 object-contain rounded-md bg-gradient-to-br from-muted to-muted/50"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-0 right-0 bg-background/95 hover:bg-background touch-target h-5 w-5 p-0 rounded-full"
-                          onClick={() => removeCard(getCardKey(card))}
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </Button>
-                      </div>
-                      <div className="flex-1 flex flex-col justify-between min-h-0">
-                        <div className="space-y-0.5">
-                          <h3 className="font-semibold text-xs leading-tight line-clamp-2 text-foreground">{card.name}</h3>
-                          <p className="text-[10px] text-muted-foreground line-clamp-1">{card.banks?.name}</p>
+                  <div 
+                    key={`card-${index}`} 
+                    className={cn(
+                      "flex-shrink-0 snap-center border rounded-lg bg-card",
+                      // Mobile: Equal width for all cards to align with columns
+                      "w-[calc((100vw-1.5rem)/3)] min-w-[105px] max-w-[120px]",
+                      // Desktop: Full width in grid
+                      "sm:w-full sm:min-w-0 sm:max-w-none",
+                      // Padding
+                      "p-1.5 sm:p-3"
+                    )}
+                  >
+                    {card ? (
+                      <div className="space-y-1.5 sm:space-y-2 flex flex-col h-full">
+                        <div className="relative flex-shrink-0 w-full">
+                          <img
+                            src={card.image || card.card_bg_image || '/placeholder.svg'}
+                            alt={card.name}
+                            className="w-full h-10 sm:h-20 object-contain rounded-md bg-gradient-to-br from-muted to-muted/50"
+                            onError={(e) => {
+                              e.currentTarget.src = '/placeholder.svg';
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-0 right-0 bg-background/95 hover:bg-background touch-target h-4 w-4 sm:h-6 sm:w-6 p-0 rounded-full"
+                            onClick={() => removeCard(getCardKey(card))}
+                          >
+                            <X className="w-2 h-2 sm:w-3 sm:h-3" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-[10px] h-7 mt-1.5 px-1.5"
-                          onClick={() => {
-                            setDetailViewCard(card);
-                            setDetailViewOpen(true);
-                          }}
-                        >
-                          <Info className="w-3 h-3 mr-1" />
-                          Details
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 flex flex-col h-full">
-                      <div className="relative w-full h-14 flex items-center justify-center bg-muted/50 rounded-md border-2 border-dashed flex-shrink-0">
-                        <Plus className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 space-y-1.5 relative min-h-0">
-                        <Input
-                          placeholder="Search card..."
-                          value={searchQueries[index]}
-                          onChange={(e) => handleSearchChange(index, e.target.value)}
-                          className="w-full text-xs h-7 touch-target"
-                        />
-                        {searchResults[index].length > 0 && (
-                          <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-48 overflow-auto">
-                            {searchResults[index].map((searchCard: any) => (
-                              <button
-                                key={searchCard.id}
-                                className="w-full text-left px-2 py-1.5 hover:bg-muted flex items-center gap-1.5"
-                                onClick={() => handleSelectCard(index, searchCard)}
-                              >
-                                <img
-                                  src={searchCard.image}
-                                  alt={searchCard.name}
-                                  className="w-10 h-6 object-contain"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-xs line-clamp-1">{searchCard.name}</div>
-                                  <div className="text-[10px] text-muted-foreground line-clamp-1">{searchCard.banks?.name}</div>
-                                </div>
-                              </button>
-                            ))}
+                        <div className="flex-1 flex flex-col justify-between min-h-0">
+                          <div className="space-y-0.5">
+                            <h3 className="font-semibold text-[9px] sm:text-xs leading-tight line-clamp-2 text-foreground">{card.name}</h3>
+                            <p className="text-[8px] sm:text-[10px] text-muted-foreground line-clamp-1">{card.banks?.name}</p>
                           </div>
-                        )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-[8px] sm:text-[10px] h-5 sm:h-7 mt-1.5 px-1 sm:px-2"
+                            onClick={() => {
+                              setDetailViewCard(card);
+                              setDetailViewOpen(true);
+                            }}
+                          >
+                            <Info className="w-2 h-2 sm:w-3 sm:h-3 mr-0.5" />
+                            <span className="hidden xs:inline">Details</span>
+                            <span className="xs:hidden">Info</span>
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="space-y-1.5 sm:space-y-2 flex flex-col h-full">
+                        <div className="relative w-full h-10 sm:h-20 flex items-center justify-center bg-muted/50 rounded-md border-2 border-dashed flex-shrink-0">
+                          <Plus className="w-3 h-3 sm:w-5 sm:h-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 space-y-1 relative min-h-0">
+                          <Input
+                            placeholder="Search..."
+                            value={searchQueries[index]}
+                            onChange={(e) => handleSearchChange(index, e.target.value)}
+                            className="w-full text-[9px] sm:text-xs h-5 sm:h-7 touch-target"
+                          />
+                          {searchResults[index].length > 0 && (
+                            <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-48 overflow-auto">
+                              {searchResults[index].map((searchCard: any) => (
+                                <button
+                                  key={searchCard.id}
+                                  className="w-full text-left px-2 py-1.5 hover:bg-muted flex items-center gap-1.5"
+                                  onClick={() => handleSelectCard(index, searchCard)}
+                                >
+                                  <img
+                                    src={searchCard.image}
+                                    alt={searchCard.name}
+                                    className="w-8 h-5 sm:w-10 sm:h-6 object-contain"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-[9px] sm:text-[10px] line-clamp-1">{searchCard.name}</div>
+                                    <div className="text-[8px] sm:text-[9px] text-muted-foreground line-clamp-1">{searchCard.banks?.name}</div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-              
-              {/* Desktop: Grid layout */}
-              {resolvedSlots.map((card, index) => (
-                <div key={`desktop-${index}`} className="hidden sm:block border rounded-lg p-4 bg-card">
-                  {card ? (
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <img
-                          src={card.image || '/placeholder.svg'}
-                          alt={card.name}
-                          className="w-full h-40 object-contain rounded-lg bg-gradient-to-br from-muted to-muted/50"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-1 sm:top-2 right-1 sm:right-2 bg-background/80 hover:bg-background touch-target h-8 w-8 sm:h-9 sm:w-9"
-                          onClick={() => removeCard(getCardKey(card))}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold line-clamp-2">{card.name}</h3>
-                        <p className="text-sm text-muted-foreground">{card.banks?.name}</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => {
-                          setDetailViewCard(card);
-                          setDetailViewOpen(true);
-                        }}
-                      >
-                        <Info className="w-4 h-4 mr-2" />
-                        View Details
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="relative w-full h-32 sm:h-40 flex items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed">
-                        <Plus className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-2 relative">
-                        <Input
-                          placeholder="Search for a card..."
-                          value={searchQueries[index]}
-                          onChange={(e) => handleSearchChange(index, e.target.value)}
-                          className="w-full text-sm sm:text-base touch-target"
-                        />
-                        {searchResults[index].length > 0 && (
-                          <div className="absolute z-10 w-full bg-background border rounded-lg shadow-lg mt-1 max-h-60 overflow-auto">
-                            {searchResults[index].map((searchCard: any) => (
-                              <button
-                                key={searchCard.id}
-                                className="w-full text-left px-3 py-2 hover:bg-muted flex items-center gap-2"
-                                onClick={() => handleSelectCard(index, searchCard)}
-                              >
-                                <img
-                                  src={searchCard.image}
-                                  alt={searchCard.name}
-                                  className="w-12 h-8 object-contain"
-                                />
-                                <div className="flex-1">
-                                  <div className="font-medium text-sm line-clamp-1">{searchCard.name}</div>
-                                  <div className="text-xs text-muted-foreground">{searchCard.banks?.name}</div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
 
             {selectedCards.length === 0 && (
@@ -553,117 +519,170 @@ export function ComparePanel({ open, onOpenChange, preSelectedCard }: ComparePan
 
             {selectedCards.length >= 2 && (
               <div className="space-y-6">
+                {/* Fixed Header with Card Names Only - Aligned with card images above */}
+                <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b-2 border-border shadow-sm pb-2.5 mb-4 -mx-3 px-3 sm:-mx-6 sm:px-6">
+                  <div className={cn(
+                    "flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory",
+                    "sm:grid sm:grid-cols-3 sm:overflow-x-visible"
+                  )}>
+                    {resolvedSlots.map((card, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "flex-shrink-0 snap-start",
+                          // Mobile: Match card image width exactly
+                          "w-[calc((100vw-1.5rem)/3)] min-w-[105px] max-w-[120px]",
+                          // Desktop: Full width to match grid columns
+                          "sm:w-full sm:min-w-0 sm:max-w-none"
+                        )}
+                      >
+                        <div className="text-[9px] sm:text-xs font-bold text-foreground line-clamp-2 mb-0.5 leading-tight">
+                          {card?.name || 'Card'}
+                        </div>
+                        <div className="text-[8px] sm:text-[10px] text-muted-foreground line-clamp-1">
+                          {card?.banks?.name || ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Mobile-friendly stacked comparison - Cards side by side */}
-                <div className="space-y-3 sm:hidden">
+                <div className="space-y-4 sm:hidden">
                   {comparisonSections.map((section) => {
                     const isExpanded = expandedSections.has(section.id);
+                    const isKeyBenefits = section.id === 'key-benefits';
                     return (
-                    <Collapsible 
-                      key={section.id} 
-                      open={isExpanded}
-                      onOpenChange={() => toggleSectionExpansion(section.id)}
-                      className="border rounded-lg overflow-hidden"
-                    >
-                      <CollapsibleTrigger className="w-full bg-muted/80 hover:bg-muted px-3 py-1.5 flex items-center justify-between transition-colors">
-                        <h3 className="font-semibold text-xs text-left leading-tight">{section.title}</h3>
-                        <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0", isExpanded && "rotate-180")} />
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                      <div className="divide-y">
-                        {section.rows.map((row) => (
-                          <div key={row.key} className="px-3 py-1">
-                            <div className="text-[10px] font-semibold text-muted-foreground mb-1">
-                              {row.label}
-                            </div>
-                            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3">
-                              {activeCards.map((card, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex-shrink-0 w-[calc((100vw-4rem)/3)] min-w-[125px] max-w-[135px] border rounded-md bg-background/70 px-1.5 py-1"
-                                >
-                                  <div className="text-[9px] font-semibold line-clamp-1 text-foreground mb-0.5">
-                                    {card?.name || 'Card'}
-                                  </div>
-                                  <div className="text-[10px] leading-tight break-words">
-                                    {renderCellValue(card, row)}
-                                  </div>
+                    <div key={section.id} className="border rounded-lg overflow-hidden">
+                      {/* Section Heading */}
+                      <Collapsible 
+                        open={isExpanded}
+                        onOpenChange={() => toggleSectionExpansion(section.id)}
+                      >
+                        <CollapsibleTrigger className="w-full bg-muted/80 hover:bg-muted px-3 py-2.5 flex items-center justify-between transition-colors">
+                          <h3 className="font-bold text-sm text-left leading-tight">{section.title}</h3>
+                          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200 flex-shrink-0", isExpanded && "rotate-180")} />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                        <div className={cn("divide-y", isKeyBenefits && "divide-y-0 space-y-2 px-3 py-2")}>
+                          {section.rows.map((row) => (
+                            <div key={row.key} className={cn("px-3", isKeyBenefits ? "py-2" : "py-2")}>
+                              {!isKeyBenefits && (
+                                <div className="text-[10px] font-semibold text-muted-foreground mb-2">
+                                  {row.label}
                                 </div>
-                              ))}
+                              )}
+                              <div className={cn(
+                                "flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3 snap-x snap-mandatory",
+                                isKeyBenefits && "gap-1"
+                              )}>
+                                {resolvedSlots.map((card, idx) => (
+                                  <div
+                                    key={idx}
+                                    className={cn(
+                                      "flex-shrink-0 snap-center",
+                                      isKeyBenefits 
+                                        ? "w-[calc((100vw-1.5rem)/3)] min-w-[105px] max-w-[120px] border-0 bg-transparent px-0" 
+                                        : "w-[calc((100vw-1.5rem)/3)] min-w-[105px] max-w-[120px] border rounded-md bg-background/70 px-1.5 py-1"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "leading-tight break-words overflow-wrap-anywhere word-break-break-word",
+                                      isKeyBenefits ? "text-[9px]" : "text-[10px]"
+                                    )}>
+                                      {card ? renderCellValue(card, row) : <span className="text-muted-foreground italic text-[9px]">Not Available</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                    </Collapsible>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                      </Collapsible>
+                    </div>
                   );
                   })}
                     </div>
 
-                {/* Tablet / Desktop table view */}
-                <div className="hidden sm:block space-y-6">
+                {/* Desktop design - Matching mobile pattern with grid layout */}
+                <div className="hidden sm:block space-y-4">
                 {comparisonSections.map((section) => {
                   const isExpanded = expandedSections.has(section.id);
+                  const isKeyBenefits = section.id === 'key-benefits';
                   return (
-                  <Collapsible 
-                    key={section.id}
-                    open={isExpanded}
-                    onOpenChange={() => toggleSectionExpansion(section.id)}
-                    className="border rounded-lg overflow-hidden"
-                  >
-                    <CollapsibleTrigger className="w-full bg-muted/80 hover:bg-muted px-4 py-2.5 flex items-center justify-between transition-colors">
-                      <h3 className="font-semibold text-sm text-left">{section.title}</h3>
-                      <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      {/* Make the comparison table horizontally scrollable on small tablet widths */}
-                      <div className="w-full overflow-x-auto">
-                        <Table className="min-w-[680px] sm:min-w-full">
-                      <TableHeader>
-                        <TableRow>
-                              <TableHead className="w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] font-semibold sticky left-0 bg-background z-10 text-xs">
-                            Attribute
-                          </TableHead>
-                              {activeCards.map((card, idx) => (
-                                <TableHead
-                                  key={idx}
-                                  className="font-semibold text-center min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-xs"
-                                >
-                              {card?.name || 'Card'}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {section.rows.map((row) => (
-                          <TableRow key={row.key} className="hover:bg-muted/50">
-                                <TableCell className="font-medium align-top w-[160px] min-w-[160px] sm:w-[200px] sm:min-w-[200px] sticky left-0 bg-background z-10 text-[11px] py-2">
-                              {row.label}
-                            </TableCell>
-                                {activeCards.map((card, idx) => (
-                                  <TableCell
+                  <div key={section.id} className="border rounded-lg overflow-hidden">
+                    <Collapsible 
+                      open={isExpanded}
+                      onOpenChange={() => toggleSectionExpansion(section.id)}
+                    >
+                      <CollapsibleTrigger className="w-full bg-muted/80 hover:bg-muted px-4 py-3 flex items-center justify-between transition-colors">
+                        <h3 className="font-bold text-base text-left">{section.title}</h3>
+                        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className={cn("divide-y", isKeyBenefits && "divide-y-0 space-y-3 px-4 py-3")}>
+                          {section.rows.map((row) => (
+                            <div key={row.key} className={cn("px-4", isKeyBenefits ? "py-3" : "py-3")}>
+                              {!isKeyBenefits && (
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">
+                                  {row.label}
+                                </div>
+                              )}
+                              <div className={cn(
+                                "grid gap-3 grid-cols-3",
+                                isKeyBenefits && "gap-2"
+                              )}>
+                                {resolvedSlots.map((card, idx) => (
+                                  <div
                                     key={idx}
-                                    className="align-top min-w-[220px] w-[220px] sm:min-w-[260px] sm:w-[260px] text-[10px] py-2"
+                                    className={cn(
+                                      "w-full",
+                                      isKeyBenefits 
+                                        ? "border-0 bg-transparent px-0" 
+                                        : "border rounded-md bg-background/70 px-3 py-2"
+                                    )}
                                   >
-                                {renderCellValue(card, row)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                                    <div className={cn(
+                                      "leading-relaxed break-words overflow-wrap-anywhere word-break-break-word w-full",
+                                      isKeyBenefits ? "text-xs" : "text-xs"
+                                    )}>
+                                      {card ? renderCellValue(card, row) : <span className="text-muted-foreground italic text-xs">Not Available</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
-                    </CollapsibleContent>
-                  </Collapsible>
                   );
                 })}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-                  {resolvedSlots.filter(Boolean).map((card, idx) => (
-                    <Button key={idx} className="w-full" onClick={() => handleApply(card)}>
-                      Apply for {card?.name || 'this card'}
-                    </Button>
-                  ))}
+                {/* Apply Now Buttons - Under each card column */}
+                <div className="mt-6 sm:mt-8 border-t pt-4 sm:pt-6">
+                  <div className={cn(
+                    "flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory",
+                    "sm:grid sm:grid-cols-3 sm:overflow-x-visible"
+                  )}>
+                    {resolvedSlots.map((card, idx) => (
+                      <Button 
+                        key={idx} 
+                        className={cn(
+                          "flex-shrink-0 snap-center sm:snap-none",
+                          "w-[calc((100vw-1.5rem)/3)] min-w-[110px] max-w-[130px]",
+                          "sm:w-full sm:min-w-0 sm:max-w-none"
+                        )}
+                        onClick={() => card && handleApply(card)}
+                        disabled={!card}
+                      >
+                        Apply Now
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

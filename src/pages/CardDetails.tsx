@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cardService } from '@/services/cardService';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -83,6 +83,7 @@ interface CardData {
 
 export default function CardDetails() {
   const { alias } = useParams<{ alias: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [card, setCard] = useState<CardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -235,7 +236,7 @@ export default function CardDetails() {
         <Navigation />
         <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Card not found</h1>
-          <Link to="/cards">
+          <Link to={`/cards${searchParams.toString() ? '?' + searchParams.toString() : ''}`}>
             <Button>Back to Cards</Button>
           </Link>
         </div>
@@ -318,7 +319,9 @@ export default function CardDetails() {
             variant="outline"
             size="sm"
             onClick={() => {
-              navigate('/cards');
+              // Preserve URL params when navigating back to cards page
+              const params = new URLSearchParams(searchParams);
+              navigate(`/cards${params.toString() ? '?' + params.toString() : ''}`);
               setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
             }}
             className="flex items-center gap-2"
@@ -330,7 +333,12 @@ export default function CardDetails() {
         <div className="text-sm text-muted-foreground">
           <Link to="/" className="hover:text-foreground">Home</Link>
           {' / '}
-          <Link to="/cards" className="hover:text-foreground">Cards</Link>
+          <Link 
+            to={`/cards${searchParams.toString() ? '?' + searchParams.toString() : ''}`} 
+            className="hover:text-foreground"
+          >
+            Cards
+          </Link>
           {' / '}
           <span className="text-foreground">{card.name}</span>
         </div>
@@ -520,7 +528,38 @@ export default function CardDetails() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-4 sm:pb-6 border-b border-border">
                   <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-2">Joining Fee</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-sm text-muted-foreground">Joining Fee</p>
+                      {(() => {
+                        const joiningFeeRaw = card.joining_fee_text ?? card.joining_fee ?? '0';
+                        const annualFeeRaw = card.annual_fee_text ?? card.annual_fee ?? '0';
+                        const joiningFee = parseInt(joiningFeeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+                        const annualFee = parseInt(annualFeeRaw?.toString().replace(/[^0-9]/g, ''), 10);
+                        const joiningFeeNum = Number.isFinite(joiningFee) ? joiningFee : 0;
+                        const annualFeeNum = Number.isFinite(annualFee) ? annualFee : 0;
+                        const isLTF = joiningFeeNum === 0 && annualFeeNum === 0;
+                        
+                        if (!isLTF) return null;
+                        
+                        return (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge className="text-xs bg-primary text-primary-foreground cursor-help">
+                                  LTF
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">LTF - Lifetime Free</p>
+                                <p className="text-sm">
+                                  This is a Lifetime Free credit card, meaning you pay ₹0 joining fee and ₹0 annual fee for the entire lifetime of the card. No charges ever!
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })()}
+                    </div>
                     <p className="text-3xl sm:text-4xl font-bold text-foreground">₹{card.joining_fee_text}</p>
                     {card.joining_fee_offset && !isEmptyOrNA(card.joining_fee_offset) && (
                       <div className="mt-3 text-sm text-muted-foreground">
@@ -745,21 +784,21 @@ export default function CardDetails() {
          (card.redemption_options && !isEmptyOrNA(card.redemption_options)) || 
          (card.redemption_catalogue && !isEmptyOrNA(card.redemption_catalogue)) ||
          (sortedUSPs.some(usp => usp.header.toLowerCase().includes('cashback'))) ? (
-          <section ref={rewardsRef} id="rewards" className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Rewards & Redemption</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">How to earn and redeem rewards</p>
+          <section ref={rewardsRef} id="rewards" className="space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">Rewards & Redemption</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">How to earn and redeem rewards</p>
             </div>
-            <div className="bg-card border border-border rounded-xl p-6 sm:p-8">
-              <div className="space-y-6">
+            <div className="bg-card border border-border rounded-lg p-4 sm:p-5">
+              <div className="space-y-4">
                 {/* Reward Conversion Rate */}
                 {card.reward_conversion_rate && !isEmptyOrNA(card.reward_conversion_rate) && (
-                  <div className="bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/20 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Award className="w-5 h-5 text-primary" />
-                      <p className="text-sm font-medium text-muted-foreground">Reward Conversion Rate</p>
+                  <div className="bg-muted/30 border border-border/50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-4 h-4 text-muted-foreground" />
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Reward Conversion Rate</p>
                     </div>
-                    <p className="text-3xl sm:text-4xl font-bold text-primary">
+                    <p className="text-lg sm:text-xl font-semibold text-foreground">
                       {card.reward_conversion_rate}
                     </p>
                   </div>
@@ -769,30 +808,30 @@ export default function CardDetails() {
                 {(card.redemption_options && !isEmptyOrNA(card.redemption_options)) || 
                  (card.redemption_catalogue && !isEmptyOrNA(card.redemption_catalogue)) ||
                  sortedUSPs.some(usp => usp.header.toLowerCase().includes('cashback')) ? (
-                  <div className="bg-background border border-border rounded-xl p-6 space-y-4">
+                  <div className="bg-background border border-border rounded-lg p-4 space-y-3">
                     {/* Redemption Options */}
                     {card.redemption_options && !isEmptyOrNA(card.redemption_options) ? (
                       <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Sparkles className="w-5 h-5 text-primary" />
-                          <h3 className="font-semibold text-foreground">Redemption Options</h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="w-4 h-4 text-muted-foreground" />
+                          <h3 className="text-sm sm:text-base font-semibold text-foreground">Redemption Options</h3>
                         </div>
                         <div 
                           dangerouslySetInnerHTML={{ __html: sanitizeHtml(card.redemption_options) }}
-                          className="prose prose-sm max-w-none text-sm text-muted-foreground leading-relaxed
-                            [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-2 
+                          className="prose prose-sm max-w-none text-xs sm:text-sm text-muted-foreground leading-relaxed
+                            [&>ul]:list-disc [&>ul]:pl-4 [&>ul]:space-y-1.5 
                             [&>li]:text-muted-foreground [&>li]:leading-relaxed
-                            [&>p]:mb-3 [&>p]:leading-relaxed
+                            [&>p]:mb-2 [&>p]:leading-relaxed
                             [&>strong]:text-foreground [&>strong]:font-semibold"
                         />
                       </div>
                     ) : sortedUSPs.some(usp => usp.header.toLowerCase().includes('cashback')) ? (
                       <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <Sparkles className="w-5 h-5 text-primary" />
-                          <h3 className="font-semibold text-foreground">Cashback Redemption</h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="w-4 h-4 text-muted-foreground" />
+                          <h3 className="text-sm sm:text-base font-semibold text-foreground">Cashback Redemption</h3>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                           Cashback is auto-adjusted in your monthly statement — no manual redemption required. The cashback earned will be credited directly to your account balance, reducing your outstanding amount.
                         </p>
                       </div>
@@ -800,19 +839,19 @@ export default function CardDetails() {
 
                     {/* Redemption Catalogue */}
                     {card.redemption_catalogue && !isEmptyOrNA(card.redemption_catalogue) && (
-                      <div className={(card.redemption_options && !isEmptyOrNA(card.redemption_options)) || sortedUSPs.some(usp => usp.header.toLowerCase().includes('cashback')) ? 'pt-4 border-t border-border' : ''}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <ExternalLink className="w-5 h-5 text-primary" />
-                          <h3 className="font-semibold text-foreground">Redemption Catalogue</h3>
+                      <div className={(card.redemption_options && !isEmptyOrNA(card.redemption_options)) || sortedUSPs.some(usp => usp.header.toLowerCase().includes('cashback')) ? 'pt-3 border-t border-border' : ''}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                          <h3 className="text-sm sm:text-base font-semibold text-foreground">Redemption Catalogue</h3>
                         </div>
                         <a 
                           href={card.redemption_catalogue}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
+                          className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
                         >
                           View Redemption Catalogue
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       </div>
                     )}

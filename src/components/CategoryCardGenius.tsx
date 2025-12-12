@@ -450,6 +450,54 @@ const CategoryCardGenius = () => {
       setCurrentQuestionIndex(0);
       return;
     }
+
+    // Validate: If travel category is selected, check if user only answered lounge questions
+    const isTravelSelected = selectedCategories.includes('travel');
+    if (isTravelSelected) {
+      const loungeFields = ['domestic_lounge_usage_quarterly', 'international_lounge_usage_quarterly'];
+      const hasLoungeAnswer = loungeFields.some(field => {
+        const value = responses[field];
+        return typeof value === 'number' && value > 0;
+      });
+      
+      // Check if user has answered any non-lounge questions (from any category)
+      const allNonLoungeFields = allQuestions
+        .filter(qd => !loungeFields.includes(qd.question.field))
+        .map(qd => qd.question.field);
+      
+      const hasNonLoungeAnswer = allNonLoungeFields.some(field => {
+        const value = responses[field];
+        return typeof value === 'number' && value > 0;
+      });
+      
+      // If user only answered lounge questions, show error
+      if (hasLoungeAnswer && !hasNonLoungeAnswer) {
+        toast.error("Please answer at least one more question besides lounge visits (like flights, hotels, or any other spending category). We need your spending patterns to recommend the best travel card for you.");
+        // Find first non-lounge question in travel category (flights or hotels)
+        const travelCategory = categories.find(c => c.id === 'travel');
+        const travelNonLoungeFields = travelCategory?.questions
+          .filter(q => !loungeFields.includes(q.field))
+          .map(q => q.field) || [];
+        
+        const firstNonLoungeTravelQuestion = allQuestions.findIndex(qd => 
+          travelNonLoungeFields.includes(qd.question.field) &&
+          (!responses[qd.question.field] || responses[qd.question.field] === 0)
+        );
+        if (firstNonLoungeTravelQuestion !== -1) {
+          setCurrentQuestionIndex(firstNonLoungeTravelQuestion);
+        } else {
+          // If no travel non-lounge questions found, go to first unanswered non-lounge question
+          const firstUnansweredNonLounge = allQuestions.findIndex(qd => 
+            !loungeFields.includes(qd.question.field) &&
+            (!responses[qd.question.field] || responses[qd.question.field] === 0)
+          );
+          if (firstUnansweredNonLounge !== -1) {
+            setCurrentQuestionIndex(firstUnansweredNonLounge);
+          }
+        }
+        return;
+      }
+    }
     setLoading(true);
     setCurrentFactIndex(0);
     try {
