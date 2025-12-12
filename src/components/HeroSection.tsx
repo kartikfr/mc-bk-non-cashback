@@ -13,6 +13,7 @@ const HeroSection = () => {
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const subheadlineRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const floatingElementsRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -31,7 +32,13 @@ const HeroSection = () => {
       y: 40,
       opacity: 0,
       duration: 0.8
-    }, "-=0.6");
+    }, "-=0.6").from(cardRef.current, {
+      y: 80,
+      opacity: 0,
+      scale: 0.9,
+      duration: 1.2,
+      ease: "power3.out"
+    }, "-=0.4");
 
     // Parallax effect for floating background elements
     if (floatingElementsRef.current) {
@@ -56,7 +63,7 @@ const HeroSection = () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
   }, []);
-  return <section className="relative overflow-hidden bg-gradient-hero pt-28 sm:pt-32 pb-12 sm:pb-16 lg:pb-20 min-h-[85vh] sm:min-h-screen flex items-center">
+  return <section className="relative overflow-visible sm:overflow-hidden bg-gradient-hero pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-16 lg:pb-20 min-h-[85vh] sm:min-h-screen flex items-center">
       {/* Animated Background Elements with Parallax - Simplified on mobile */}
       <div ref={floatingElementsRef} className="absolute inset-0 overflow-hidden pointer-events-none opacity-40 sm:opacity-100">
         {/* Floating circles - fewer on mobile */}
@@ -71,23 +78,22 @@ const HeroSection = () => {
       </div>
 
       <div className="section-shell relative z-10 w-full">
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center">
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center">
           {/* Left Content */}
-          <div className="text-center lg:text-left space-y-4 sm:space-y-6 max-w-2xl w-full">
-            <h1 ref={headlineRef} className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-charcoal-900 leading-[1.1] tracking-tight">
-              Stop Leaving{" "}
+          <div className="text-center lg:text-left space-y-5 sm:space-y-6 md:space-y-7 max-w-2xl w-full order-2 lg:order-1">
+            <h1 ref={headlineRef} className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-extrabold text-charcoal-900 leading-[1.1] tracking-tight px-2 sm:px-0">
+              You're Losing Money{" "}
               <span className="text-[hsl(145,100%,33%)]">
-                Money
-              </span>{" "}
-              on the Table
+                With the Wrong Card
+              </span>
             </h1>
 
-            <p ref={subheadlineRef} className="text-base sm:text-lg md:text-xl lg:text-2xl text-charcoal-700 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            <p ref={subheadlineRef} className="text-sm sm:text-base md:text-lg lg:text-xl text-charcoal-700 max-w-xl mx-auto lg:mx-0 leading-snug px-4 sm:px-0 line-clamp-2">
               Find the credit card that pays you back for living your life. Get personalized recommendations in 60 seconds.
             </p>
 
             {/* CTA Buttons */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start opacity-100 pt-2">
+            <div ref={ctaRef} className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start opacity-100 pt-1 sm:pt-2 px-4 sm:px-0">
               <Button 
                 size="lg" 
                 onClick={() => {
@@ -97,8 +103,7 @@ const HeroSection = () => {
                 className="w-full sm:w-auto group shadow-xl text-base sm:text-lg px-6 sm:px-8 py-6 sm:py-7 touch-target"
               >
                 <CreditCard className="mr-2 w-5 h-5" />
-                <span className="hidden xs:inline">Discover Credit Cards</span>
-                <span className="xs:hidden">Discover Cards</span>
+                Find My Best Card
               </Button>
               <Button 
                 size="lg" 
@@ -116,12 +121,12 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Right Content - 3D Card - Hidden on mobile */}
-          <div className="hidden lg:flex justify-center items-center lg:justify-end w-full pointer-events-auto">
+          {/* Right Content - 3D Card - Visible on all screens */}
+          <div ref={cardRef} className="flex justify-center items-center w-full pointer-events-auto order-1 lg:order-2 px-2 sm:px-4 lg:px-0 py-4 sm:py-0 overflow-visible">
             <CreditCard3D 
-              cardImage="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop" 
               cardName="Your Dream Card" 
-              className="w-full max-w-lg" 
+              estimatedSavings={8450}
+              className="w-full max-w-[280px] sm:max-w-[320px] md:max-w-[380px] lg:max-w-[450px] xl:max-w-[500px]" 
             />
           </div>
         </div>

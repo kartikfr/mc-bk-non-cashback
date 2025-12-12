@@ -5,9 +5,95 @@ import { cn } from "@/lib/utils";
 
 const TooltipProvider = TooltipPrimitive.Provider;
 
-const Tooltip = TooltipPrimitive.Root;
+// Context to share open state between Tooltip and TooltipTrigger
+const TooltipContext = React.createContext<{
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  clickable: boolean;
+}>({
+  open: false,
+  setOpen: () => {},
+  clickable: true,
+});
 
-const TooltipTrigger = TooltipPrimitive.Trigger;
+// Enhanced Tooltip component with click support
+const Tooltip = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root> & {
+    clickable?: boolean;
+  }
+>(({ clickable = true, ...props }, ref) => {
+  const [open, setOpen] = React.useState(false);
+
+  // Handle click outside to close when clickable
+  React.useEffect(() => {
+    if (!clickable || !open) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      // Don't close if clicking inside the tooltip content or trigger
+      if (
+        target.closest('[data-radix-tooltip-content]') || 
+        target.closest('[data-radix-tooltip-trigger]') ||
+        target.closest('[role="tooltip"]')
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+
+    // Use a small delay to avoid immediate closing on click
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open, clickable]);
+
+  return (
+    <TooltipContext.Provider value={{ open, setOpen, clickable }}>
+      <TooltipPrimitive.Root
+        {...props}
+        open={clickable ? open : undefined}
+        onOpenChange={clickable ? setOpen : undefined}
+        delayDuration={200}
+      />
+    </TooltipContext.Provider>
+  );
+});
+Tooltip.displayName = "Tooltip";
+
+// Enhanced TooltipTrigger with click support
+const TooltipTrigger = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Trigger>
+>(({ onClick, asChild, ...props }, ref) => {
+  const context = React.useContext(TooltipContext);
+  
+  const handleClick = (e: React.MouseEvent) => {
+    // Only toggle if context is available and clickable
+    if (context && context.clickable) {
+      // Toggle tooltip on click
+      context.setOpen(!context.open);
+    }
+    // Still call original onClick handler
+    onClick?.(e);
+  };
+
+  // When asChild is used, Radix UI will merge the onClick handler
+  return (
+    <TooltipPrimitive.Trigger
+      {...props}
+      asChild={asChild}
+      ref={ref}
+      onClick={handleClick}
+    />
+  );
+});
+TooltipTrigger.displayName = TooltipPrimitive.Trigger.displayName;
 
 const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,

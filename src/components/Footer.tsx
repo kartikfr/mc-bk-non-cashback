@@ -21,9 +21,9 @@ const Footer = () => {
       content: (
         <ul className="space-y-3 text-sm opacity-80">
           <li><Link to="/" className="hover:opacity-100 transition-opacity">Home</Link></li>
-          <li><Link to="/cards" className="hover:opacity-100 transition-opacity">Discover Cards</Link></li>
-          <li><Link to="/card-genius" className="hover:opacity-100 transition-opacity">AI Card Genius</Link></li>
-          <li><Link to="/card-genius-category" className="hover:opacity-100 transition-opacity">AI Category Card Genius</Link></li>
+          <li><Link to="/cards" className="hover:opacity-100 transition-opacity">Discover</Link></li>
+          <li><Link to="/card-genius" className="hover:opacity-100 transition-opacity">Super Card Genius</Link></li>
+          <li><Link to="/card-genius-category" className="hover:opacity-100 transition-opacity">Category Card Genius</Link></li>
           <li><Link to="/beat-my-card" className="hover:opacity-100 transition-opacity">Beat My Card</Link></li>
           <li><button className="hover:opacity-100 transition-opacity" onClick={() => window.location.assign('/#blog')}>Blogs</button></li>
         </ul>
